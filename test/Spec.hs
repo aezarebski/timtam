@@ -233,13 +233,31 @@ testConversion = do
             ]
        in eventsAsObservations simObsEvents `shouldSatisfy` (== llhdObsEvents)
 
+testImpossibleParameters = do
+  describe "Test correct handling of impossible parameters" $ do
+    it "Test negative birth rate is impossible" $
+      let obs = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Occurrence)]
+          llhd1 = fst $ llhdAndNB obs (0.0000000001,1.0,0.3,[],0.6,[]) initLlhdState
+          llhd2 = fst $ llhdAndNB obs (0.0000000000,1.0,0.3,[],0.6,[]) initLlhdState
+          llhd3 = fst $ llhdAndNB obs (-0.0000000001,1.0,0.3,[],0.6,[]) initLlhdState
+       in do
+        isNaN llhd1 `shouldBe` False
+        isNaN llhd2 `shouldBe` False
+        isNaN llhd3 `shouldBe` False
+        isInfinite llhd1 `shouldBe` False
+        isInfinite llhd2 `shouldBe` True
+        isInfinite llhd3 `shouldBe` True
+        llhd1 < 0 `shouldBe` True
+        llhd2 < 0 `shouldBe` True
+        llhd3 < 0 `shouldBe` True
 
 main :: IO ()
 main = hspec $ do
-  -- testNbPGF
+  testNbPGF
   testPdeStatistics
   testp0
   testRr
   testPdeGF
   testLlhd
   testConversion
+  testImpossibleParameters
