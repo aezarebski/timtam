@@ -250,6 +250,28 @@ testImpossibleParameters = do
         llhd1 < 0 `shouldBe` True
         llhd2 < 0 `shouldBe` True
         llhd3 < 0 `shouldBe` True
+    it "Test negative sampling rate is impossible" $
+      let obs1 = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Occurrence)]
+          obs2 = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Occurrence)]
+          llhd11 = fst $ llhdAndNB obs1 (1.0,1.0,0.1,[],0.6,[]) initLlhdState
+          llhd12 = fst $ llhdAndNB obs1 (1.0,1.0,0.0,[],0.6,[]) initLlhdState
+          llhd13 = fst $ llhdAndNB obs1 (1.0,1.0,-0.1,[],0.6,[]) initLlhdState
+          llhd21 = fst $ llhdAndNB obs2 (1.0,1.0,0.1,[],0.6,[]) initLlhdState
+          llhd22 = fst $ llhdAndNB obs2 (1.0,1.0,0.0,[],0.6,[]) initLlhdState
+          llhd23 = fst $ llhdAndNB obs2 (1.0,1.0,-0.1,[],0.6,[]) initLlhdState
+       in do
+        isNaN llhd11 `shouldBe` False
+        isNaN llhd12 `shouldBe` False
+        isNaN llhd13 `shouldBe` False
+        isNaN llhd21 `shouldBe` False
+        isNaN llhd22 `shouldBe` False
+        isNaN llhd23 `shouldBe` False
+        isInfinite llhd11 `shouldBe` False
+        isInfinite llhd12 `shouldBe` True
+        isInfinite llhd13 `shouldBe` True
+        isInfinite llhd21 `shouldBe` False
+        isInfinite llhd22 `shouldBe` False
+        isInfinite llhd23 `shouldBe` True
 
 main :: IO ()
 main = hspec $ do
