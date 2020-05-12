@@ -3,12 +3,13 @@
 
 module Main where
 
-import Control.Monad (liftM)
+import Control.Monad (when)
 import qualified Data.ByteString.Lazy as L
 import Data.Csv
 import Data.List (intercalate)
 import System.Directory (doesFileExist,removeFile)
-import qualified Epidemic.BDSCOD as BDSCOD
+import qualified Epidemic.BDSCOD as SimBDSCOD
+import qualified Epidemic.Utility as SimUtil
 import BDSCOD.Llhd
 import BDSCOD.Utility
 
@@ -21,6 +22,7 @@ llhdsWriteFile fp d ps = case ps of
                     output (x1, x2, x3, [(_,x4)], x5, [(_,x6)]) (x7, x8) =
                       intercalate "," $ map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
 
+appMessage :: String
 appMessage =
   intercalate
     "\n"
@@ -69,22 +71,22 @@ main =
         [(simLambda, simMu, simPsi, [(simRhoTime,r)], simOmega, [(simNuTime,simNu)]) | r <- linspace 0.01 0.40 400] ++
         [(simLambda, simMu, simPsi, [(simRhoTime,simRho)], o, [(simNuTime,simNu)]) | o <- linspace 0.01 2.0 200] ++
         [(simLambda, simMu, simPsi, [(simRhoTime,simRho)], simOmega, [(simNuTime,n)]) | n <- linspace 0.01 0.40 400]
-      simConfig = BDSCOD.configuration simDuration simParams
+      simConfig = SimBDSCOD.configuration simDuration simParams
    in do happyToContinue1 <- checkFileCanBeOverwritten outputFileSimulation1 :: IO Bool
          happyToContinue2 <- checkFileCanBeOverwritten outputFileSimulation2
          happyToContinue3 <- checkFileCanBeOverwritten outputFileObservations
          happyToContinue4 <- checkFileCanBeOverwritten outputFileLlhdValues
-         if (not happyToContinue1) && (not happyToContinue2) && (not happyToContinue3) && (not happyToContinue4)
+         if not happyToContinue1 && not happyToContinue2 && not happyToContinue3 && not happyToContinue4
            then
              return ()
            else
              do putStrLn appMessage
-                simEvents <- BDSCOD.simulation simConfig
+                simEvents <- SimUtil.simulation False simConfig SimBDSCOD.allEvents
                 Prelude.writeFile outputFileSimulation1 $ intercalate "\n" (map show simEvents)
                 L.writeFile outputFileSimulation2 $ encode simEvents
                 let obs =
                       eventsAsObservations $
-                      BDSCOD.observedEvents simEvents
+                      SimBDSCOD.observedEvents simEvents
                     numSimEvents = length simEvents
                     numObs = length obs
                 Prelude.writeFile outputFileObservations $ intercalate "\n" (map show obs)
@@ -112,5 +114,5 @@ checkFileCanBeOverwritten fp =
             do
               putStrLn "Okay, continuing the simulation...\n\n"
               fileExists <- doesFileExist fp
-              if fileExists then removeFile fp else return ()
+              when fileExists $ removeFile fp
               return True
