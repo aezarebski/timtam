@@ -19,7 +19,13 @@ data Event
 type Observation = (Time, Event)
 
 
+-- | Predicate for the observation referring to a birth.
+isBirth :: Observation -> Bool
+isBirth (_,e) = e == Birth
 
+-- | Predicate for the observation referring to a sampling.
+isSample :: Observation -> Bool
+isSample (_,e) = e == Sample
 
 
 
@@ -37,6 +43,16 @@ type Parameters
 
 
 
+-- | Predicate for whether the parameters could possibly have given rise to the
+-- observations.
+arePlausible :: [Observation]
+             -> Parameters
+             -> Bool
+arePlausible obs (l, m, r, trs, o, tns)
+  | minimum [l, m, r, o] < 0 = False
+  | any isBirth obs && l == 0 = False
+  | any isSample obs && r == 0 = False
+  | otherwise = True
 
 
 
@@ -292,21 +308,26 @@ initLlhdState = (0,0,1,Zero)
 
 
 
+-- | The log-likelihood and the distribution of prevalence.
+llhdAndNB :: [Observation]  -- ^ The observed events
+          -> Parameters     -- ^ The parameters
+          -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
+          -> (LogLikelihood,NegativeBinomial)
+llhdAndNB obs params state0 =
+  if arePlausible obs params
+    then llhdAndNB' obs params state0
+    else (-1 / 0, Zero)
 
 
-llhdAndNB :: [Observation]
-     -> Parameters
-     -> LlhdCalcState
-     -> (LogLikelihood,NegativeBinomial)
-
-
-
-
-
-
-llhdAndNB [] _ (l,_,_,nb) = (l,nb)
-llhdAndNB ((delay,event):events) params (l,t,k,nb) =
-  llhdAndNB events params (l+l'+l'',t',k'',nb'')
+-- | Compute the log-likelihood and distribution of prevalence assuming
+-- plausible parameters.
+llhdAndNB' :: [Observation]
+           -> Parameters
+           -> LlhdCalcState
+           -> (LogLikelihood,NegativeBinomial)
+llhdAndNB' [] _ (l,_,_,nb) = (l,nb)
+llhdAndNB' ((delay,event):events) params (l,t,k,nb) =
+  llhdAndNB' events params (l+l'+l'',t',k'',nb'')
     where
       t' = t + delay
       (l',nb') = intervalLlhd params delay k nb
