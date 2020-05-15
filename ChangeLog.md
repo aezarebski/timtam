@@ -3,6 +3,8 @@
 ## 0.1.0.1
 
 - Return `-Infinity` for impossible parameters rather than throwing an error.
+  This is acheived by wrapping the likelihood function to recognise impossible
+  parameters before doing any real computation.
 - Update to the latest version of `epi-sim` which had a couple of breaking
   changes.
 
