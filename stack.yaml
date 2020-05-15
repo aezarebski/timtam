@@ -40,8 +40,8 @@ packages:
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
 extra-deps:
-  - git: https://azarebski@bitbucket.org/azarebski/epi-sim.git
-    commit: 95f876dedbaf823384960da94e68ac036d0ad804
+  - git: https://github.com/aezarebski/epi-sim.git
+    commit: 69741a3db670108a40788817e196ca214124944d
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

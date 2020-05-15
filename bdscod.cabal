@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.0.0
+version:             0.1.0.1
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -27,7 +27,6 @@ library
                , vector
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs
-  -- ghc-options:         -Wall -fwarn-tabs
 
 
 executable manceau-comparison

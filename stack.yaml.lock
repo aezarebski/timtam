@@ -6,18 +6,18 @@
 packages:
 - completed:
     cabal-file:
-      size: 2059
-      sha256: dd968dc0e0ff43fce5f1fd983d31af212793986af8f7dcec2cba5424d220a62f
+      size: 2601
+      sha256: ace49059275c7d5903319d37c6fa83b5735bf562275f4a6bd7077bcf799b1cbf
     name: epi-sim
-    version: 0.1.7.0
-    git: https://azarebski@bitbucket.org/azarebski/epi-sim.git
+    version: 0.1.8.3
+    git: https://github.com/aezarebski/epi-sim.git
     pantry-tree:
-      size: 1313
-      sha256: 9a783cf2609ea9f5d3f628accd5885070e00b051915141ce05b60a524bafc341
-    commit: 95f876dedbaf823384960da94e68ac036d0ad804
+      size: 1804
+      sha256: 1a3fc747e8adbdef1b96382ec711cad6ecc8d32764905498b24e32faf16832f2
+    commit: 69741a3db670108a40788817e196ca214124944d
   original:
-    git: https://azarebski@bitbucket.org/azarebski/epi-sim.git
-    commit: 95f876dedbaf823384960da94e68ac036d0ad804
+    git: https://github.com/aezarebski/epi-sim.git
+    commit: 69741a3db670108a40788817e196ca214124944d
 snapshots:
 - completed:
     size: 492015
