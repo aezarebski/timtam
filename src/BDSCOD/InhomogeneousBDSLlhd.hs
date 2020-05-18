@@ -1,6 +1,6 @@
 module BDSCOD.InhomogeneousBDSLlhd where
 
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust,fromMaybe)
 import BDSCOD.Types
 import BDSCOD.Llhd hiding (llhdAndNB')
 import Epidemic.Types
@@ -35,3 +35,11 @@ llhdAndNB' ((delay,event):events) inhomParams@(tlams,mu,psi) (l,t,k,nb) =
                t' = rateChangeTime
                (l',nb') = intervalLlhd bdscodParams (rateChangeTime-t) k nb
              in llhdAndNB' ((delay-(rateChangeTime-t),event):events) inhomParams (l+l',t',k,nb')
+
+-- | The log-likelihood and the distribution of prevalence of the inhomogenoues BDS.
+llhdAndNB :: [Observation]  -- ^ The observed events
+          -> InhomParams    -- ^ The parameters
+          -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
+          -> (LogLikelihood,NegativeBinomial)
+llhdAndNB obs params state0 =
+  fromMaybe (-1 / 0, Zero) $ llhdAndNB' obs params state0
