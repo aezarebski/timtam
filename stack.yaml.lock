@@ -6,15 +6,15 @@
 packages:
 - completed:
     name: epi-sim
-    version: 0.1.8.3
+    version: 0.1.8.5
     git: https://github.com/aezarebski/epi-sim.git
     pantry-tree:
-      size: 1804
-      sha256: 1a3fc747e8adbdef1b96382ec711cad6ecc8d32764905498b24e32faf16832f2
-    commit: 69741a3db670108a40788817e196ca214124944d
+      size: 1980
+      sha256: aa3d92fb6d31179a5469a9b20a708ef43c6a343ad1ae6f5081a5ef295b24d3e2
+    commit: d6fb984f74fb876b00140726900758f4958a10ae
   original:
     git: https://github.com/aezarebski/epi-sim.git
-    commit: 69741a3db670108a40788817e196ca214124944d
+    commit: d6fb984f74fb876b00140726900758f4958a10ae
 - completed:
     name: epi-types
     version: 0.1.0.0

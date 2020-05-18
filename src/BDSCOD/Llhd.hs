@@ -2,43 +2,16 @@ module BDSCOD.Llhd where
 
 import Data.List (find)
 import Data.Maybe (fromJust)
+import BDSCOD.Types
+import BDSCOD.Utility
 import Epidemic.Types
 
-
-
-type NumLineages = Double
-
-data Event
-  = Birth
-  | Sample
-  | Occurrence
-  | Catastrophe NumLineages
-  | Disaster NumLineages
-  deriving (Show, Eq)
-
-type Observation = (Time, Event)
-
-
--- | Predicate for the observation referring to a birth.
-isBirth :: Observation -> Bool
-isBirth (_,e) = e == Birth
-
--- | Predicate for the observation referring to a sampling.
-isSample :: Observation -> Bool
-isSample (_,e) = e == Sample
-
-
-
-
+-- | The parameters of the constant rate BDSCOD are the birth rate, the natural
+-- removal rate, the sampling rate, the timing and probability of catastrophic
+-- removal, the occurrence rate, and the timing the probability of removal due
+-- to disaster.
 type Parameters
-   = (Rate
-     , Rate
-     , Rate
-     , [(Time, Probability)]
-     , Rate
-     , [(Time, Probability)])
-
-
+   = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
 
 -- | Predicate for whether the parameters could possibly have given rise to the
 -- observations.
@@ -50,66 +23,6 @@ arePlausible obs (l, m, r, trs, o, tns)
   | any isBirth obs && l == 0 = False
   | any isSample obs && r == 0 = False
   | otherwise = True
-
-
-
-data NegativeBinomial
-  = Zero
-  | NegBinom Double Probability
-  deriving (Show)
-
-nbFromMAndV :: (Double, Double) -> NegativeBinomial
-nbFromMAndV (0, 0) = Zero
-nbFromMAndV (m, v) =
-  if m > 0 && v >= m
-    then NegBinom r p
-    else error $ "nbFromMAndV received bad values: " ++ show (m,v)
-  where
-    r = (m ** 2) / (v - m)
-    p = (v - m) / v
-
-mAndVFromNb :: NegativeBinomial -> (Double, Double)
-mAndVFromNb (NegBinom r p) = (m, v)
-  where
-    m = p * r / (1 - p)
-    v = m / (1 - p)
-
-
-
-
-
-
-nbPGF :: NegativeBinomial -> Double -> Double
-nbPGF nb z = case nb of
-  Zero -> 1
-  (NegBinom r p) -> ((1 - p) / (1 - p * z)) ** r
-
-nbPGF' nb z = case nb of
-  Zero -> 0
-  (NegBinom r p) -> (r * p / (1 - p)) * nbPGF (NegBinom (r+1) p) z
-
-nbPGF'' nb z = case nb of
-  Zero -> 0
-  (NegBinom r p) -> (r * (r + 1) * (p / (1 - p)) ** 2.0) *
-                      nbPGF (NegBinom (r+2) p) z
-
-
-
-
-
-
-nbPGFdash j nb z =
-  case nb of
-    Zero -> 0
-    (NegBinom r p) ->
-      pochhammer r j * (p / (1 - p)) ** j *
-        nbPGF (NegBinom (r + j) p) z
-
-pochhammer _ 0 = 1
-pochhammer a i = (a + i - 1) * pochhammer a (i - 1)
-
-
-
 
 
 
@@ -187,7 +100,6 @@ rr params@(lam, _, _, _, _, _) delay z =
 
 
 
-data PDESolution = PDESol NegativeBinomial NumLineages
 
 
 
@@ -266,9 +178,15 @@ pdeStatistics params delay pdeSol@(PDESol nb k) =
 
 
 
+intervalLlhd ::
+     (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+  -> Double
+  -> Double
+  -> NegativeBinomial
+  -> (Probability, NegativeBinomial)
 intervalLlhd params delay k nb =
-  let (c,m,v) = pdeStatistics params delay (PDESol nb k)
-   in (log c,nbFromMAndV (m,v))
+  let (c, m, v) = pdeStatistics params delay (PDESol nb k)
+   in (log c, nbFromMAndV (m, v))
 
 
 
@@ -293,12 +211,8 @@ eventLlhd t (_, _, _, _, _, nus) (Disaster n) k nb@(NegBinom r p) =
 
 
 
-type LogLikelihood = Double
-type LlhdCalcState = (LogLikelihood
-                     ,Time
-                     ,NumLineages
-                     ,NegativeBinomial)
-
+-- | This is the state of the likelihood calculation: llhd, time, LTT, NB of
+-- hidden lineages
 initLlhdState :: LlhdCalcState
 initLlhdState = (0,0,1,Zero)
 

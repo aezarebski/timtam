@@ -3,15 +3,16 @@
 
 module Main where
 
+import BDSCOD.Llhd
+import BDSCOD.Types
+import BDSCOD.Utility
 import Control.Monad (when)
 import qualified Data.ByteString.Lazy as L
 import Data.Csv
 import Data.List (intercalate)
-import System.Directory (doesFileExist,removeFile)
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import qualified Epidemic.Utility as SimUtil
-import BDSCOD.Llhd
-import BDSCOD.Utility
+import System.Directory (doesFileExist, removeFile)
 
 
 llhdsWriteFile fp d ps = case ps of

@@ -1,8 +1,9 @@
 import Test.Hspec
 
-import qualified Epidemic as EpiSim
-import BDSCOD.Utility
 import BDSCOD.Llhd
+import BDSCOD.Types
+import BDSCOD.Utility
+import qualified Epidemic as EpiSim
 
 -- | Check if @y@ is withing @delta@ of @x@
 withinDeltaOf :: (Ord a, Num a)
