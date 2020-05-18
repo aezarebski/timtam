@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.1.1.0
+
+- Switch to types imported from `epi-types`.
+
 ## 0.1.0.1
 
 - Return `-Infinity` for impossible parameters rather than throwing an error.

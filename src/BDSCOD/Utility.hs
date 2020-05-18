@@ -4,7 +4,7 @@ module BDSCOD.Utility
 
 import qualified Data.Vector as V
 import qualified Epidemic as EpiSim
--- import qualified Epidemic.Utility as EpiUtil
+import Epidemic.Types
 import BDSCOD.Llhd
 
 -- | Convert simulation events to observation events

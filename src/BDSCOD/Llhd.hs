@@ -2,7 +2,7 @@ module BDSCOD.Llhd where
 
 import Data.List (find)
 import Data.Maybe (fromJust)
-
+import Epidemic.Types
 
 
 
@@ -29,9 +29,6 @@ isSample (_,e) = e == Sample
 
 
 
-type Rate = Double
-type Probability = Double
-type Time = Double
 
 type Parameters
    = (Rate
