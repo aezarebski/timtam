@@ -217,12 +217,14 @@ testInhomBDSLlhd = do
           tlams' = fromJust $ asTimed [(0,1.2),(10,5.0)]
           tlams'' = fromJust $ asTimed [(0,1.3),(10,5.0)]
           tlams''' = fromJust $ asTimed [(0,1.3),(0.5,1.4)]
+          tlams'''' = fromJust $ asTimed [(0,1.3),(1.5,1.3),(2.5,1.3)]
           lam = fromJust $ cadlagValue tlams 0.1
           lam'' = fromJust $ cadlagValue tlams'' 0.1
           (llhdValXXX1,_) = InhomBDSLlhd.llhdAndNB obs (tlams,1.0,0.3) initLlhdState
           (llhdValXXX2,_) = InhomBDSLlhd.llhdAndNB obs (tlams',1.0,0.3) initLlhdState
           (llhdValXXX3,_) = InhomBDSLlhd.llhdAndNB obs (tlams'',1.0,0.3) initLlhdState
           (llhdValXXX4,_) = InhomBDSLlhd.llhdAndNB obs (tlams''',1.0,0.3) initLlhdState
+          (llhdValXXX5,_) = InhomBDSLlhd.llhdAndNB obs (tlams'''',1.0,0.3) initLlhdState
           (llhdValYYY1,_) = llhdAndNB obs (lam,1.0,0.3,[],0.0,[]) initLlhdState
           (llhdValYYY2,_) = llhdAndNB obs (lam'',1.0,0.3,[],0.0,[]) initLlhdState
           (llhdValYYY3,_) = llhdAndNB obs (lam'' + 0.1,1.0,0.3,[],0.0,[]) initLlhdState
@@ -232,6 +234,7 @@ testInhomBDSLlhd = do
         llhdValXXX3 `shouldSatisfy` (withinDeltaOf 1e-3 (llhdValYYY2))
         llhdValXXX3 `shouldSatisfy` (\l -> not $ withinDeltaOf 1e-3 llhdValYYY1 l)
         (if llhdValYYY3 < llhdValYYY2 then llhdValXXX3 > llhdValXXX4 else llhdValXXX3 < llhdValXXX4) `shouldBe` True
+        llhdValXXX5 `shouldSatisfy` (withinDeltaOf 1e-1 (llhdValYYY2)) -- exposes limitation of approximation!!!
 
 testConversion = do
   describe "Test conversion between event types" $ do
