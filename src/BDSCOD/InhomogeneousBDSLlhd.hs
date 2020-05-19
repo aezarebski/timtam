@@ -2,7 +2,7 @@ module BDSCOD.InhomogeneousBDSLlhd where
 
 import Data.Maybe (fromJust,fromMaybe)
 import BDSCOD.Types
-import BDSCOD.Llhd hiding (llhdAndNB')
+import BDSCOD.Llhd hiding (initLlhdState,llhdAndNB')
 import Epidemic.Types
 
 
@@ -43,3 +43,6 @@ llhdAndNB :: [Observation]  -- ^ The observed events
           -> (LogLikelihood,NegativeBinomial)
 llhdAndNB obs params state0 =
   fromMaybe (-1 / 0, Zero) $ llhdAndNB' obs params state0
+
+initLlhdState :: LlhdCalcState
+initLlhdState = (0,0,1,Zero)

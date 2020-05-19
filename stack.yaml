@@ -41,7 +41,7 @@ packages:
 #
 extra-deps:
   - git: https://github.com/aezarebski/epi-sim.git
-    commit: d6fb984f74fb876b00140726900758f4958a10ae
+    commit: 447d10a3d3ce61fbfc06aac959d5186648d0df21
   - git: https://github.com/aezarebski/epi-types.git
     commit: 40f619a172ff70134bf97e4dbd975c77c6c7a3ce
 
