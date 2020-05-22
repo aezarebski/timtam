@@ -4,7 +4,7 @@ import qualified BDSCOD.InhomogeneousBDSLlhd as InhomBDSLlhd
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust,isJust)
 import qualified Epidemic as EpiSim
 import Epidemic.Types
 
@@ -235,21 +235,31 @@ testInhomBDSLlhd = do
         llhdValXXX3 `shouldSatisfy` (\l -> not $ withinDeltaOf 1e-3 llhdValYYY1 l)
         (if llhdValYYY3 < llhdValYYY2 then llhdValXXX3 > llhdValXXX4 else llhdValXXX3 < llhdValXXX4) `shouldBe` True
         llhdValXXX5 `shouldSatisfy` (withinDeltaOf 1e-1 (llhdValYYY2)) -- exposes limitation of approximation!!!
-    it "Check values are finite when sensible" $
+    describe "Check values are finite when sensible" $
       let infParams = ([(0.0,1.0),(1.0,1.0)],0.4,0.4) :: InhomBDSLlhd.InhomParams
-          obs = [(0.3,Birth),(0.5,Birth),(0.1,Sample)]
+          (tlams,_,_) = infParams
+          obs = [(0.3,Birth),(0.5,Birth),(0.19,Sample)]
           llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
-          obs' = [(0.3,Birth),(0.5,Birth),(0.2,Sample)]
+          obs' = [(0.3,Birth),(0.5,Birth),(0.20,Sample)]
           llhdVal' = fst $ InhomBDSLlhd.llhdAndNB obs' infParams initLlhdState
-          obs'' = [(0.3,Birth),(0.5,Birth),(0.2,Sample)]
+          obs'' = [(0.3,Birth),(0.5,Birth),(0.21,Sample)]
           llhdVal'' = fst $ InhomBDSLlhd.llhdAndNB obs'' infParams initLlhdState
        in do
-        print llhdVal
-        print llhdVal'
-        print llhdVal''
-        isInfinite llhdVal `shouldBe` False
-        isInfinite llhdVal' `shouldBe` False
-        isInfinite llhdVal'' `shouldBe` False
+        it "Check cadlagValue" $ do
+          cadlagValue tlams 1.1 == Just 1.0 `shouldBe` True
+          cadlagValue tlams 1.0 == Just 1.0 `shouldBe` True
+          cadlagValue tlams 0.9 == Just 1.0 `shouldBe` True
+        it "Check nextTime" $ do
+          isJust (nextTime tlams 1.1) `shouldBe` True
+          isJust (nextTime tlams 1.0) `shouldBe` True
+          isJust (nextTime tlams 0.9) `shouldBe` True
+        it "Check llhdValue" $ do
+          print llhdVal
+          print llhdVal'
+          print llhdVal''
+          isInfinite llhdVal `shouldBe` False
+          isInfinite llhdVal' `shouldBe` False
+          isInfinite llhdVal'' `shouldBe` False
 
 testConversion = do
   describe "Test conversion between event types" $ do
