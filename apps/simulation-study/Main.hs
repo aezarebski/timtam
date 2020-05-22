@@ -3,15 +3,17 @@
 
 module Main where
 
+import BDSCOD.Llhd
+import BDSCOD.Types
+import BDSCOD.Utility
 import Control.Monad (when)
 import qualified Data.ByteString.Lazy as L
 import Data.Csv
 import Data.List (intercalate)
-import System.Directory (doesFileExist,removeFile)
+import Data.Maybe (fromJust, isJust)
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import qualified Epidemic.Utility as SimUtil
-import BDSCOD.Llhd
-import BDSCOD.Utility
+import System.Directory (doesFileExist, removeFile)
 
 
 llhdsWriteFile fp d ps = case ps of
@@ -76,12 +78,12 @@ main =
          happyToContinue2 <- checkFileCanBeOverwritten outputFileSimulation2
          happyToContinue3 <- checkFileCanBeOverwritten outputFileObservations
          happyToContinue4 <- checkFileCanBeOverwritten outputFileLlhdValues
-         if not happyToContinue1 && not happyToContinue2 && not happyToContinue3 && not happyToContinue4
+         if not happyToContinue1 && not happyToContinue2 && not happyToContinue3 && not happyToContinue4 && not (isJust simConfig)
            then
              return ()
            else
              do putStrLn appMessage
-                simEvents <- SimUtil.simulation False simConfig SimBDSCOD.allEvents
+                simEvents <- SimUtil.simulation False (fromJust simConfig) SimBDSCOD.allEvents
                 Prelude.writeFile outputFileSimulation1 $ intercalate "\n" (map show simEvents)
                 L.writeFile outputFileSimulation2 $ encode simEvents
                 let obs =

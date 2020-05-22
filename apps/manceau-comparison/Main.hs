@@ -2,12 +2,13 @@
 
 module Main where
 
+import BDSCOD.Llhd
+import BDSCOD.Types
 import Control.Applicative
 import qualified Data.ByteString.Lazy as BL
 import Data.Csv
 import Data.List (intercalate)
 import qualified Data.Vector as V
-import BDSCOD.Llhd
 
 observations =
   [ (1.0, Birth)

@@ -1,8 +1,12 @@
 import Test.Hspec
 
-import qualified Epidemic as EpiSim
-import BDSCOD.Utility
+import qualified BDSCOD.InhomogeneousBDSLlhd as InhomBDSLlhd
 import BDSCOD.Llhd
+import BDSCOD.Types
+import BDSCOD.Utility
+import Data.Maybe (fromJust,isJust)
+import qualified Epidemic as EpiSim
+import Epidemic.Types
 
 -- | Check if @y@ is withing @delta@ of @x@
 withinDeltaOf :: (Ord a, Num a)
@@ -205,6 +209,55 @@ testLlhd = do
         llhdVal3 `shouldSatisfy` (withinDeltaOf 3e-1 (-41.5))
         llhdVal9 `shouldSatisfy` (withinDeltaOf 3e-1 (-46.0))
 
+testInhomBDSLlhd = do
+  describe "Test inhomogeneous BDS LLHD" $ do
+    it "Check for constant parameters it looks right" $
+      let obs = [(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Sample),(1.0,Sample)]
+          tlams = fromJust $ asTimed [(0,1.2)]
+          tlams' = fromJust $ asTimed [(0,1.2),(10,5.0)]
+          tlams'' = fromJust $ asTimed [(0,1.3),(10,5.0)]
+          tlams''' = fromJust $ asTimed [(0,1.3),(0.5,1.4)]
+          tlams'''' = fromJust $ asTimed [(0,1.3),(1.5,1.3),(2.5,1.3)]
+          lam = fromJust $ cadlagValue tlams 0.1
+          lam'' = fromJust $ cadlagValue tlams'' 0.1
+          (llhdValXXX1,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams,1.0,0.3)) initLlhdState
+          (llhdValXXX2,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams',1.0,0.3)) initLlhdState
+          (llhdValXXX3,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'',1.0,0.3)) initLlhdState
+          (llhdValXXX4,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams''',1.0,0.3)) initLlhdState
+          (llhdValXXX5,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'''',1.0,0.3)) initLlhdState
+          (llhdValYYY1,_) = llhdAndNB obs (lam,1.0,0.3,[],0.0,[]) initLlhdState
+          (llhdValYYY2,_) = llhdAndNB obs (lam'',1.0,0.3,[],0.0,[]) initLlhdState
+          (llhdValYYY3,_) = llhdAndNB obs (lam'' + 0.1,1.0,0.3,[],0.0,[]) initLlhdState
+       in do
+        llhdValXXX1 `shouldSatisfy` (withinDeltaOf 1e-3 (llhdValYYY1))
+        llhdValXXX2 `shouldSatisfy` (withinDeltaOf 1e-3 (llhdValYYY1))
+        llhdValXXX3 `shouldSatisfy` (withinDeltaOf 1e-3 (llhdValYYY2))
+        llhdValXXX3 `shouldSatisfy` (\l -> not $ withinDeltaOf 1e-3 llhdValYYY1 l)
+        (if llhdValYYY3 < llhdValYYY2 then llhdValXXX3 > llhdValXXX4 else llhdValXXX3 < llhdValXXX4) `shouldBe` True
+        llhdValXXX5 `shouldSatisfy` (withinDeltaOf 1e-1 (llhdValYYY2)) -- exposes limitation of approximation!!!
+    describe "Check values are finite when sensible" $
+      let infParams = (InhomBDSLlhd.InhomParams (fromJust $ asTimed [(0.0,1.0),(1.0,1.0)],0.4,0.4)) :: InhomBDSLlhd.InhomParams
+          (InhomBDSLlhd.InhomParams (tlams,_,_)) = infParams
+          obs = [(0.3,Birth),(0.5,Birth),(0.19,Sample)]
+          llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
+          obs' = [(0.3,Birth),(0.5,Birth),(0.20,Sample)]
+          llhdVal' = fst $ InhomBDSLlhd.llhdAndNB obs' infParams initLlhdState
+          obs'' = [(0.3,Birth),(0.5,Birth),(0.21,Sample)]
+          llhdVal'' = fst $ InhomBDSLlhd.llhdAndNB obs'' infParams initLlhdState
+       in do
+        it "Check cadlagValue" $ do
+          cadlagValue tlams 1.1 == Just 1.0 `shouldBe` True
+          cadlagValue tlams 1.0 == Just 1.0 `shouldBe` True
+          cadlagValue tlams 0.9 == Just 1.0 `shouldBe` True
+        it "Check nextTime" $ do
+          isJust (nextTime tlams 1.1) `shouldBe` True
+          isJust (nextTime tlams 1.0) `shouldBe` True
+          isJust (nextTime tlams 0.9) `shouldBe` True
+        it "Check llhdValue" $ do
+          isInfinite llhdVal `shouldBe` False
+          isInfinite llhdVal' `shouldBe` False
+          isInfinite llhdVal'' `shouldBe` False
+
 testConversion = do
   describe "Test conversion between event types" $ do
     it "Demonstration data set 1" $
@@ -283,3 +336,4 @@ main = hspec $ do
   testLlhd
   testConversion
   testImpossibleParameters
+  testInhomBDSLlhd
