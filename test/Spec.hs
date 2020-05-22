@@ -328,12 +328,12 @@ testImpossibleParameters = do
 
 main :: IO ()
 main = hspec $ do
-  -- testNbPGF
-  -- testPdeStatistics
-  -- testp0
-  -- testRr
-  -- testPdeGF
-  -- testLlhd
-  -- testConversion
-  -- testImpossibleParameters
+  testNbPGF
+  testPdeStatistics
+  testp0
+  testRr
+  testPdeGF
+  testLlhd
+  testConversion
+  testImpossibleParameters
   testInhomBDSLlhd
