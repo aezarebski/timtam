@@ -27,6 +27,7 @@ library
   build-depends: base >= 4.7 && < 5
                , epi-sim
                , vector
+               , aeson
                , epi-types
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs
@@ -38,7 +39,7 @@ executable manceau-comparison
       Paths_bdscod
   hs-source-dirs:
       apps/manceau-comparison
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -56,7 +57,7 @@ executable simulation-study
       Paths_bdscod
   hs-source-dirs:
       apps/simulation-study
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -75,7 +76,7 @@ executable simulation-study-time-dependent-rates
       Paths_bdscod
   hs-source-dirs:
       apps/simulation-study-time-dependent-rates
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -94,7 +95,7 @@ test-suite tests
       Paths_bdscod
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
     , epi-sim

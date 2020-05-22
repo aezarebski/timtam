@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
@@ -39,7 +40,7 @@ data Config = Config { simulationParameters :: InhomParams
                      , simulationEventsFile :: FilePath
                      , inferenceParameters :: [InhomParams]
                      , inferenceLlhdFile :: FilePath
-                     } deriving (Show, Generic)
+                     } deriving (Show,Generic)
 
 instance Json.FromJSON Config
 
@@ -51,13 +52,17 @@ writeSimEvents events = case events of
                         return ())
   Just es -> (\fp -> B.writeFile fp $ Csv.encode es)
 
+asRecord :: LlhdEval -> B.ByteString
+asRecord (LlhdEval (InhomParams (Timed brts, _, _)) ll) =
+  pack $ intercalate "," $ (show ll : (take 2 $ map (show . snd) brts))
+
 writeLlhdVals :: [LlhdEval] -> FilePath -> IO ()
 writeLlhdVals llhdEvals fp =
-  B.writeFile fp $ B.intercalate "\n" [pack $ show ip ++ show ll | (LlhdEval ip ll) <- llhdEvals]
+  B.writeFile fp $ B.intercalate "\n" (map asRecord llhdEvals)
 
 getSimEvents :: Maybe Time -> Maybe InhomParams -> IO (Maybe [Epidemic.Event])
-getSimEvents (Just duration) (Just inhomParams) =
-  do conf <- pure $ configuration duration inhomParams
+getSimEvents (Just duration) (Just (InhomParams (Timed brts, mu, psi))) =
+  do conf <- pure $ configuration duration (brts,mu,psi)
      if isJust conf
        then do sim <- simulation True (fromJust conf) allEvents
                return $ Just sim
@@ -78,12 +83,12 @@ main :: IO ()
 main =
   do
     putStrLn appMessage
-    config <- readConfigFile "examples/time-dependent-rates-config.json"
+    config <- readConfigFile "time-dependent-rates-config.json"
     simEvents <- getSimEvents (simulationDuration <$> config) (simulationParameters <$> config)
     simOutputFile <- pure $ simulationEventsFile <$> config
     let
       infParams = inferenceParameters <$> config
-      obs = eventsAsObservations <$> simEvents
+      obs = (eventsAsObservations . observedEvents) <$> simEvents
       llhdVals = (liftM2 llhdEvaluations) obs infParams
       infOutputFile = inferenceLlhdFile <$> config
       in do fromMaybe (return ()) $ (liftM (writeSimEvents simEvents)) simOutputFile

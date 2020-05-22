@@ -2,6 +2,10 @@
 
 ## 0.1.1.0
 
+- Include additional testing.
+- Upgrade the version of `epi-sim`
+- There is an application for exploring the behaviour of the `InhomogeneousBDS`:
+  details are in the `examples` directory.
 - Implement the likelihood for the birth-death-sampling model with inhomogeneous
   birth rate making use of the functions in `BDSCOD.Llhd` to do the actual
   computation.

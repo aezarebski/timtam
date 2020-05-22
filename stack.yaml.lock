@@ -6,26 +6,26 @@
 packages:
 - completed:
     name: epi-sim
-    version: 0.1.8.5
+    version: 0.1.8.8
     git: https://github.com/aezarebski/epi-sim.git
     pantry-tree:
       size: 1980
-      sha256: 266382c9e5f970b869db4cb131ca1733f92c212e9d21f92c7da7da97e125530a
-    commit: 447d10a3d3ce61fbfc06aac959d5186648d0df21
+      sha256: 5db1154d35037744ab001d8bb45a2a3613c88b8a673954dedd6957dc65a452ab
+    commit: 7e13343d305661bbe5207a2190f6711ddd90574b
   original:
     git: https://github.com/aezarebski/epi-sim.git
-    commit: 447d10a3d3ce61fbfc06aac959d5186648d0df21
+    commit: 7e13343d305661bbe5207a2190f6711ddd90574b
 - completed:
     name: epi-types
-    version: 0.1.0.0
+    version: 0.1.1.1
     git: https://github.com/aezarebski/epi-types.git
     pantry-tree:
-      size: 472
-      sha256: bfa413166b139aef9c91cb9fdd2f159c861280763775b48817966bbbf604e5eb
-    commit: 40f619a172ff70134bf97e4dbd975c77c6c7a3ce
+      size: 524
+      sha256: deaa34d1a858a3b0317e9c23fd710c3dfb8f07f07287b4e21bb3c42e14e1919b
+    commit: e065077a459e082b4472dbd9f21c0b15f4092203
   original:
     git: https://github.com/aezarebski/epi-types.git
-    commit: 40f619a172ff70134bf97e4dbd975c77c6c7a3ce
+    commit: e065077a459e082b4472dbd9f21c0b15f4092203
 snapshots:
 - completed:
     size: 492015

@@ -21,7 +21,7 @@ processEvent' (_, currTime) epiSimEvent =
     (EpiSim.OccurrenceEvent absTime _) ->
       ((absTime - currTime, Occurrence), absTime)
     (EpiSim.DisasterEvent absTime (EpiSim.People persons)) -> ((absTime - currTime, Disaster . fromIntegral $ V.length persons), absTime)
-    _ -> error "Cannot handle epi-sim event"
+    (EpiSim.RemovalEvent _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
 
 -- | Predicate for the observation referring to a birth.
 isBirth :: Observation -> Bool

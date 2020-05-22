@@ -1,16 +1,23 @@
+{-# LANGUAGE DeriveGeneric #-}
 module BDSCOD.InhomogeneousBDSLlhd where
 
-import Data.Maybe (fromJust,fromMaybe)
+import BDSCOD.Llhd hiding (initLlhdState, llhdAndNB')
 import BDSCOD.Types
-import BDSCOD.Llhd hiding (initLlhdState,llhdAndNB')
+import Data.List (intercalate)
+import Data.Maybe (fromJust, fromMaybe)
 import Epidemic.Types
+import qualified Data.Aeson as Json
+import GHC.Generics
 
 
 
 -- | The parameters of the inhomogeneous BDS are the inhomogeneous birth rate,
 -- the natural removal rate and the sampling rate.
-type InhomParams
-   = (Timed Rate, Rate, Rate)
+newtype InhomParams
+   = InhomParams (Timed Rate, Rate, Rate) deriving (Generic,Show)
+
+
+instance Json.FromJSON InhomParams
 
 -- | Compute the log-likelihood and distribution of prevalence under the
 -- inhomogenoues birth-death-sampling model assuming plausible parameters.
@@ -22,7 +29,7 @@ llhdAndNB' :: [Observation]
            -> LlhdCalcState
            -> Maybe (LogLikelihood,NegativeBinomial)
 llhdAndNB' [] _ (l,_,_,nb) = Just (l,nb)
-llhdAndNB' ((delay,event):events) inhomParams@(tlams,mu,psi) (l,t,k,nb) =
+llhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) (l,t,k,nb) =
   do
     rateChangeTime <- nextTime tlams t
     if rateChangeTime - t > delay
