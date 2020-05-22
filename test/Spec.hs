@@ -235,6 +235,12 @@ testInhomBDSLlhd = do
         llhdValXXX3 `shouldSatisfy` (\l -> not $ withinDeltaOf 1e-3 llhdValYYY1 l)
         (if llhdValYYY3 < llhdValYYY2 then llhdValXXX3 > llhdValXXX4 else llhdValXXX3 < llhdValXXX4) `shouldBe` True
         llhdValXXX5 `shouldSatisfy` (withinDeltaOf 1e-1 (llhdValYYY2)) -- exposes limitation of approximation!!!
+    it "Check values are finite when sensible" $
+      let infParams = ([(0.0,1.0),(1.0,1.0)],0.4,0.4) :: InhomBDSLlhd.InhomParams
+          obs = [(0.3391255524880492,Birth),(0.5184932067126476,Birth),(6.254128272774973e-2,Sample),(9.529466344713522e-2,Sample),(4.095734546794971e-2,Sample)]
+          llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
+       in do
+        isInfinite llhdVal `shouldBe` False
 
 testConversion = do
   describe "Test conversion between event types" $ do
@@ -306,12 +312,12 @@ testImpossibleParameters = do
 
 main :: IO ()
 main = hspec $ do
-  testNbPGF
-  testPdeStatistics
-  testp0
-  testRr
-  testPdeGF
-  testLlhd
-  testConversion
-  testImpossibleParameters
+  -- testNbPGF
+  -- testPdeStatistics
+  -- testp0
+  -- testRr
+  -- testPdeGF
+  -- testLlhd
+  -- testConversion
+  -- testImpossibleParameters
   testInhomBDSLlhd
