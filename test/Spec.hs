@@ -237,10 +237,19 @@ testInhomBDSLlhd = do
         llhdValXXX5 `shouldSatisfy` (withinDeltaOf 1e-1 (llhdValYYY2)) -- exposes limitation of approximation!!!
     it "Check values are finite when sensible" $
       let infParams = ([(0.0,1.0),(1.0,1.0)],0.4,0.4) :: InhomBDSLlhd.InhomParams
-          obs = [(0.3391255524880492,Birth),(0.5184932067126476,Birth),(6.254128272774973e-2,Sample),(9.529466344713522e-2,Sample),(4.095734546794971e-2,Sample)]
+          obs = [(0.3,Birth),(0.5,Birth),(0.1,Sample)]
           llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
+          obs' = [(0.3,Birth),(0.5,Birth),(0.2,Sample)]
+          llhdVal' = fst $ InhomBDSLlhd.llhdAndNB obs' infParams initLlhdState
+          obs'' = [(0.3,Birth),(0.5,Birth),(0.2,Sample)]
+          llhdVal'' = fst $ InhomBDSLlhd.llhdAndNB obs'' infParams initLlhdState
        in do
+        print llhdVal
+        print llhdVal'
+        print llhdVal''
         isInfinite llhdVal `shouldBe` False
+        isInfinite llhdVal' `shouldBe` False
+        isInfinite llhdVal'' `shouldBe` False
 
 testConversion = do
   describe "Test conversion between event types" $ do
