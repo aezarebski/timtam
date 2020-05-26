@@ -3,20 +3,17 @@
 This package defines the approximate likelihood of a birth-death process with
 various observation processes.
 
-## Running the examples
+## Running the Manceau example
 
 ```
 $ stack build
 $ stack test
 $ stack exec manceau-comparison
-$ stack exec simulation-study
-```
-
-## Making the figures
-
-```
-$ Rscript R/llhd-profiles.R
 $ Rscript R/manceau-comparison.R
 ```
 
-This creates `out/llhd-profile-*.pdf` and `out/manceau-comparison.pdf`.
+This creates `out/manceau-comparison.pdf`.
+
+## Simulation study
+
+See `examples/simulation-study/README.md` for details of the simulation study.
