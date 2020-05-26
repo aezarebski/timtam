@@ -2,17 +2,21 @@ library(ggplot2)
 library(dplyr)
 library(stringr)
 
-PARAMS <- list(lambda = 1.5,
-               mu = 0.3,
-               psi = 0.3,
-               rho = 0.15,
-               omega = 0.3,
-               nu = 0.15
+INPUT_FILE <- "out/config.json"
+
+config <- jsonlite::read_json(INPUT_FILE)
+
+PARAMS <- list(lambda = config$simLambda,
+               mu = config$simMu,
+               psi = config$simPsi,
+               rho = config$simRho,
+               omega = config$simOmega,
+               nu = config$simNu
                )
 
 save_figures <- TRUE
 
-INPUT_FILE <- "out/simulation-study-llhds.csv"
+INPUT_FILE <- config$outputLlhdFile
 
 if (!file.exists(INPUT_FILE)) {
     stop(sprintf("Cannot find the input file: %s", INPUT_FILE))
@@ -121,7 +125,7 @@ if (save_figures) {
 }
 
 
-simulationEvents <- readLines("out/simulated-events.txt")
+simulationEvents <- readLines(config$outputEventsFile)
 et <- as.list(table(str_extract(simulationEvents, "^[a-zA-Z]+")))
 
 mask <- grepl(pattern = "CatastropheEvent", x = simulationEvents)
