@@ -137,7 +137,7 @@ num_disastered <- sapply(str_match_all(simulationEvents[mask], pattern = "Person
 rm(mask)
 
 
-num_unobserved_lineages <- 1 + et$InfectionEvent - et$OccurrenceEvent - et$RemovalEvent - et$SamplingEvent - num_catastropheed - num_disastered
+num_unobserved_lineages <- 1 + et$InfectionEvent - et$OccurrenceEvent - et$RemovalEvent - et$SamplingEvent - sum(num_catastropheed) - sum(num_disastered)
 
 unique_thresh <- 0.000001
 curr_nb <- as.list(filter(x, abs(lambda - PARAMS$lambda) < unique_thresh, mu == PARAMS$mu, psi == PARAMS$psi, abs(rho - PARAMS$rho) < unique_thresh, omega == PARAMS$omega, abs(nu - PARAMS$nu) < unique_thresh) %>% select(starts_with("neg_binom")))

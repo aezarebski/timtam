@@ -35,7 +35,7 @@ llhdsWriteFile fp d ps duration conditionLlhd =
       let x = condLlhdAndNB d p duration conditionLlhd
       appendFile fp $ output p x
       llhdsWriteFile fp d ps' duration conditionLlhd
-      where output (x1, x2, x3, [(_, x4)], x5, [(_, x6)]) (x7, x8) =
+      where output (x1, x2, x3, ((_, x4):_), x5, [(_, x6)]) (x7, x8) =
               intercalate "," $
               map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
 
@@ -69,7 +69,7 @@ data SimStudyParams =
     , simMu :: Rate
     , simPsi :: Rate
     , simRho :: Probability
-    , simRhoTime :: Time
+    , simRhoTimes :: [Time]
     , simOmega :: Rate
     , simNu :: Probability
     , simNuTime :: Time
@@ -85,14 +85,14 @@ main :: IO ()
 main = do
   config <- readConfigFile "out/config.json"
   let SimStudyParams{..} = fromJust config
-      simParams = (simLambda, simMu, simPsi, [(simRhoTime,simRho)], simOmega, [(simNuTime,simNu)])
+      simParams = (simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)])
       infParamss =
-        [(l, simMu, simPsi, [(simRhoTime,simRho)], simOmega, [(simNuTime,simNu)]) | l <- linspace 1.0 8.0 200] ++
-        [(simLambda, m, simPsi, [(simRhoTime,simRho)], simOmega, [(simNuTime,simNu)]) | m <- linspace 0.01 2.0 200] ++
-        [(simLambda, simMu, p, [(simRhoTime,simRho)], simOmega, [(simNuTime,simNu)]) | p <- linspace 0.01 2.0 200] ++
-        [(simLambda, simMu, simPsi, [(simRhoTime,r)], simOmega, [(simNuTime,simNu)]) | r <- linspace 0.01 0.40 400] ++
-        [(simLambda, simMu, simPsi, [(simRhoTime,simRho)], o, [(simNuTime,simNu)]) | o <- linspace 0.01 2.0 200] ++
-        [(simLambda, simMu, simPsi, [(simRhoTime,simRho)], simOmega, [(simNuTime,n)]) | n <- linspace 0.01 0.40 400]
+        [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | l <- linspace 1.0 8.0 200] ++
+        [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | m <- linspace 0.01 2.0 200] ++
+        [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | p <- linspace 0.01 2.0 200] ++
+        [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | r <- linspace 0.01 0.40 400] ++
+        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(simNuTime,simNu)]) | o <- linspace 0.01 2.0 200] ++
+        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,n)]) | n <- linspace 0.01 0.40 400]
       simConfig = SimBDSCOD.configuration simDuration simParams
       conditionUponObservation = True
    in if isNothing simConfig
