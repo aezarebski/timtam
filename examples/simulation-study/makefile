@@ -1,5 +1,8 @@
 
-figures: out/llhd-profile-lambda.pdf
+figures: out/llhd-profile-lambda.pdf out/simulation-visualisation.png
+
+out/simulation-visualisation.png: src/birth-death-lines.R out/simulated-events.csv
+	Rscript src/birth-death-lines.R out/simulated-events.csv out/simulation-visualisation.png
 
 out/llhd-profile-lambda.pdf: out/simulation-study-llhds.csv src/llhd-profiles.R out/config.json
 	Rscript src/llhd-profiles.R

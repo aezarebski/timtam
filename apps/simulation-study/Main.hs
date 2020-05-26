@@ -62,6 +62,7 @@ linspace x1 x2 n = [x1 + fromIntegral i * delta | i <- [0 .. (n - 1)]]
 data SimStudyParams =
   SimStudyParams
     { outputEventsFile :: FilePath
+    , outputEventsCsv :: FilePath
     , outputObservationsFile :: FilePath
     , outputLlhdFile :: FilePath
     , simDuration :: Time
@@ -102,6 +103,7 @@ main = do
         do putStrLn appMessage
            simEvents <- SimUtil.simulation True (fromJust simConfig) SimBDSCOD.allEvents
            Prelude.writeFile outputEventsFile $ intercalate "\n" (map show simEvents)
+           L.writeFile outputEventsCsv $ Csv.encode simEvents
            let obs =
                  eventsAsObservations $
                  SimBDSCOD.observedEvents simEvents

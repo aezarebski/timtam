@@ -2,6 +2,7 @@
 
 ## 0.1.2.2
 
+- Include a visualisation of the simulated data set used in `simulation-study`
 - Use a JSON file to configure the `simulation-study` and allow for multiple
   \(\rho\) events to occur. This adds an additional dependency on `aeson`.
 
