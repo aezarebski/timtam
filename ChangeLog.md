@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.2.2
+
+- Use a JSON file to configure the `simulation-study` and allow for multiple
+  \(\rho\) events to occur. This adds an additional dependency on `aeson`.
+
 ## 0.1.2.1
 
 - Use `make` to run the `simulation-study`.
