@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.1.2.0
+
+- Include the `BDSCOD.Conditioning` module for helper functions for conditioning
+  the likelihood.
+- Document more of the functionality in `BDSCOD.Llhd`.
+
 ## 0.1.1.0
 
 - Include additional testing.

@@ -19,6 +19,7 @@ extra-source-files:  README.md
 
 library
   exposed-modules: BDSCOD.Llhd
+                   BDSCOD.Conditioning
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd

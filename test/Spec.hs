@@ -1,12 +1,16 @@
-import Test.Hspec
 
+import BDSCOD.Conditioning
 import qualified BDSCOD.InhomogeneousBDSLlhd as InhomBDSLlhd
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
-import Data.Maybe (fromJust,isJust)
+import Control.Monad (replicateM)
+import Data.Maybe (fromJust, isJust)
 import qualified Epidemic as EpiSim
+import qualified Epidemic.BirthDeathSampling as EpiBDS
 import Epidemic.Types
+import qualified Epidemic.Utility as EpiUtil
+import Test.Hspec
 
 -- | Check if @y@ is withing @delta@ of @x@
 withinDeltaOf :: (Ord a, Num a)
@@ -326,6 +330,36 @@ testImpossibleParameters = do
         isInfinite llhd22 `shouldBe` False
         isInfinite llhd23 `shouldBe` True
 
+-- | Simulate from the birth-death-sampling process multiple times and use this
+-- to estimate the CI of probability the process is unobserved then check that
+-- this matches the function which computes this probability.
+bdsSimulations :: (Rate,Rate,Rate) -> Time -> IO Bool
+bdsSimulations simRates simDuration =
+  let simConfig = EpiBDS.configuration simDuration simRates
+      probUnobservedVals = map (\x -> probabilityUnobserved simRates (simDuration+x)) [-0.1,0.0,0.1]
+      probUnobserved = probUnobservedVals !! 1
+      numReplicates = 100
+      numObservations = length . filter EpiSim.isSampling
+      phat ns = (fromIntegral . length $ filter (>0) ns) / (fromIntegral (length ns))
+      probCI ns = (ph - d, ph + d) where ph = phat ns; n = fromIntegral $ length ns; d = 3 * sqrt (ph * (1 - ph) / n)
+  in do sims <- replicateM numReplicates (EpiUtil.simulationWithSystemRandom False simConfig EpiBDS.allEvents)
+        (a,b) <- pure . probCI $ map numObservations sims
+        return $ a < (1-probUnobserved) && (1-probUnobserved) < b
+
+testConditioningProbability :: SpecWith ()
+testConditioningProbability =
+  describe "Test probability of going unobserved is correct" $ do
+    it "Test empirical estimate has CI containing value" $ do
+      x <- bdsSimulations (2.0,0.4,0.1) 0.7
+      x `shouldBe` True
+      x' <- bdsSimulations (2.0,0.1,0.4) 0.7
+      x' `shouldBe` True
+      x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
+      x'' `shouldBe` True
+
+
+
+
 main :: IO ()
 main = hspec $ do
   testNbPGF
@@ -337,3 +371,4 @@ main = hspec $ do
   testConversion
   testImpossibleParameters
   testInhomBDSLlhd
+  testConditioningProbability
