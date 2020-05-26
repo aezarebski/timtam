@@ -92,7 +92,7 @@ rr'' params@(lam, _, _, _, _, _) delay z =
 
 
 
--- | The probability an individual does not give rise to a \(\psi\) or
+-- | The /probability/ an individual does not give rise to a \(\psi\) or
 -- \(\omega\) sampled observation during a period of time of length @duration@
 -- nor are \(\rho\) sampled at the end of this period which happens with
 -- probability @1-z@.

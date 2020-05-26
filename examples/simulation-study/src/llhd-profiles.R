@@ -2,7 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(stringr)
 
-PARAMS <- list(lambda = 3.2,
+PARAMS <- list(lambda = 1.5,
                mu = 0.3,
                psi = 0.3,
                rho = 0.15,
@@ -12,7 +12,13 @@ PARAMS <- list(lambda = 3.2,
 
 save_figures <- TRUE
 
-x <- read.csv("simulation-study-llhds.csv", header = FALSE, stringsAsFactors = FALSE)
+INPUT_FILE <- "out/simulation-study-llhds.csv"
+
+if (!file.exists(INPUT_FILE)) {
+    stop(sprintf("Cannot find the input file: %s", INPUT_FILE))
+}
+
+x <- read.csv(INPUT_FILE, header = FALSE, stringsAsFactors = FALSE)
 names(x) <- c("lambda", "mu", "psi", "rho", "omega", "nu", "llhd", "negative_binomial")
 nb_params <- t(sapply(str_extract_all(x$negative_binomial, "[\\d.]+(?:e-?\\d+)?"), as.numeric))
 x$neg_binom_r <- nb_params[,1]
@@ -115,7 +121,7 @@ if (save_figures) {
 }
 
 
-simulationEvents <- readLines("simulated-events.txt")
+simulationEvents <- readLines("out/simulated-events.txt")
 et <- as.list(table(str_extract(simulationEvents, "^[a-zA-Z]+")))
 
 mask <- grepl(pattern = "CatastropheEvent", x = simulationEvents)

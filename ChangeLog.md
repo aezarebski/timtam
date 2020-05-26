@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.1.2.1
+
+- Use `make` to run the `simulation-study`.
+
 ## 0.1.2.0
 
 - Include the `BDSCOD.Conditioning` module for helper functions for conditioning

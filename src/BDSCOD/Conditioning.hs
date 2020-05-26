@@ -4,11 +4,12 @@ import BDSCOD.Llhd
 import Epidemic.Types
 
 
--- | The probability that a single individual does not give rise to any
+-- | The /probability/ that a single individual does not give rise to any
 -- observable event during a period of time.
 --
--- This can be used to condition on there being at least one observation since
--- the origin time.
+-- __NOTE__ The rates here assume the total birth, death and observation rates.
+-- If there are multiple ways in which the process can be observed then the
+-- total observation rate is the sum of their rates.
 probabilityUnobserved ::
   (Rate,Rate,Rate)  -- ^ birth, death and observation rate
   -> Time           -- ^ duration of period
