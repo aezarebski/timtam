@@ -25,7 +25,10 @@ arePlausible obs (l, m, r, trs, o, tns)
   | otherwise = True
 
 
-
+-- | The total event rate
+--
+-- In Zarebski /et al/ (2020) the net event rate is \(\gamma\).
+--
 eventRate :: Parameters -> Double
 eventRate (lam, mu, psi, _, om, _) = lam + mu + psi + om
 
@@ -39,6 +42,7 @@ x1and2 params@(lam, _, _, _, _, _) =
       sqrtDisc = sqrt $ discriminant params
    in ((gam - sqrtDisc) / (2 * lam), (gam + sqrtDisc) / (2 * lam))
 
+odeHelpers :: Parameters -> Time -> (Double,Double,Double,Double)
 odeHelpers params delay = (x1,x2,disc,expFact)
   where
     (x1,x2) = x1and2 params
@@ -49,7 +53,8 @@ odeHelpers params delay = (x1,x2,disc,expFact)
 
 
 
-
+-- | The partial derivative of @p0@ with respect to its final argument @z@.
+p0' :: Parameters -> Time -> Probability -> Double
 p0' params delay z =
   (expFact * x2 - x1) / (x2 - expFact * (x1 - z) - z) -
   ((expFact - 1) * (x1 * (x2 - z) - expFact * x2 * (x1 - z))) /
@@ -57,6 +62,9 @@ p0' params delay z =
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
+-- | The second partial derivative of @p0@ with respect to its final argument
+-- @z@.
+p0'' :: Parameters -> Time -> Probability -> Double
 p0'' params delay z =
   (2 * (expFact - 1) ^ 2 * (x1 * (x2 - z) -
   expFact * x2 * (x1 - z))) /
@@ -66,12 +74,14 @@ p0'' params delay z =
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
+rr' :: Parameters -> Time -> Probability -> Double
 rr' params@(lam, _, _, _, _, _) delay z =
   (2 * (1 - expFact) * expFact * disc) /
   (lam ^ 2 * (x2 - expFact * (x1 - z) - z) ^ 3)
   where
     (x1, x2, disc, expFact) = odeHelpers params delay
 
+rr'' :: Parameters -> Time -> Probability -> Double
 rr'' params@(lam, _, _, _, _, _) delay z =
   (6 * (expFact - 1) ^ 2 * expFact * disc) /
   (lam ^ 2 * (x2 - expFact * (x1 - z) - z) ^ 4)
@@ -82,13 +92,21 @@ rr'' params@(lam, _, _, _, _, _) delay z =
 
 
 
-
+-- | The probability an individual does not give rise to a \(\psi\) or
+-- \(\omega\) sampled observation during a period of time of length @duration@
+-- nor are \(\rho\) sampled at the end of this period which happens with
+-- probability @1-z@.
+p0 :: Parameters -> Time -> Probability -> Probability
 p0 params delay z =
   (x1 * (x2 - z) - x2 * (x1 - z) * expFact) /
   ((x2 - z) - (x1 - z) * expFact)
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
+-- | The probability an individual has one extant lineage at present /given/
+-- there is a \(\rho\) sampling at present and it does not get sampled at this
+-- instant. In Zarebski /et al/ (2020) this is the function \(R(u,z)\).
+rr :: Parameters -> Time -> Probability -> Probability
 rr params@(lam, _, _, _, _, _) delay z =
   disc * expFact /
   ((lam ^ 2) * (((x2 - z) - (x1 - z) * expFact) ^ 2))
@@ -179,7 +197,7 @@ pdeStatistics params delay pdeSol@(PDESol nb k) =
 
 
 intervalLlhd ::
-     (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+     Parameters
   -> Double
   -> Double
   -> NegativeBinomial
