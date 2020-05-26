@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.1.0
+version:             0.1.2.0
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -19,6 +19,7 @@ extra-source-files:  README.md
 
 library
   exposed-modules: BDSCOD.Llhd
+                   BDSCOD.Conditioning
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd

@@ -1,5 +1,8 @@
 # BDSCOD
 
+This package defines the approximate likelihood of a birth-death process with
+various observation processes.
+
 ## Running the examples
 
 ```
