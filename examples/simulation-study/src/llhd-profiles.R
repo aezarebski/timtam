@@ -2,7 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(stringr)
 
-PARAMS <- list(lambda = 3.2,
+PARAMS <- list(lambda = 1.5,
                mu = 0.3,
                psi = 0.3,
                rho = 0.15,
