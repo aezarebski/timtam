@@ -333,18 +333,32 @@ testImpossibleParameters = do
 -- | Simulate from the birth-death-sampling process multiple times and use this
 -- to estimate the CI of probability the process is unobserved then check that
 -- this matches the function which computes this probability.
-bdsSimulations :: (Rate,Rate,Rate) -> Time -> IO Bool
+bdsSimulations :: (Rate, Rate, Rate) -> Time -> IO Bool
 bdsSimulations simRates simDuration =
   let simConfig = EpiBDS.configuration simDuration simRates
-      probUnobservedVals = map (\x -> probabilityUnobserved simRates (simDuration+x)) [-0.1,0.0,0.1]
+      probUnobservedVals =
+        map
+          (\x -> probabilityUnobserved simRates (simDuration + x))
+          [-0.1, 0.0, 0.1]
       probUnobserved = probUnobservedVals !! 1
       numReplicates = 100
       numObservations = length . filter EpiSim.isSampling
-      phat ns = (fromIntegral . length $ filter (>0) ns) / (fromIntegral (length ns))
-      probCI ns = (ph - d, ph + d) where ph = phat ns; n = fromIntegral $ length ns; d = 3 * sqrt (ph * (1 - ph) / n)
-  in do sims <- replicateM numReplicates (EpiUtil.simulationWithSystemRandom False simConfig EpiBDS.allEvents)
-        (a,b) <- pure . probCI $ map numObservations sims
-        return $ a < (1-probUnobserved) && (1-probUnobserved) < b
+      phat ns =
+        (fromIntegral . length $ filter (> 0) ns) / (fromIntegral (length ns))
+      probCI ns = (ph - d, ph + d)
+        where
+          ph = phat ns
+          n = fromIntegral $ length ns
+          d = 3 * sqrt (ph * (1 - ph) / n)
+   in do sims <-
+           replicateM
+             numReplicates
+             (EpiUtil.simulationWithSystemRandom
+                False
+                simConfig
+                EpiBDS.allEvents)
+         (a, b) <- pure . probCI $ map numObservations sims
+         return $ a < (1 - probUnobserved) && (1 - probUnobserved) < b
 
 testConditioningProbability :: SpecWith ()
 testConditioningProbability =
