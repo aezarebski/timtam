@@ -52,10 +52,10 @@ linspace x1 x2 n = [x1 + fromIntegral i * delta | i <- [0 .. (n - 1)]]
 
 main :: IO ()
 main =
-  let outputFileSimulation1 = "simulated-events.txt"
-      outputFileSimulation2 = "simulated-all-events.txt"
-      outputFileObservations = "simulated-events-observed.txt"
-      outputFileLlhdValues = "simulation-study-llhds.csv"
+  let outputFileSimulation1 = "out/simulated-events.txt"
+      outputFileSimulation2 = "out/simulated-all-events.txt"
+      outputFileObservations = "out/simulated-events-observed.txt"
+      outputFileLlhdValues = "out/simulation-study-llhds.csv"
       simDuration = 3.1
       simLambda = 3.2
       simMu = 0.3
