@@ -1,10 +1,10 @@
 
-figures: out/llhd-profile-lambda.pdf out/simulation-visualisation.png
+figures: out/parameter-llhd-profiles.pdf out/simulation-visualisation.png
 
 out/simulation-visualisation.png: src/birth-death-lines.R out/simulated-events.csv
 	Rscript src/birth-death-lines.R out/simulated-events.csv out/simulation-visualisation.png
 
-out/llhd-profile-lambda.pdf: out/simulation-study-llhds.csv src/llhd-profiles.R out/config.json
+out/parameter-llhd-profiles.pdf: out/simulation-study-llhds.csv src/llhd-profiles.R out/config.json
 	Rscript src/llhd-profiles.R
 
 out/simulation-study-llhds.csv: out/config.json
@@ -17,6 +17,7 @@ out/config.json: src/json-config.R
 clean:
 	rm -f out/config.json
 	stack clean
+	rm -f out/parameter-llhd-profiles.pdf
 	rm -f out/llhd-profile-*.pdf
 	rm -f out/simulated-all-events.txt
 	rm -f out/simulated-events-observed.txt

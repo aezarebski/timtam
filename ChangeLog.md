@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.1.2.3
+
+- Adjust the figures generated in `simulation-study`.
+
 ## 0.1.2.2
 
 - Include a visualisation of the simulated data set used in `simulation-study`
