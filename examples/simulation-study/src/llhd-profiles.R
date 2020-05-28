@@ -33,7 +33,8 @@ x$neg_binom_p <- 1 - nb_params[,2] # R and Wikipedia have different parameterisa
 font_scale_factor <- 0.5
 fig_theme <- theme(
     axis.title.x = element_text(size = font_scale_factor * 22),
-    axis.title.y = element_text(size = font_scale_factor * 22),
+    axis.title.y = element_blank(),
+    ## axis.title.y = element_text(size = font_scale_factor * 22),
     axis.ticks = ggplot2::element_blank(),
     axis.line.x.bottom = element_line(colour = "#000000"),
     legend.title = element_text(size = font_scale_factor * 22),
@@ -164,7 +165,8 @@ prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
     geom_vline(xintercept = num_unobserved_lineages, linetype = truth_linetype) +
     labs(x = "Unobserved Lineages",
          y = "Log-Likelihood") +
-    fig_theme
+    fig_theme +
+    theme(axis.title.y = element_text(size = font_scale_factor * 22))
 
 if (save_figures) {
     ggsave("out/llhd-profile-prevalence.pdf", plot = prev_figure, height = 10.5, width = 14.8, units = "cm")
