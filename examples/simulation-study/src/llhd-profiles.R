@@ -125,7 +125,9 @@ if (save_figures) {
 }
 
 
-simulationEvents <- readLines(config$outputEventsFile)
+## Suppress warnings because otherwise there is a warning about a missing new
+## line character that does not affect things.
+simulationEvents <- suppressWarnings(readLines(config$outputEventsFile))
 et <- as.list(table(str_extract(simulationEvents, "^[a-zA-Z]+")))
 
 mask <- grepl(pattern = "CatastropheEvent", x = simulationEvents)
@@ -139,11 +141,13 @@ rm(mask)
 
 num_unobserved_lineages <- 1 + et$InfectionEvent - et$OccurrenceEvent - et$RemovalEvent - et$SamplingEvent - sum(num_catastropheed) - sum(num_disastered)
 
-unique_thresh <- 0.000001
+## Because we do not include the true parameters in the LLHD evaluations, we
+## need to get the closest match to them among those that we have.
+unique_thresh <- 0.0006
 curr_nb <- as.list(filter(x, abs(lambda - PARAMS$lambda) < unique_thresh, mu == PARAMS$mu, psi == PARAMS$psi, abs(rho - PARAMS$rho) < unique_thresh, omega == PARAMS$omega, abs(nu - PARAMS$nu) < unique_thresh) %>% select(starts_with("neg_binom")))
 curr_nb <- list(neg_binom_r = mean(curr_nb$neg_binom_r), neg_binom_p = mean(curr_nb$neg_binom_p))
 
-prev_mesh <- 1:100 * 10
+prev_mesh <- 130:350
 plot_df <- data.frame(prevalence = prev_mesh, log_prob = dnbinom(prev_mesh, size = curr_nb$neg_binom_r, prob = curr_nb$neg_binom_p, log = TRUE))
 
 prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
