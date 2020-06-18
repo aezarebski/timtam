@@ -5,6 +5,8 @@ module Main where
 
 import Criterion.Main
 import Control.Monad (liftM)
+import Data.Aeson
+import qualified Data.ByteString.Lazy as B
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Epidemic
@@ -29,7 +31,7 @@ type SimParams = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probabi
 
 
 
-
+appMessage :: String
 appMessage =
   intercalate
     "\n"
@@ -58,7 +60,9 @@ rParamsAndObs =
       simNuTime = 20.0
       simParams = (simLambda, simMu, simPsi, [(simRhoTime,simRho)], simOmega, [(simNuTime,simNu)])
       simConfig = fromJust $ BDSCOD.configuration simDuration simParams
-   in do simEvents <- SimUtil.simulationWithSystemRandom True simConfig BDSCOD.allEvents
+      -- This commented line toggles whether to fix the seed.
+   -- in do simEvents <- SimUtil.simulationWithSystemRandom True simConfig BDSCOD.allEvents
+   in do simEvents <- SimUtil.simulation True simConfig BDSCOD.allEvents
          simObs <- pure $ eventsAsObservations (BDSCOD.observedEvents simEvents)
          putStrLn $ "The number of observations is: " ++ (show . length) simObs
          return (simParams, simObs)
@@ -69,16 +73,25 @@ evalLLHD bname (params, obs) =
 
 
 main :: IO ()
-main =
-  do putStrLn appMessage
-     defaultMain [ env rParamsAndObs $ \ ~(ps,os) -> bench "01" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "02" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "03" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "04" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "05" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "06" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "07" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "08" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "09" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 , env rParamsAndObs $ \ ~(ps,os) -> bench "10" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
-                 ]
+main = do
+  (ps, os) <- rParamsAndObs
+  B.writeFile "out/simulated-observations.json" $ encode os
+  defaultMain
+    [ bgroup
+        "llhd-evaluation"
+        [ bench "simulated-data" $
+          nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+        ]
+    ]
+  -- do putStrLn appMessage
+  --    defaultMain [ env rParamsAndObs $ \ ~(ps,os) -> bench "01" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "02" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "03" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "04" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "05" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "06" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "07" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "08" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "09" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                , env rParamsAndObs $ \ ~(ps,os) -> bench "10" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  --                ]
