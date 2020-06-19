@@ -3,20 +3,21 @@
 
 module Main where
 
-import Criterion.Main
+import BDSCOD.Llhd
+import BDSCOD.Types
+import BDSCOD.Utility
 import Control.Monad (liftM)
+import Criterion.Main
+import Criterion.Types
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Epidemic
-import Epidemic.Types
 import qualified Epidemic.BDSCOD as BDSCOD
+import Epidemic.Types
 import qualified Epidemic.Utility as SimUtil
-import BDSCOD.Llhd
-import BDSCOD.Types
-import BDSCOD.Utility
-
+import Statistics.Types (cl95)
 
 type SimParams = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
 
@@ -71,12 +72,27 @@ evalLLHD :: String -> (SimParams, [Observation]) -> Benchmark
 evalLLHD bname (params, obs) =
   bench bname $ nf (\o -> fst $ llhdAndNB o params initLlhdState) obs
 
+-- | Default benchmarking configuration.
+myConfig :: Config
+myConfig = Config {
+      confInterval = cl95
+    , timeLimit    = 5
+    , resamples    = 1000
+    , regressions  = []
+    , rawDataFile  = Nothing
+    , reportFile   = Nothing
+    , csvFile      = Nothing
+    , jsonFile     = Just "out/criterion-report.json"
+    , junitFile    = Nothing
+    , verbosity    = Quiet
+    , template     = "default"
+    }
 
 main :: IO ()
 main = do
   (ps, os) <- rParamsAndObs
   B.writeFile "out/simulated-observations.json" $ encode os
-  defaultMain
+  defaultMainWith myConfig
     [ bgroup
         "llhd-evaluation"
         [ bench "simulated-data" $
