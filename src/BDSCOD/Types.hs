@@ -1,19 +1,19 @@
 module BDSCOD.Types where
 
 
-import Epidemic.Types
+import Epidemic.Types.Parameter
 
 type NumLineages = Double
 
-data Event
-  = Birth
-  | Sample
-  | Occurrence
-  | Catastrophe NumLineages
-  | Disaster NumLineages
+data ObservedEvent
+  = OBirth
+  | OSample
+  | OOccurrence
+  | OCatastrophe NumLineages
+  | ODisaster NumLineages
   deriving (Show, Eq)
 
-type Observation = (Time, Event)
+type Observation = (Time, ObservedEvent)
 
 data NegativeBinomial
   = Zero
