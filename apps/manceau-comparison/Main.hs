@@ -9,27 +9,32 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Csv
 import Data.List (intercalate)
 import qualified Data.Vector as V
+import Epidemic.Types.Parameter
 
+observations :: [(Time, ObservedEvent)]
 observations =
-  [ (1.0, Birth)
-  , (1.0, Occurrence)
-  , (1.0, Birth)
-  , (1.0, Birth)
-  , (1.0, Sample)
-  , (1.0, Occurrence)
-  , (1.0, Catastrophe 3)
+  [ (1.0, OBirth)
+  , (1.0, OOccurrence)
+  , (1.0, OBirth)
+  , (1.0, OBirth)
+  , (1.0, OSample)
+  , (1.0, OOccurrence)
+  , (1.0, OCatastrophe 3)
   ]
 
+parameters :: [Parameters]
 parameters =
   [ (lam, 1.0, 0.3, [(7,0.5)], 0.6, [])
   | lam <- [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
   ]
 
+printLlhd :: [Observation] -> [Parameters] -> IO ()
 printLlhd d [] = return ()
 printLlhd d (p:ps) = do
   print . fst $ llhdAndNB d p initLlhdState
   printLlhd d ps
 
+appMessage :: String
 appMessage =
   intercalate
     "\n"
