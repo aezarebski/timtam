@@ -9,13 +9,15 @@ import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
 import qualified Data.Aeson as Json
+import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
-import Data.List (intercalate,intersperse)
+import Data.List (intercalate, intersperse)
 import Data.Maybe
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
 import Epidemic.Types.Parameter
+import Epidemic.Types.Population
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 
@@ -108,11 +110,20 @@ main = do
            simEvents <- SimUtil.simulation True (fromJust simConfig) SimBDSCOD.allEvents
            Prelude.writeFile outputEventsFile $ intercalate "\n" (map show simEvents)
            L.writeFile outputEventsCsv $ Csv.encode simEvents
+             -- Generate the Newick representations so we can have a tree view of the whole simulation.
+           let maybeEpiTree = maybeEpidemicTree simEvents
+           let Just (newickBuilder,newickMetaData) = asNewickString (0, Person 1) =<< maybeEpiTree
+           L.writeFile "demo-newick-string-epitree.txt" $ BBuilder.toLazyByteString newickBuilder
+           L.writeFile "demo-newick-metadata-epitree.csv" $ Csv.encode newickMetaData
            let obs =
                  eventsAsObservations <$>
                  SimBDSCOD.observedEvents simEvents
                numSimEvents = length simEvents
                numObs = length obs
+             -- Generate the Newick representations of the observed data
+           let Just (newickBuilder',newickMetaData') = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpiTree
+           L.writeFile "demo-newick-string-recontree.txt" $ BBuilder.toLazyByteString newickBuilder'
+           L.writeFile "demo-newick-metadata-recontree.csv" $ Csv.encode newickMetaData'
            fromJust $ Prelude.writeFile outputObservationsFile . intersperse '\n' <$> (fmap show obs)
            putStrLn $ "Number of events in the simulation: " ++ show numSimEvents
            putStrLn $ "Number of events in the dataset: " ++ show numObs
