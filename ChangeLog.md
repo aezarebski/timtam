@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.1.2.4
+
+- Update to newer versions of `epi-sim` and `epi-types`.
+
 ## 0.1.2.3
 
 - Adjust the figures generated in `simulation-study`.
