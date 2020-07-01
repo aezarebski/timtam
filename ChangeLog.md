@@ -2,6 +2,7 @@
 
 ## 0.1.2.4
 
+- Include Newick output from `simulation-study` and generate a very simple tree.
 - Update to newer versions of `epi-sim` and `epi-types`.
 
 ## 0.1.2.3
