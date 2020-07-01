@@ -21,6 +21,8 @@ INPUT_FILE <- config$outputLlhdFile
 
 if (!file.exists(INPUT_FILE)) {
     stop(sprintf("Cannot find the input file: %s", INPUT_FILE))
+} else {
+    cat("Found the input file:", INPUT_FILE, "\n")
 }
 
 x <- read.csv(INPUT_FILE, header = FALSE, stringsAsFactors = FALSE)
@@ -140,16 +142,17 @@ if (save_figures) {
 simulationEvents <- suppressWarnings(readLines(config$outputEventsFile))
 et <- as.list(table(str_extract(simulationEvents, "^[a-zA-Z]+")))
 
-mask <- grepl(pattern = "CatastropheEvent", x = simulationEvents)
+mask <- grepl(pattern = "Catastrophe", x = simulationEvents)
 num_catastropheed <- sapply(str_match_all(simulationEvents[mask], pattern = "Person\\s[0-9]+"), length)
 rm(mask)
 
-mask <- grepl(pattern = "DisasterEvent", x = simulationEvents)
+mask <- grepl(pattern = "Disaster", x = simulationEvents)
 num_disastered <- sapply(str_match_all(simulationEvents[mask], pattern = "Person\\s[0-9]+"), length)
 rm(mask)
 
+num_unobserved_lineages <- 1 + et$Infection - et$Occurrence - et$Removal - et$Sampling - sum(num_catastropheed) - sum(num_disastered)
+cat(sprintf("\nThe number of unobserved lineages, a.k.a. the final prevalence, is %d\n\n", num_unobserved_lineages))
 
-num_unobserved_lineages <- 1 + et$InfectionEvent - et$OccurrenceEvent - et$RemovalEvent - et$SamplingEvent - sum(num_catastropheed) - sum(num_disastered)
 
 ## Because we do not include the true parameters in the LLHD evaluations, we
 ## need to get the closest match to them among those that we have.

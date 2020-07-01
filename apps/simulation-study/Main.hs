@@ -11,10 +11,11 @@ import BDSCOD.Utility
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
-import Data.List (intercalate)
+import Data.List (intercalate,intersperse)
 import Data.Maybe
 import qualified Epidemic.BDSCOD as SimBDSCOD
-import Epidemic.Types
+import Epidemic.Types.Events
+import Epidemic.Types.Parameter
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 
@@ -35,7 +36,7 @@ llhdsWriteFile fp d ps duration conditionLlhd =
       let x = condLlhdAndNB d p duration conditionLlhd
       appendFile fp $ output p x
       llhdsWriteFile fp d ps' duration conditionLlhd
-      where output (x1, x2, x3, ((_, x4):_), x5, [(_, x6)]) (x7, x8) =
+      where output (x1, x2, x3, ((_, x4):_), x5, ((_, x6)):_) (x7, x8) =
               intercalate "," $
               map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
 
@@ -73,7 +74,7 @@ data SimStudyParams =
     , simRhoTimes :: [Time]
     , simOmega :: Rate
     , simNu :: Probability
-    , simNuTime :: Time
+    , simNuTimes :: [Time]
     }
   deriving (Show, Generic)
 
@@ -85,15 +86,18 @@ readConfigFile fp = Json.decode <$> L.readFile fp
 main :: IO ()
 main = do
   config <- readConfigFile "out/config.json"
+  if isJust config
+    then putStrLn "Configuration file read successfully!"
+    else putStrLn "Could not read configuration JSON!!!"
   let SimStudyParams{..} = fromJust config
-      simParams = (simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)])
+      simParams = (simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes])
       infParamss =
-        [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | l <- linspace 1.2 1.8 200] ++
-        [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | m <- linspace 0.1 0.6 200] ++
-        [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | p <- linspace 0.2 0.4 200] ++
-        [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(simNuTime,simNu)]) | r <- linspace 0.1 0.50 200] ++
-        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(simNuTime,simNu)]) | o <- linspace 0.2 0.4 200] ++
-        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(simNuTime,n)]) | n <- linspace 0.1 0.50 200]
+        [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- linspace 1.2 1.8 200] ++
+        [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- linspace 0.1 0.6 200] ++
+        [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- linspace 0.2 0.4 200] ++
+        [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | r <- linspace 0.1 0.50 200] ++
+        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(nt,simNu) | nt <- simNuTimes]) | o <- linspace 0.2 0.4 200] ++
+        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,n) | nt <- simNuTimes]) | n <- linspace 0.1 0.50 200]
       simConfig = SimBDSCOD.configuration simDuration simParams
       conditionUponObservation = True
    in if isNothing simConfig
@@ -105,11 +109,13 @@ main = do
            Prelude.writeFile outputEventsFile $ intercalate "\n" (map show simEvents)
            L.writeFile outputEventsCsv $ Csv.encode simEvents
            let obs =
-                 eventsAsObservations $
+                 eventsAsObservations <$>
                  SimBDSCOD.observedEvents simEvents
                numSimEvents = length simEvents
                numObs = length obs
-           Prelude.writeFile outputObservationsFile $ intercalate "\n" (map show obs)
+           fromJust $ Prelude.writeFile outputObservationsFile . intersperse '\n' <$> (fmap show obs)
            putStrLn $ "Number of events in the simulation: " ++ show numSimEvents
            putStrLn $ "Number of events in the dataset: " ++ show numObs
-           llhdsWriteFile outputLlhdFile obs infParamss simDuration conditionUponObservation
+           if isJust obs
+             then llhdsWriteFile outputLlhdFile (fromJust obs) infParamss simDuration conditionUponObservation
+             else putStrLn "The observations are nothing!"
