@@ -42,13 +42,14 @@ fig_theme <- theme(
     legend.title = element_text(size = font_scale_factor * 22),
     plot.title = element_text(size = font_scale_factor * 32),
     plot.subtitle = element_text(size = font_scale_factor * 22),
-    panel.grid.minor = ggplot2::element_blank(),
+    panel.grid.minor.x = ggplot2::element_blank(),
+    panel.grid.minor.y = ggplot2::element_blank(),
+    ## panel.grid.minor.y = ggplot2::element_line(color="#cbcbcb"),
     panel.grid.major.y = ggplot2::element_line(color="#cbcbcb"),
     panel.grid.major.x = ggplot2::element_blank(),
     panel.background = ggplot2::element_blank(),
     strip.background = ggplot2::element_rect(fill="white"))
 
-y_scaling <- scale_y_continuous(breaks = seq(from = -60, to = -45, by = 5))
 
 truth_linetype <- "dashed"
 
@@ -57,7 +58,7 @@ lambda_figure <- ggplot(filter(x, mu == PARAMS$mu, psi == PARAMS$psi, rho == PAR
     geom_vline(xintercept = PARAMS$lambda, linetype = truth_linetype) +
     labs(x = "Birth rate",
          y = "Log-Likelihood") +
-    y_scaling +
+    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
     fig_theme
 
 if (save_figures) {
@@ -71,7 +72,7 @@ mu_figure <- ggplot(filter(x, lambda == PARAMS$lambda, psi == PARAMS$psi, rho ==
     geom_vline(xintercept = PARAMS$mu, linetype = truth_linetype) +
     labs(x = "Death rate",
          y = "Log-Likelihood") +
-    y_scaling +
+    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
     fig_theme
 
 if (save_figures) {
@@ -85,7 +86,7 @@ psi_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, rho == 
     geom_vline(xintercept = PARAMS$psi, linetype = truth_linetype) +
     labs(x = "Sampling rate",
          y = "Log-Likelihood") +
-    y_scaling +
+    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
     fig_theme
 
 if (save_figures) {
@@ -99,7 +100,7 @@ rho_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, psi == 
     geom_vline(xintercept = PARAMS$rho, linetype = truth_linetype) +
     labs(x = "Catastrophe extinction\nprobability",
          y = "Log-Likelihood") +
-    y_scaling +
+    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
     fig_theme
 
 if (save_figures) {
@@ -113,7 +114,7 @@ omega_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, psi =
     geom_vline(xintercept = PARAMS$omega, linetype = truth_linetype) +
     labs(x = "Occurrence rate",
          y = "Log-Likelihood") +
-    y_scaling +
+    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
     fig_theme
 
 if (save_figures) {
@@ -127,7 +128,7 @@ nu_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, psi == P
     geom_vline(xintercept = PARAMS$nu, linetype = truth_linetype) +
     labs(x = "Disaster extinction\nprobability",
          y = "Log-Likelihood") +
-    y_scaling +
+    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
     fig_theme
 
 if (save_figures) {
@@ -160,7 +161,7 @@ unique_thresh <- 0.0006
 curr_nb <- as.list(filter(x, abs(lambda - PARAMS$lambda) < unique_thresh, mu == PARAMS$mu, psi == PARAMS$psi, abs(rho - PARAMS$rho) < unique_thresh, omega == PARAMS$omega, abs(nu - PARAMS$nu) < unique_thresh) %>% select(starts_with("neg_binom")))
 curr_nb <- list(neg_binom_r = mean(curr_nb$neg_binom_r), neg_binom_p = mean(curr_nb$neg_binom_p))
 
-prev_mesh <- 130:350
+prev_mesh <- 250:550
 plot_df <- data.frame(prevalence = prev_mesh, log_prob = dnbinom(prev_mesh, size = curr_nb$neg_binom_r, prob = curr_nb$neg_binom_p, log = TRUE))
 
 prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
