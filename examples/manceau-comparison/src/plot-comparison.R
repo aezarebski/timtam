@@ -1,4 +1,5 @@
 library(ggplot2)
+library(cowplot)
 
 llAnkit <- c(
   -40.4552507476100,
@@ -45,21 +46,14 @@ fig_theme <- theme(
     panel.background = ggplot2::element_blank(),
     strip.background = ggplot2::element_rect(fill="white"))
 
-ggplot(plot_df, aes(x = lambda)) +
+llhd_comp_fig <- ggplot(plot_df, aes(x = lambda)) +
     geom_line(aes(y = zarebski)) +
     geom_point(aes(y = ankit), shape = 5, size = 3) +
     labs(x = "Birth Rate",
          y = "Log-likelihood") +
     scale_colour_manual(values = c("#1380A1", "#FAAB18")) +
+    scale_y_continuous(position = "right") +
     fig_theme
-
-
-ggsave("out/manceau-comparison.pdf", height = 10.5, width = 14.8, units = "cm")
-
-
-
-
-
 
 
 
@@ -90,7 +84,7 @@ points_df <- data.frame(x = c(occurrence_x_pos,occurrence_x_pos,3,1,4,5),
                                  ))
 
 
-g <- ggplot() +
+toy_data_fig <- ggplot() +
     segment(c(occurrence_x_pos,7.5),
             c(occurrence_x_pos,-0.5),
             linetype = "dashed") +
@@ -105,11 +99,30 @@ g <- ggplot() +
     segment(c(2,4), c(4,4)) +
     segment(c(3,6), c(5,6)) +
     geom_point(data = points_df,
-               mapping = aes(x = x, y = y, colour = colour)) +
-    labs(colour = "Observation type",
-         y = "Time") +
-    theme(axis.line.y = element_line(colour = "grey"),
+               mapping = aes(x = x, y = y, shape = colour),
+               size = 6) +
+    labs(shape = "Observation type") +
+    scale_y_continuous(name = "Time", breaks = 0:7, labels = 7:0) +
+    scale_shape_manual(values = c(1,4,2)) +
+    theme(axis.line.y = element_line(),
           axis.line.x = element_blank(),
-          axis.title.x = element_blank())
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.background = element_blank(),
+          legend.position = "bottom",
+          legend.key = element_blank()
+          )
 
-print(g)
+manceau_comp <- plot_grid(toy_data_fig,
+                          llhd_comp_fig,
+                          rel_widths = c(0.6,1.0),
+                          labels = c("A", "B"),
+                          scale = 0.9)
+
+## print(manceau_comp)
+ggsave("out/manceau-comparison.pdf",
+       plot = manceau_comp,
+       height = 10.5,
+       width = 14.8,
+       units = "cm")
