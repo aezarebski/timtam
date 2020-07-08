@@ -55,3 +55,61 @@ ggplot(plot_df, aes(x = lambda)) +
 
 
 ggsave("out/manceau-comparison.pdf", height = 10.5, width = 14.8, units = "cm")
+
+
+
+
+
+
+
+
+
+
+segment <- function(p0, p1, ...) {
+    seg_df <- data.frame(x = p0[1],
+                         y = p0[2],
+                         xend = p1[1],
+                         yend = p1[2])
+    geom_segment(data = seg_df,
+                 mapping = aes(x = x,
+                               y = y,
+                               xend = xend,
+                               yend = yend),
+                 ...)
+}
+
+occurrence_x_pos <- 5.5
+points_df <- data.frame(x = c(occurrence_x_pos,occurrence_x_pos,3,1,4,5),
+                        y = c(1,5,2,0,0,0),
+                        colour = c( "Occurrence"
+                                 , "Occurrence"
+                                 , "Sample"
+                                 , "Catastrophe"
+                                 , "Catastrophe"
+                                 , "Catastrophe"
+                                 ))
+
+
+g <- ggplot() +
+    segment(c(occurrence_x_pos,7.5),
+            c(occurrence_x_pos,-0.5),
+            linetype = "dashed") +
+    segment(c(1,0), c(1, 3)) +
+    segment(c(2,3), c(2, 4)) +
+    segment(c(3,2), c(3, 3)) +
+    segment(c(3,4), c(3, 6)) +
+    segment(c(4,0), c(4, 4)) +
+    segment(c(4,6), c(4, 7)) +
+    segment(c(5,0), c(5, 6)) +
+    segment(c(1,3), c(3,3)) +
+    segment(c(2,4), c(4,4)) +
+    segment(c(3,6), c(5,6)) +
+    geom_point(data = points_df,
+               mapping = aes(x = x, y = y, colour = colour)) +
+    labs(colour = "Observation type",
+         y = "Time") +
+    theme(axis.line.y = element_line(colour = "grey"),
+          axis.line.x = element_blank(),
+          axis.title.x = element_blank())
+
+print(g)
