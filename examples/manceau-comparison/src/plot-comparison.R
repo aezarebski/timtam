@@ -124,5 +124,5 @@ manceau_comp <- plot_grid(toy_data_fig,
 ggsave("out/manceau-comparison.pdf",
        plot = manceau_comp,
        height = 10.5,
-       width = 14.8,
+       width = 28.8,
        units = "cm")
