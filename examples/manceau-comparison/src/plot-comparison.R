@@ -84,17 +84,20 @@ points_df <- data.frame(x = c(occurrence_x_pos,occurrence_x_pos,3,1,4,5),
                                  ))
 
 
+point_delta_circle <- 0.25
+point_delta_triangle <- 0.37
+
 toy_data_fig <- ggplot() +
     segment(c(occurrence_x_pos,7.5),
             c(occurrence_x_pos,-0.5),
             linetype = "dashed") +
-    segment(c(1,0), c(1, 3)) +
+    segment(c(1,0+point_delta_circle), c(1, 3)) +
     segment(c(2,3), c(2, 4)) +
-    segment(c(3,2), c(3, 3)) +
+    segment(c(3,2+point_delta_triangle), c(3, 3)) +
     segment(c(3,4), c(3, 6)) +
-    segment(c(4,0), c(4, 4)) +
+    segment(c(4,0+point_delta_circle), c(4, 4)) +
     segment(c(4,6), c(4, 7)) +
-    segment(c(5,0), c(5, 6)) +
+    segment(c(5,0+point_delta_circle), c(5, 6)) +
     segment(c(1,3), c(3,3)) +
     segment(c(2,4), c(4,4)) +
     segment(c(3,6), c(5,6)) +
