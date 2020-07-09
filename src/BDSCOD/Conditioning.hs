@@ -1,7 +1,7 @@
 module BDSCOD.Conditioning where
 
 import BDSCOD.Llhd
-import Epidemic.Types
+import Epidemic.Types.Parameter
 
 
 -- | The /probability/ that a single individual does not give rise to any

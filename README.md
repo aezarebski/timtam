@@ -5,14 +5,7 @@ various observation processes.
 
 ## Running the Manceau example
 
-```
-$ stack build
-$ stack test
-$ stack exec manceau-comparison
-$ Rscript R/manceau-comparison.R
-```
-
-This creates `out/manceau-comparison.pdf`.
+See `examples/manceau-comparison/README.md` for details of the comparison
 
 ## Simulation study
 

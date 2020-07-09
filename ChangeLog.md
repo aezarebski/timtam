@@ -1,5 +1,15 @@
 # ChangeLog
 
+## 0.1.2.5
+
+- Include a `manceau-comparison` example and include a figure of the data that
+  is used in the comparison.
+
+## 0.1.2.4
+
+- Include Newick output from `simulation-study` and generate a very simple tree.
+- Update to newer versions of `epi-sim` and `epi-types`.
+
 ## 0.1.2.3
 
 - Adjust the figures generated in `simulation-study`.

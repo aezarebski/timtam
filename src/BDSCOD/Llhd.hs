@@ -4,7 +4,9 @@ import Data.List (find)
 import Data.Maybe (fromJust)
 import BDSCOD.Types
 import BDSCOD.Utility
-import Epidemic.Types
+import Epidemic.Types.Parameter
+import Epidemic.Types.Events
+import Epidemic.Types.Population
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
 -- removal rate, the sampling rate, the timing and probability of catastrophic
@@ -210,16 +212,16 @@ intervalLlhd params delay k nb =
 
 
 
-
-eventLlhd _ (lam, _, _, _, _, _) Birth k nb = (log lam, k + 1, nb)
-eventLlhd _ (_, _, psi, _, _, _) Sample k nb = (log psi, k - 1, nb)
-eventLlhd _ (_, _, _, _, om, _) Occurrence k nb@(NegBinom r p) =
+eventLlhd :: Time -> Parameters -> ObservedEvent -> NumLineages -> NegativeBinomial -> (LogLikelihood, NumLineages, NegativeBinomial)
+eventLlhd _ (lam, _, _, _, _, _) OBirth k nb = (log lam, k + 1, nb)
+eventLlhd _ (_, _, psi, _, _, _) OSample k nb = (log psi, k - 1, nb)
+eventLlhd _ (_, _, _, _, om, _) OOccurrence k nb@(NegBinom r p) =
   (log om + log (nbPGF' nb 1), k, NegBinom (r + 1) p)
-eventLlhd t (_, _, _, rhs, _, _) (Catastrophe n) k nb@(NegBinom r p) =
+eventLlhd t (_, _, _, rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
   let rh = snd . fromJust $ find ((== t) . fst) rhs
       logL = n * log rh + log (nbPGF nb (1 - rh))
    in (logL, k - n, NegBinom r ((1 - rh) * p))
-eventLlhd t (_, _, _, _, _, nus) (Disaster n) k nb@(NegBinom r p) =
+eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
   let nu = snd . fromJust $ find ((== t) . fst) nus
       logL = n * log nu + log (nbPGFdash n nb (1 - nu))
    in (logL, k, NegBinom (r + n) ((1 - nu) * p))

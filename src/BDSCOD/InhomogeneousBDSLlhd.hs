@@ -5,7 +5,7 @@ import BDSCOD.Llhd hiding (initLlhdState, llhdAndNB')
 import BDSCOD.Types
 import Data.List (intercalate)
 import Data.Maybe (fromJust, fromMaybe)
-import Epidemic.Types
+import Epidemic.Types.Parameter
 import qualified Data.Aeson as Json
 import GHC.Generics
 
