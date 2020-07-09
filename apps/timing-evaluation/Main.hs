@@ -6,16 +6,14 @@ module Main where
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
-import Control.Monad (liftM)
 import Criterion.Main
 import Criterion.Types
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List (intercalate)
-import Data.Maybe (fromJust)
-import Epidemic
+import Data.Maybe (fromJust,isJust)
 import qualified Epidemic.BDSCOD as BDSCOD
-import Epidemic.Types
+import Epidemic.Types.Parameter
 import qualified Epidemic.Utility as SimUtil
 import Statistics.Types (cl95)
 
@@ -48,8 +46,8 @@ appMessage =
     ]
 
 
-rParamsAndObs :: IO (SimParams,[Observation])
-rParamsAndObs =
+paramsAndRandomObs :: IO (SimParams, Maybe [Observation])
+paramsAndRandomObs =
   let simDuration = 3.0
       simLambda = 3.2
       simMu = 0.3
@@ -64,7 +62,7 @@ rParamsAndObs =
       -- This commented line toggles whether to fix the seed.
    -- in do simEvents <- SimUtil.simulationWithSystemRandom True simConfig BDSCOD.allEvents
    in do simEvents <- SimUtil.simulation True simConfig BDSCOD.allEvents
-         simObs <- pure $ eventsAsObservations (BDSCOD.observedEvents simEvents)
+         simObs <- pure $ eventsAsObservations <$> (BDSCOD.observedEvents simEvents)
          putStrLn $ "The number of observations is: " ++ (show . length) simObs
          return (simParams, simObs)
 
@@ -90,15 +88,21 @@ myConfig = Config {
 
 main :: IO ()
 main = do
-  (ps, os) <- rParamsAndObs
-  B.writeFile "out/simulated-observations.json" $ encode os
-  defaultMainWith myConfig
-    [ bgroup
-        "llhd-evaluation"
-        [ bench "simulated-data" $
-          nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
+  (ps, maybeObs) <- paramsAndRandomObs
+  if isJust maybeObs
+    then
+    let justObs = fromJust maybeObs
+     in do
+      B.writeFile "out/simulated-observations.json" $ encode justObs
+      defaultMainWith myConfig
+        [ bgroup
+          "llhd-evaluation"
+          [ bench "simulated-data" $
+            nf (\p -> fst $ llhdAndNB justObs p initLlhdState) ps
+          ]
         ]
-    ]
+    else
+    putStrLn "Simulation failed."
   -- do putStrLn appMessage
   --    defaultMain [ env rParamsAndObs $ \ ~(ps,os) -> bench "01" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps
   --                , env rParamsAndObs $ \ ~(ps,os) -> bench "02" $ nf (\p -> fst $ llhdAndNB os p initLlhdState) ps

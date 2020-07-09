@@ -13,7 +13,6 @@ build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
                      ChangeLog.md
-                     R/manceau-comparison.R
 
 
 library
@@ -24,20 +23,12 @@ library
                    BDSCOD.InhomogeneousBDSLlhd
   hs-source-dirs:
       src
-<<<<<<< HEAD
-  build-depends: aeson
-               , base >= 4.7 && < 5
-               , deepseq >= 1.4.4.0
-               , epi-sim
-               , epi-types
-               , vector
-=======
   build-depends: base >= 4.7 && < 5
+               , deepseq >= 1.4.4.0
                , epi-sim >= 0.2.0.0
                , vector
                , aeson
                , epi-types >= 0.2.1.1
->>>>>>> master
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs -Wmissing-signatures
 
@@ -115,8 +106,8 @@ executable timing-evaluation
                 , bytestring       >= 0.10
                 , criterion        == 1.5.6.2
                 , deepseq          >= 1.4.4.0
-                , epi-sim          == 0.1.8.8
-                , epi-types        == 0.1.1.1
+                , epi-types >= 0.2.1.1
+                , epi-sim >= 0.2.0.0
                 , statistics       >= 0.15
   default-language: Haskell2010
 

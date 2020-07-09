@@ -2,19 +2,10 @@
 
 module BDSCOD.Types where
 
--- import Control.DeepSeq
--- import Data.Aeson
--- import Epidemic.Types
--- import GHC.Generics (Generic)
-
-
--- instance NFData Event
-
--- instance ToJSON Event
-
--- instance FromJSON Event
-
+import Control.DeepSeq
+import Data.Aeson
 import Epidemic.Types.Parameter
+import GHC.Generics (Generic)
 
 type NumLineages = Double
 
@@ -24,8 +15,13 @@ data ObservedEvent
   | OOccurrence
   | OCatastrophe NumLineages
   | ODisaster NumLineages
-  deriving (Show, Eq)
->>>>>>> master
+  deriving (Show, Eq, Generic)
+
+instance NFData ObservedEvent
+
+instance ToJSON ObservedEvent
+
+instance FromJSON ObservedEvent
 
 type Observation = (Time, ObservedEvent)
 

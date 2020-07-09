@@ -1,7 +1,7 @@
 module BDSCOD.Utility where
 
 import qualified Data.Vector as V
-import qualified Epidemic as EpiSim
+
 import Epidemic.Types.Parameter
 import Epidemic.Types.Events
 import Epidemic.Types.Population
