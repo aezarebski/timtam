@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
@@ -8,6 +9,7 @@ import BDSCOD.Types
 import BDSCOD.Utility
 import Criterion.Main
 import Criterion.Types
+import GHC.Generics (Generic)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List (intercalate)
@@ -17,18 +19,23 @@ import Epidemic.Types.Parameter
 import qualified Epidemic.Utility as SimUtil
 import Statistics.Types (cl95)
 
-type SimParams = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+-- | This is the parameters of the likelihood function.
+newtype SimParams =
+  SimParams
+    (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+  deriving (Show, Eq, Generic)
 
-
--- llhdsWriteFile fp d ps = case ps of
---   [] -> return ()
---   (p:ps') -> do {appendFile fp $ output p (llhdAndNB d p initLlhdState);
---                                     llhdsWriteFile fp d ps'}
---                   where
---                     output (x1, x2, x3, [(_,x4)], x5, [(_,x6)]) (x7, x8) =
---                       intercalate "," $ map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
-
-
+-- | The record of a computation including the size of the data set processed,
+-- the computed value, the time taken and the path to the file where the input
+-- data is stored.
+data ComputationRecord =
+  ComputationRecord
+    { crSimulationSize :: Int
+    , crLlhd :: LogLikelihood
+    , crEvalTime :: Double
+    , crObservationFile :: FilePath
+    }
+  deriving (Show, Eq, Generic)
 
 appMessage :: String
 appMessage =
@@ -64,10 +71,10 @@ paramsAndRandomObs =
    in do simEvents <- SimUtil.simulation True simConfig BDSCOD.allEvents
          simObs <- pure $ eventsAsObservations <$> (BDSCOD.observedEvents simEvents)
          putStrLn $ "The number of observations is: " ++ (show . length) simObs
-         return (simParams, simObs)
+         return (SimParams simParams, simObs)
 
 evalLLHD :: String -> (SimParams, [Observation]) -> Benchmark
-evalLLHD bname (params, obs) =
+evalLLHD bname ((SimParams params), obs) =
   bench bname $ nf (\o -> fst $ llhdAndNB o params initLlhdState) obs
 
 -- | Default benchmarking configuration.
@@ -88,7 +95,7 @@ myConfig = Config {
 
 main :: IO ()
 main = do
-  (ps, maybeObs) <- paramsAndRandomObs
+  (SimParams ps, maybeObs) <- paramsAndRandomObs
   if isJust maybeObs
     then
     let justObs = fromJust maybeObs
