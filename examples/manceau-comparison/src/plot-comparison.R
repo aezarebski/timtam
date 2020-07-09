@@ -1,5 +1,7 @@
 library(ggplot2)
 library(cowplot)
+library(magrittr)
+library(dplyr)
 
 llAnkit <- c(
   -40.4552507476100,
@@ -14,22 +16,9 @@ llAnkit <- c(
   -47.0239173599859
 )
 
-llZar <- c(
-    -40.4550918517829
-    ,-40.87013575276441
-    ,-41.38157282061684
-    ,-41.9803636161457
-    ,-42.658637698856054
-    ,-43.40945251151045
-    ,-44.226626725508694
-    ,-45.104620318860626
-    ,-46.03844474479797
-    ,-47.02359300426023
-)
-
-lambdaVals <- 1.0 + 1:10 / 10
-
-plot_df <- data.frame(lambda = lambdaVals, ankit = llAnkit, zarebski = llZar)
+plot_df <- read.csv("out/computed-values.csv", header = FALSE) %>%
+    set_names(c("lambda", "zarebski")) %>%
+    mutate(ankit = llAnkit)
 
 font_scale_factor <- 0.5
 fig_theme <- theme(

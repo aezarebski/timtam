@@ -1,15 +1,14 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
 import BDSCOD.Llhd
 import BDSCOD.Types
-import Control.Applicative
 import qualified Data.ByteString.Lazy as BL
 import Data.Csv
 import Data.List (intercalate)
-import qualified Data.Vector as V
 import Epidemic.Types.Parameter
+import GHC.Generics (Generic)
 
 observations :: [(Time, ObservedEvent)]
 observations =
@@ -28,11 +27,21 @@ parameters =
   | lam <- [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
   ]
 
-printLlhd :: [Observation] -> [Parameters] -> IO ()
-printLlhd d [] = return ()
-printLlhd d (p:ps) = do
-  print . fst $ llhdAndNB d p initLlhdState
-  printLlhd d ps
+data Result =
+  Result
+    { birthRate :: Rate
+    , llhd :: LogLikelihood
+    }
+  deriving (Generic)
+
+instance ToRecord Result
+
+paramsAndLlhd :: [Observation] -> Parameters -> Result
+paramsAndLlhd obs p =
+  let (ll, _) = llhdAndNB obs p initLlhdState
+      (lam, _, _, _, _, _) = p
+   in Result lam ll
+
 
 appMessage :: String
 appMessage =
@@ -51,4 +60,6 @@ appMessage =
 main :: IO ()
 main = do
   putStrLn appMessage
-  printLlhd observations parameters
+  let csvByteString = encode $ map (paramsAndLlhd observations) parameters
+      outputCsv = "out/computed-values.csv"
+   in BL.writeFile outputCsv csvByteString
