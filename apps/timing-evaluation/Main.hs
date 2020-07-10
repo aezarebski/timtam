@@ -111,8 +111,8 @@ observationsJsonFilePath n =
 
 main :: IO ()
 main =
-  let modelParams = ModelParameters (1.5,0.3,0.3,[(rt,0.2) | rt <- [3.5,4.5,5.5,6.5]],0.3,[(nt,0.2) | nt <- [5,6,7,8]]) 10
-      simIds = [1..10] :: [Int]
+  let modelParams = ModelParameters (1.5,0.3,0.3,[],0.3,[]) 5
+      simIds = [1..20] :: [Int]
       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
     in do putStrLn appMessage
           simObsWithId <- mapM (getObservations modelParams) simIds
