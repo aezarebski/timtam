@@ -30,3 +30,17 @@ python-dateutil==2.8.1
 scipy==1.4.1
 six==1.15.0
 ```
+
+## Running
+
+```
+stack clean 
+stack build 
+rm out/*
+rm fibber.html 
+rm fobber.csv 
+stack exec -- timing-evaluation --output fibber.html --csv fobber.csv --time-limit 5 
+Rscript src/prepare-simulations-for-popsize.R 
+cd popsize-distribution 
+./run-python-timing.sh
+```
