@@ -13,8 +13,8 @@ import Criterion.Main
 import GHC.Generics (Generic)
 import Data.Aeson as JSON
 import qualified Data.ByteString.Lazy as B
-import Data.List (intercalate)
-import Data.Maybe (fromJust,isJust,fromMaybe)
+import Data.List (intercalate,find)
+import Data.Maybe (fromJust,isJust,fromMaybe,catMaybes)
 import qualified Data.Csv as CSV
 import qualified Epidemic.BDSCOD as BDSCOD
 import Epidemic.Types.Parameter
@@ -100,6 +100,15 @@ leftPad c l x
   | length x == l = Just x
   | length x < l = leftPad c l . (c:) $ x
   | otherwise = Nothing
+
+-- | Return a list of the first element of a list satisfying each predicate
+-- allowing duplicates.
+multipleFinds :: [(a -> Bool)] -- ^ predicates
+              -> [a]
+              -> [a]
+multipleFinds predicates values =
+  catMaybes $ map (\p -> find p values) predicates
+
 
 -- | The name of the file to write the simulation observations to.
 observationsJsonFilePath :: Int -> FilePath
