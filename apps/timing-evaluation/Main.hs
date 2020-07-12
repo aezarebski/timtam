@@ -53,24 +53,27 @@ data LlhdAndData =
 
 instance CSV.ToRecord LlhdAndData
 
+type Simulation = ([Observation], Int)
 
+-- | Return the number of observations in a simulated data set.
+simulationSize :: Simulation -> Int
+simulationSize = length . fst
 
 -- | Record the simulations and return a record of the details.
 recordSimulationOutput :: ModelParameters
-                       -> ([Observation], Int) -- ^ observations and identifier for output
+                       -> Simulation
                        -> IO LlhdAndData
-recordSimulationOutput (ModelParameters params _) (obs,simNum) =
+recordSimulationOutput (ModelParameters params _) sim@(obs,simNum) =
   let obsJson = observationsJsonFilePath simNum
-      simSize = length obs
       obsLlhd = fst $ llhdAndNB obs params initLlhdState
       in do B.writeFile obsJson $ JSON.encode obs
-            return $ LlhdAndData simSize obsLlhd obsJson
+            return $ LlhdAndData (simulationSize sim) obsLlhd obsJson
 
 
 
 -- | Generate a random simulation of the observations and return it along with
 -- an identification integer.
-getObservations :: ModelParameters -> Int -> IO ([Observation],Int)
+getObservations :: ModelParameters -> Int -> IO Simulation
 getObservations (ModelParameters params simDuration) simId =
   let simConfig = BDSCOD.configuration simDuration params
     in if isJust simConfig
@@ -87,7 +90,7 @@ getObservations (ModelParameters params simDuration) simId =
 -- benchmark is the same as the JSON file into which the observations have been
 -- written.
 benchmarkableLlhdEvaluations :: ModelParameters
-                             -> ([Observation], Int)
+                             -> Simulation
                              -> Benchmark
 benchmarkableLlhdEvaluations (ModelParameters params _) (obs,simId) =
   let simName = observationsJsonFilePath simId
