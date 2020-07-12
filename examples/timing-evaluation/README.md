@@ -43,4 +43,7 @@ stack exec -- timing-evaluation --output fibber.html --csv fobber.csv --time-lim
 Rscript src/prepare-simulations-for-popsize.R 
 cd popsize-distribution 
 ./run-python-timing.sh
+cd ../ 
+Rscript src/plot-profiles.R
+Rscript src/plot-llhds.R
 ```
