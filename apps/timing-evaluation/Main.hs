@@ -116,7 +116,7 @@ multipleFinds predicates values =
 -- | The name of the file to write the simulation observations to.
 observationsJsonFilePath :: Int -> FilePath
 observationsJsonFilePath n =
-  let paddedLength = 4 :: Int
+  let paddedLength = 5 :: Int
       idString = fromMaybe (show n) (leftPad '0' paddedLength (show n))
    in "out/simulated-observations-" ++ idString ++ ".json"
 
@@ -124,8 +124,8 @@ observationsJsonFilePath n =
 main :: IO ()
 main =
   let modelParams = ModelParameters (1.5,0.3,0.3,[],0.3,[]) 5 -- lambda, mu, psi, rho, omega, nu
-      simIds = [1..20] :: [Int] -- the indicies of the simulations
-      simulationPredicates = [\s -> let n = simulationSize s in n > 10 * i && n <= 11 * i | i <- [1..30]]
+      simIds = [1..1000] :: [Int] -- the indicies of the simulations
+      simulationPredicates = [\s -> let n = simulationSize s in n > 5 * i && n <= 5 * (i + 1) | i <- [1..60]]
       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
     in do putStrLn appMessage
           randomSimulations <- mapM (getObservations modelParams) simIds
