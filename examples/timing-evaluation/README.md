@@ -79,5 +79,5 @@ something about nnumerical stability in his code that accounts for this.
 Finally, let's consider how the selected truncation parameter differs with the
 size of the data set, since this is a novel result too.
 
-![](out/out/truncation-comparison.png)
+![](out/truncation-comparison.png)
 
