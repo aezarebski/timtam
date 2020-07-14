@@ -46,5 +46,5 @@ truncation_parameter_trend <-
                          y = truncationParameter)) +
     geom_point()
 
-ggsave("out/truncation-comparison.png", truncation_comparison_trend)
-ggsave("out/truncation-comparison.pdf", truncation_comparison_trend)
+ggsave("out/truncation-comparison.png", truncation_parameter_trend)
+ggsave("out/truncation-comparison.pdf", truncation_parameter_trend)
