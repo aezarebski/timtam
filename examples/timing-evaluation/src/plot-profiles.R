@@ -6,7 +6,7 @@ library(purrr)
 library(jsonlite)
 
 
-x1 <- read.csv("fobber.csv")
+x1 <- read.csv("fobber.csv") %>% rename(bdscodMeanSeconds = Mean)
 x2 <- read.csv("out/simulation-sizes-and-llhds.csv", header = FALSE) %>% set_names(c("Size", "Llhd", "Name"))
 bdscod_records <- left_join(x1, x2, by = "Name")
 
@@ -25,30 +25,63 @@ pop_sim_records <- list.files(path = "out/", pattern = "^popsize", full.names = 
     bind_rows %>%
     mutate(Name = gsub(pattern = ".*observations", replacement = "out/simulated-observations", x = inputJson))
 
-tmp <- pop_sim_records %>% rename(Mean2 = evaluationTime / numReplicates) %>% select(Name, Mean2)
-plot_df <- left_join(bdscod_records, tmp, by = "Name") %>% select(Size, Mean, Mean2) %>% melt(id.vars = "Size")
+tmp <- pop_sim_records %>% rename(popsizeMeanSeconds = evaluationTime / numReplicates) %>% select(Name, popsizeMeanSeconds)
+plot_df <- left_join(bdscod_records, tmp, by = "Name") %>%
+    select(Size, bdscodMeanSeconds, popsizeMeanSeconds) %>%
+    melt(id.vars = "Size")
 rm(tmp)
 
 
-g <- ggplot(data = plot_df, mapping = aes(x = Size, y = value)) +
-    geom_point() +
-    geom_smooth(method = "lm", linetype = "dashed") +
-    geom_smooth(method = "loess", se = FALSE) +
-    facet_wrap(~variable, scales = "free_y")
-
-ggsave("out/profiles.png", g)
-ggsave("out/profiles.pdf", g)
-
 ## The following commands can be used to fit a model to understand the scaling
 ## of the timing of the computation.
-foo <- plot_df %>%
-    filter(variable == "Mean") %>%
+bdscod_model <- plot_df %>%
+    filter(variable == "bdscodMeanSeconds") %>%
     mutate(ln_size = log(Size),
-           ln_time = log(value))
-bar <- plot_df %>%
-    filter(variable == "Mean2") %>%
-    mutate(ln_size = log(Size),
-           ln_time = log(value))
+           ln_time = log(value)) %>%
+    {lm(ln_time ~ ln_size, data = .)}
 
-lm(ln_time ~ ln_size, data = foo) %>% summary
-lm(ln_time ~ ln_size, data = bar) %>% summary
+popsize_model <- plot_df %>%
+    filter(variable == "popsizeMeanSeconds") %>%
+    mutate(ln_size = log(Size),
+           ln_time = log(value)) %>%
+    {lm(ln_time ~ ln_size, data = .)}
+
+x_vals <- 1:200
+
+y_vals1 <- exp(predict(bdscod_model, data.frame(ln_size = log(x_vals))))
+y_vals2 <- exp(predict(popsize_model, data.frame(ln_size = log(x_vals))))
+y_vals <- c(y_vals1, y_vals2)
+
+plot_df_2 <- data.frame(Size = rep(x_vals, 2),
+                        value = y_vals,
+                        variable = rep(c("bdscodMeanSeconds", "popsizeMeanSeconds"), each = length(x_vals)))
+
+sink(file = "out/model-fit-summary.txt")
+print("================================================================================\n")
+cat("BDSCOD model fit\n")
+cat("================================================================================\n")
+summary(bdscod_model)
+cat("\n================================================================================\n")
+cat("Manceau et al (2020) model fit\n")
+cat("================================================================================\n")
+summary(popsize_model)
+sink()
+
+## Now we actually put together the plot.
+
+facet_label_map <- c(bdscodMeanSeconds = "BDSCOD",
+                     popsizeMeanSeconds = "Manceau et al (2020)")
+
+g <- ggplot(data = plot_df, mapping = aes(x = Size, y = value)) +
+    geom_point() +
+    geom_line(data = plot_df_2) +
+    facet_wrap(~variable,
+               scales = "free_y",
+               labeller = labeller(variable = facet_label_map)) +
+    labs(x = "Size of dataset",
+         y = "Mean evaluation time (seconds)") +
+    theme_classic()
+
+## print(g)
+ggsave("out/profiles.png", g, height = 10.5, width = 14.8, units = "cm")
+ggsave("out/profiles.pdf", g, height = 10.5, width = 14.8, units = "cm")
