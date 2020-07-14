@@ -1,5 +1,6 @@
 library(dplyr)
 library(ggplot2)
+library(latex2exp)
 library(reshape2)
 library(magrittr)
 library(purrr)
@@ -32,19 +33,32 @@ plot_df <- left_join(bdscod_llhds, pop_sim_llhds, by = "name")
 llhd_comparison <- ggplot(data = plot_df,
                           mapping = aes(x = bdscodLlhd,
                                         y = popSimLlhd)) +
-    geom_smooth(method = "lm") +
-    geom_abline(intercept = 0, slope = 1) +
-    geom_point()
+    geom_smooth(method = "lm", linetype = "dashed", colour = "grey", size = 0.3, alpha = 0.2) +
+    geom_abline(intercept = 0, slope = 1, linetype = "solid", size = 0.3) +
+    geom_point(size = 1) +
+    labs(x = "BDSCOD log-likelihood",
+         y = "Manceau et al (2020)\nlog-likelihood") +
+    theme_classic() +
+    theme(axis.title = element_text(size = 5),
+          axis.text = element_text(size = 5),
+          axis.line = element_line(size = 0.2))
 
 
-ggsave("out/llhd-comparison.png", llhd_comparison)
-ggsave("out/llhd-comparison.pdf", llhd_comparison)
+ggsave("out/llhd-comparison.png", llhd_comparison, height = 5.25, width = 7.4, units = "cm")
+ggsave("out/llhd-comparison.pdf", llhd_comparison, height = 5.25, width = 7.4, units = "cm")
 
 truncation_parameter_trend <-
     ggplot(data = plot_df,
            mapping = aes(x = size,
                          y = truncationParameter)) +
-    geom_point()
+    geom_smooth(method = "lm", colour = "grey", size = 0.3, alpha = 0.2) +
+    geom_point(size = 1) +
+    labs(x = "Size of dataset",
+         y = TeX("Truncation parameter, $N$")) +
+    theme_classic() +
+    theme(axis.title = element_text(size = 5),
+          axis.text = element_text(size = 5),
+          axis.line = element_line(size = 0.2))
 
-ggsave("out/truncation-comparison.png", truncation_parameter_trend)
-ggsave("out/truncation-comparison.pdf", truncation_parameter_trend)
+ggsave("out/truncation-comparison.png", truncation_parameter_trend, height = 5.25, width = 7.4, units = "cm")
+ggsave("out/truncation-comparison.pdf", truncation_parameter_trend, height = 5.25, width = 7.4, units = "cm")
