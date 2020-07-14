@@ -3,7 +3,7 @@ library(dplyr)
 library(purrr)
 library(magrittr)
 
-SIMULATION_DURATION <- 10
+SIMULATION_DURATION <- 6
 
 simulation_filepaths <- list.files(path = "out/",
                                    pattern = "^simulated",

@@ -123,14 +123,16 @@ observationsJsonFilePath n =
 
 main :: IO ()
 main =
-  let modelParams = ModelParameters (1.5,0.3,0.3,[],0.3,[]) 5 -- lambda, mu, psi, rho, omega, nu
+  let duration = 6.0
+      modelParams = ModelParameters (1.5,0.3,0.3,[(duration - 1e-6,0.5)],0.3,[]) duration -- lambda, mu, psi, rho, omega, nu
       simIds = [1..1000] :: [Int] -- the indicies of the simulations
-      simulationPredicates = [\s -> let n = simulationSize s in n > 5 * i && n <= 5 * (i + 1) | i <- [1..60]]
+      binWidth = 10
+      simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]
       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
     in do putStrLn appMessage
           randomSimulations <- mapM (getObservations modelParams) simIds
           let selectedSimulations = multipleFinds simulationPredicates randomSimulations
-          putStrLn $ "There are " ++ (show $ length selectedSimulations) ++ " simulations that will be used."
+          putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."
           records <- mapM (recordSimulationOutput modelParams) selectedSimulations
           B.writeFile outputCsvFilePath $ CSV.encode records
           defaultMain $ map (benchmarkableLlhdEvaluations modelParams) selectedSimulations

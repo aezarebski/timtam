@@ -31,7 +31,10 @@ rm(tmp)
 
 
 g <- ggplot(data = plot_df, mapping = aes(x = Size, y = value)) +
-    geom_point() + geom_smooth(method = "lm") + facet_wrap(~variable, scales = "free_y")
+    geom_point() +
+    geom_smooth(method = "lm", linetype = "dashed") +
+    geom_smooth(method = "loess", se = FALSE) +
+    facet_wrap(~variable, scales = "free_y")
 
 ggsave("out/profiles.png", g)
 ggsave("out/profiles.pdf", g)
@@ -48,3 +51,4 @@ bar <- plot_df %>%
            ln_time = log(value))
 
 lm(ln_time ~ ln_size, data = foo) %>% summary
+lm(ln_time ~ ln_size, data = bar) %>% summary

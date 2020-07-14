@@ -33,6 +33,7 @@ llhd_comparison <- ggplot(data = plot_df,
                           mapping = aes(x = bdscodLlhd,
                                         y = popSimLlhd)) +
     geom_smooth(method = "lm") +
+    geom_abline(intercept = 0, slope = 1) +
     geom_point()
 
 
