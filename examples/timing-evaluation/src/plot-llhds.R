@@ -1,5 +1,6 @@
 library(dplyr)
 library(ggplot2)
+library(cowplot)
 library(latex2exp)
 library(reshape2)
 library(magrittr)
@@ -62,3 +63,9 @@ truncation_parameter_trend <-
 
 ggsave("out/truncation-comparison.png", truncation_parameter_trend, height = 5.25, width = 7.4, units = "cm")
 ggsave("out/truncation-comparison.pdf", truncation_parameter_trend, height = 5.25, width = 7.4, units = "cm")
+
+comb_plot <- plot_grid(llhd_comparison, truncation_parameter_trend, ncol = 2, labels = c("A", "B"))
+
+
+ggsave("out/bdscod-popsize-comparison.png", comb_plot, height = 10.5, width = 14.8, units = "cm")
+ggsave("out/bdscod-popsize-comparison.pdf", comb_plot, height = 10.5, width = 14.8, units = "cm")
