@@ -8,7 +8,9 @@ import Control.Monad (replicateM)
 import Data.Maybe (fromJust, isJust)
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
-import Epidemic.Types
+import Epidemic.Types.Parameter
+import Epidemic.Types.Events
+import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
 import Test.Hspec
 
@@ -202,7 +204,7 @@ testPdeStatistics = do
 testLlhd = do
   describe "Test llhd" $ do
     it "Manceau example" $
-      let obs = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Occurrence),(1.0,Catastrophe 3)]
+      let obs = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OOccurrence),(1.0,OCatastrophe 3)]
           (llhdVal1,_) = llhdAndNB obs (1.1,1.0,0.3,[(7.0,0.5)],0.6,[]) initLlhdState
           (llhdVal2,_) = llhdAndNB obs (1.2,1.0,0.3,[(7.0,0.5)],0.6,[]) initLlhdState
           (llhdVal3,_) = llhdAndNB obs (1.3,1.0,0.3,[(7.0,0.5)],0.6,[]) initLlhdState
@@ -216,7 +218,7 @@ testLlhd = do
 testInhomBDSLlhd = do
   describe "Test inhomogeneous BDS LLHD" $ do
     it "Check for constant parameters it looks right" $
-      let obs = [(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Sample),(1.0,Sample)]
+      let obs = [(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OSample),(1.0,OSample)]
           tlams = fromJust $ asTimed [(0,1.2)]
           tlams' = fromJust $ asTimed [(0,1.2),(10,5.0)]
           tlams'' = fromJust $ asTimed [(0,1.3),(10,5.0)]
@@ -242,11 +244,11 @@ testInhomBDSLlhd = do
     describe "Check values are finite when sensible" $
       let infParams = (InhomBDSLlhd.InhomParams (fromJust $ asTimed [(0.0,1.0),(1.0,1.0)],0.4,0.4)) :: InhomBDSLlhd.InhomParams
           (InhomBDSLlhd.InhomParams (tlams,_,_)) = infParams
-          obs = [(0.3,Birth),(0.5,Birth),(0.19,Sample)]
+          obs = [(0.3,OBirth),(0.5,OBirth),(0.19,OSample)]
           llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
-          obs' = [(0.3,Birth),(0.5,Birth),(0.20,Sample)]
+          obs' = [(0.3,OBirth),(0.5,OBirth),(0.20,OSample)]
           llhdVal' = fst $ InhomBDSLlhd.llhdAndNB obs' infParams initLlhdState
-          obs'' = [(0.3,Birth),(0.5,Birth),(0.21,Sample)]
+          obs'' = [(0.3,OBirth),(0.5,OBirth),(0.21,OSample)]
           llhdVal'' = fst $ InhomBDSLlhd.llhdAndNB obs'' infParams initLlhdState
        in do
         it "Check cadlagValue" $ do
@@ -265,35 +267,35 @@ testInhomBDSLlhd = do
 testConversion = do
   describe "Test conversion between event types" $ do
     it "Demonstration data set 1" $
-      let p1 = EpiSim.Person 1
-          p2 = EpiSim.Person 2
-          p4 = EpiSim.Person 4
-          p5 = EpiSim.Person 5
-          p6 = EpiSim.Person 6
+      let p1 = Person 1
+          p2 = Person 2
+          p4 = Person 4
+          p5 = Person 5
+          p6 = Person 6
           simObsEvents =
-            [ EpiSim.InfectionEvent 1 p1 p2
-            , EpiSim.SamplingEvent 3 p1
-            , EpiSim.InfectionEvent 4 p2 p4
-            , EpiSim.SamplingEvent 6 p4
-            , EpiSim.OccurrenceEvent 8 p2
-            , EpiSim.OccurrenceEvent 11 p6
-            , EpiSim.SamplingEvent 12 p5
+            [ Infection 1 p1 p2
+            , Sampling 3 p1
+            , Infection 4 p2 p4
+            , Sampling 6 p4
+            , Occurrence 8 p2
+            , Occurrence 11 p6
+            , Sampling 12 p5
             ]
           llhdObsEvents =
-            [ (1.0, Birth)
-            , (2.0, Sample)
-            , (1.0, Birth)
-            , (2.0, Sample)
-            , (2.0, Occurrence)
-            , (3.0, Occurrence)
-            , (1.0, Sample)
+            [ (1.0, OBirth)
+            , (2.0, OSample)
+            , (1.0, OBirth)
+            , (2.0, OSample)
+            , (2.0, OOccurrence)
+            , (3.0, OOccurrence)
+            , (1.0, OSample)
             ]
        in eventsAsObservations simObsEvents `shouldSatisfy` (== llhdObsEvents)
 
 testImpossibleParameters = do
   describe "Test correct handling of impossible parameters" $ do
     it "Test negative birth rate is impossible" $
-      let obs = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Occurrence)]
+      let obs = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OOccurrence)]
           llhd1 = fst $ llhdAndNB obs (0.0000000001,1.0,0.3,[],0.6,[]) initLlhdState
           llhd2 = fst $ llhdAndNB obs (0.0000000000,1.0,0.3,[],0.6,[]) initLlhdState
           llhd3 = fst $ llhdAndNB obs (-0.0000000001,1.0,0.3,[],0.6,[]) initLlhdState
@@ -308,8 +310,8 @@ testImpossibleParameters = do
         llhd2 < 0 `shouldBe` True
         llhd3 < 0 `shouldBe` True
     it "Test negative sampling rate is impossible" $
-      let obs1 = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Sample),(1.0,Occurrence)]
-          obs2 = [(1.0,Birth),(1.0,Occurrence),(1.0,Birth),(1.0,Birth),(1.0,Occurrence)]
+      let obs1 = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OOccurrence)]
+          obs2 = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OOccurrence)]
           llhd11 = fst $ llhdAndNB obs1 (1.0,1.0,0.1,[],0.6,[]) initLlhdState
           llhd12 = fst $ llhdAndNB obs1 (1.0,1.0,0.0,[],0.6,[]) initLlhdState
           llhd13 = fst $ llhdAndNB obs1 (1.0,1.0,-0.1,[],0.6,[]) initLlhdState
@@ -330,6 +332,11 @@ testImpossibleParameters = do
         isInfinite llhd22 `shouldBe` False
         isInfinite llhd23 `shouldBe` True
 
+tmpIsSampling :: EpidemicEvent -> Bool
+tmpIsSampling e = case e of
+  Sampling{} -> True
+  _ -> False
+
 -- | Simulate from the birth-death-sampling process multiple times and use this
 -- to estimate the CI of probability the process is unobserved then check that
 -- this matches the function which computes this probability.
@@ -342,7 +349,7 @@ bdsSimulations simRates simDuration =
           [-0.1, 0.0, 0.1]
       probUnobserved = probUnobservedVals !! 1
       numReplicates = 100
-      numObservations = length . filter EpiSim.isSampling
+      numObservations = length . filter tmpIsSampling
       phat ns =
         (fromIntegral . length $ filter (> 0) ns) / (fromIntegral (length ns))
       probCI ns = (ph - d, ph + d)

@@ -1,7 +1,11 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module BDSCOD.Types where
 
-
+import Control.DeepSeq
+import Data.Aeson
 import Epidemic.Types.Parameter
+import GHC.Generics (Generic)
 
 type NumLineages = Double
 
@@ -11,7 +15,13 @@ data ObservedEvent
   | OOccurrence
   | OCatastrophe NumLineages
   | ODisaster NumLineages
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NFData ObservedEvent
+
+instance ToJSON ObservedEvent
+
+instance FromJSON ObservedEvent
 
 type Observation = (Time, ObservedEvent)
 

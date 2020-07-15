@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.2.6
+
+- Include an example looking at the computational complexity of the BDSCOD and
+  the algorithm from Marc Manceau et al (2020).
+
 ## 0.1.2.5
 
 - Include a `manceau-comparison` example and include a figure of the data that
