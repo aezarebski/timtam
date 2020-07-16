@@ -7,13 +7,6 @@ import BDSCOD.Utility
 import Epidemic.Types.Parameter
 
 
--- | The parameters of the constant rate BDSCOD are the birth rate, the natural
--- removal rate, the sampling rate, the timing and probability of catastrophic
--- removal, the occurrence rate, and the timing the probability of removal due
--- to disaster.
-type Parameters
-   = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
-
 -- | Predicate for whether the parameters could possibly have given rise to the
 -- observations.
 arePlausible :: [Observation]
