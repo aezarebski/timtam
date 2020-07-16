@@ -64,6 +64,7 @@ executable simulation-study
     , aeson
     , bytestring
     , cassava
+    , containers >= 0.6
     , directory
     , epi-sim >= 0.2.0.0
     , epi-types >= 0.2.1.1
