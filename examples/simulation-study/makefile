@@ -1,8 +1,9 @@
 
-figures: out/parameter-llhd-profiles.pdf out/simulation-visualisation.png
+# figures: out/parameter-llhd-profiles.pdf out/simulation-visualisation.png
+figures: out/parameter-llhd-profiles.pdf
 
-out/simulation-visualisation.png: out/simulated-events.csv src/birth-death-lines.R
-	Rscript src/birth-death-lines.R out/simulated-events.csv out/simulation-visualisation.png
+# out/simulation-visualisation.png: out/simulated-events.csv src/birth-death-lines.R
+# 	Rscript src/birth-death-lines.R out/simulated-events.csv out/simulation-visualisation.png
 
 out/parameter-llhd-profiles.pdf: out/simulation-study-llhds.csv src/llhd-profiles.R out/config.json
 	Rscript src/llhd-profiles.R
