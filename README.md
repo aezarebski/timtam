@@ -7,9 +7,12 @@ various observation processes.
 
 See `examples/manceau-comparison/README.md` for details of the comparison
 
-## Simulation study
+## Simulation studies
 
-See `examples/simulation-study/README.md` for details of the simulation study.
+There are a couple of simulation studies; see the following files for details.
+
+- `examples/simulation-study/README.md`
+- `examples/simulation-study-time-series/README.md`
 
 ## Evaluation timing
 

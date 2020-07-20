@@ -73,6 +73,25 @@ executable simulation-study
     , vector
   default-language: Haskell2010
 
+executable simulation-study-time-series
+  main-is: Main.hs
+  other-modules:
+      Paths_bdscod
+  hs-source-dirs:
+      apps/simulation-study-time-series
+  ghc-options: 
+  build-depends:
+      base >=4.7 && <5
+    , aeson
+    , bdscod
+    , bytestring
+    , cassava
+    , directory
+    , epi-sim >= 0.2.0.0
+    , epi-types >= 0.2.1.1
+    , mtl >= 2.2
+    , vector
+  default-language: Haskell2010
 
 executable simulation-study-time-dependent-rates
   main-is: Main.hs
