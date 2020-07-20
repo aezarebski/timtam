@@ -45,19 +45,18 @@ condLlhdAndNB obs params@(birthRate,deathRate,samplingRate,_,occRate,_) duration
 -- process at each of the parameter values given and write the results to file.
 llhdsWriteFile :: FilePath -> [Observation] -> ProfileParameters -> Time -> Bool -> IO ()
 llhdsWriteFile fp d psMap duration conditionLlhd =
-  let ps = concat . map snd . toList $ psMap
-   in llhdsWriteFile' fp d ps duration conditionLlhd
+   mapM_ (\(pName,pVals) -> llhdsWriteFile' fp d pName pVals duration conditionLlhd) (toList psMap)
 
-llhdsWriteFile' :: FilePath -> [Observation] -> [Parameters] -> Time -> Bool -> IO ()
-llhdsWriteFile' fp d ps duration conditionLlhd =
+llhdsWriteFile' :: FilePath -> [Observation] -> ParameterName -> [Parameters] -> Time -> Bool -> IO ()
+llhdsWriteFile' fp d paramName ps duration conditionLlhd =
   case ps of
     [] -> return ()
     (p:ps') -> do
       let x = condLlhdAndNB d p duration conditionLlhd
       appendFile fp $ output p x
-      llhdsWriteFile' fp d ps' duration conditionLlhd
+      llhdsWriteFile' fp d paramName ps' duration conditionLlhd
       where output (x1, x2, x3, ((_, x4):_), x5, ((_, x6)):_) (x7, x8) =
-              intercalate "," $
+              intercalate "," . ((show paramName):) $
               map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
 
 appMessage :: String
@@ -107,7 +106,7 @@ readConfigFile fp = Json.decode <$> L.readFile fp
 inferenceParameters SimStudyParams{..} =
   fromList [lambdaParams,muParams,psiParams,rhoParams,omegaParams,nuParams]
   where
-      probRange = linspace 0.1 0.9 200
+      probRange = linspace 0.2 0.4 200
       lambdaParams = (ParamLambda, [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- linspace 1.2 1.8 200])
       muParams = (ParamMu, [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- linspace 0.1 0.6 200])
       psiParams = (ParamPsi, [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- linspace 0.2 0.4 200])

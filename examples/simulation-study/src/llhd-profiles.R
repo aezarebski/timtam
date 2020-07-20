@@ -26,7 +26,7 @@ if (!file.exists(INPUT_FILE)) {
 }
 
 x <- read.csv(INPUT_FILE, header = FALSE, stringsAsFactors = FALSE)
-names(x) <- c("lambda", "mu", "psi", "rho", "omega", "nu", "llhd", "negative_binomial")
+names(x) <- c("variedParameter", "lambda", "mu", "psi", "rho", "omega", "nu", "llhd", "negative_binomial")
 nb_params <- t(sapply(str_extract_all(x$negative_binomial, "[\\d.]+(?:e-?\\d+)?"), as.numeric))
 x$neg_binom_r <- nb_params[,1]
 x$neg_binom_p <- 1 - nb_params[,2] # R and Wikipedia have different parameterisations.
@@ -53,7 +53,7 @@ fig_theme <- theme(
 
 truth_linetype <- "dashed"
 
-lambda_figure <- ggplot(filter(x, mu == PARAMS$mu, psi == PARAMS$psi, rho == PARAMS$rho, omega == PARAMS$omega, nu == PARAMS$nu), aes(x = lambda, y = llhd)) +
+lambda_figure <- ggplot(filter(x, variedParameter == "ParamLambda"), aes(x = lambda, y = llhd)) +
     geom_line() +
     geom_vline(xintercept = PARAMS$lambda, linetype = truth_linetype) +
     labs(x = "Birth rate",
@@ -67,7 +67,7 @@ if (save_figures) {
            height = 10.5, width = 14.8, units = "cm")
 }
 
-mu_figure <- ggplot(filter(x, lambda == PARAMS$lambda, psi == PARAMS$psi, rho == PARAMS$rho, omega == PARAMS$omega, nu == PARAMS$nu), aes(x = mu, y = llhd)) +
+mu_figure <- ggplot(filter(x, variedParameter == "ParamMu"), aes(x = mu, y = llhd)) +
     geom_line() +
     geom_vline(xintercept = PARAMS$mu, linetype = truth_linetype) +
     labs(x = "Death rate",
@@ -81,7 +81,7 @@ if (save_figures) {
            height = 10.5, width = 14.8, units = "cm")
 }
 
-psi_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, rho == PARAMS$rho, omega == PARAMS$omega, nu == PARAMS$nu), aes(x = psi, y = llhd)) +
+psi_figure <- ggplot(filter(x, variedParameter == "ParamPsi"), aes(x = psi, y = llhd)) +
     geom_line() +
     geom_vline(xintercept = PARAMS$psi, linetype = truth_linetype) +
     labs(x = "Sampling rate",
@@ -95,7 +95,7 @@ if (save_figures) {
            height = 10.5, width = 14.8, units = "cm")
 }
 
-rho_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, psi == PARAMS$psi, omega == PARAMS$omega, nu == PARAMS$nu), aes(x = rho, y = llhd)) +
+rho_figure <- ggplot(filter(x, variedParameter == "ParamRho"), aes(x = rho, y = llhd)) +
     geom_line() +
     geom_vline(xintercept = PARAMS$rho, linetype = truth_linetype) +
     labs(x = "Catastrophe extinction\nprobability",
@@ -109,7 +109,7 @@ if (save_figures) {
            height = 10.5, width = 14.8, units = "cm")
 }
 
-omega_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, psi == PARAMS$psi, rho == PARAMS$rho, nu == PARAMS$nu), aes(x = omega, y = llhd)) +
+omega_figure <- ggplot(filter(x, variedParameter == "ParamOmega"), aes(x = omega, y = llhd)) +
     geom_line() +
     geom_vline(xintercept = PARAMS$omega, linetype = truth_linetype) +
     labs(x = "Occurrence rate",
@@ -123,7 +123,7 @@ if (save_figures) {
            height = 10.5, width = 14.8, units = "cm")
 }
 
-nu_figure <- ggplot(filter(x, lambda == PARAMS$lambda, mu == PARAMS$mu, psi == PARAMS$psi, rho == PARAMS$rho, omega == PARAMS$omega), aes(x = nu, y = llhd)) +
+nu_figure <- ggplot(filter(x, variedParameter == "ParamNu"), aes(x = nu, y = llhd)) +
     geom_line() +
     geom_vline(xintercept = PARAMS$nu, linetype = truth_linetype) +
     labs(x = "Disaster extinction\nprobability",
@@ -157,11 +157,11 @@ cat(sprintf("\nThe number of unobserved lineages, a.k.a. the final prevalence, i
 
 ## Because we do not include the true parameters in the LLHD evaluations, we
 ## need to get the closest match to them among those that we have.
-unique_thresh <- 0.0006
+unique_thresh <- 0.006
 curr_nb <- as.list(filter(x, abs(lambda - PARAMS$lambda) < unique_thresh, mu == PARAMS$mu, psi == PARAMS$psi, abs(rho - PARAMS$rho) < unique_thresh, omega == PARAMS$omega, abs(nu - PARAMS$nu) < unique_thresh) %>% select(starts_with("neg_binom")))
 curr_nb <- list(neg_binom_r = mean(curr_nb$neg_binom_r), neg_binom_p = mean(curr_nb$neg_binom_p))
 
-prev_mesh <- 250:550
+prev_mesh <- 50:550
 plot_df <- data.frame(prevalence = prev_mesh, log_prob = dnbinom(prev_mesh, size = curr_nb$neg_binom_r, prob = curr_nb$neg_binom_p, log = TRUE))
 
 prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
