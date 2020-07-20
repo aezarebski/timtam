@@ -7,15 +7,15 @@ config <- list(
   outputEventsCsv = "out/simulated-events.csv",
   outputObservationsFile = "out/simulated-events-observed.txt",
   outputLlhdFile = "out/simulation-study-llhds.csv",
-  simDuration = 10.0,
+  simDuration = 16.0,
   simLambda = 1.5,
   simMu = 0.3,
   simPsi = 0.3,
-  simRho = 0.2,
-  simRhoTimes = c(3.5,4.5,5.5,6.5),
+  simRho = 0.25,
+  simRhoTimes = seq(from = 3.5, to = 14.5, by = 1),
   simOmega = 0.3,
-  simNu = 0.2,
-  simNuTimes = c(5.0,6.0,7.0,8.0)
+  simNu = 0.25,
+  simNuTimes = seq(from = 3.0, to = 14.0, by = 1)
 )
 
 write_json(

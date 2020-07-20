@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.1.2.7
+
+- Generate a LaTeX table of the simulation parameters.
+- Refactor the =simulation-study= example for clarity.
+- Fix a bug in the likelihood which appeared when there are observations after a
+  scheduled event.
+
 ## 0.1.2.6
 
 - Include an example looking at the computational complexity of the BDSCOD and

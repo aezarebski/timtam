@@ -14,13 +14,26 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
 import Data.List (intercalate, intersperse)
 import Data.Maybe
+import Data.Map.Strict (Map(),fromList,toList)
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
+import System.Environment (getArgs)
 
+-- | Type to refer to a parameter without neededing to use a string.
+data ParameterName
+  = ParamLambda
+  | ParamMu
+  | ParamPsi
+  | ParamRho
+  | ParamOmega
+  | ParamNu
+  deriving (Show, Eq, Ord)
+
+type ProfileParameters = Map ParameterName [Parameters]
 
 condLlhdAndNB :: [Observation] -> Parameters -> Time -> Bool -> (LogLikelihood, NegativeBinomial)
 condLlhdAndNB obs params@(birthRate,deathRate,samplingRate,_,occRate,_) duration cond =
@@ -30,16 +43,20 @@ condLlhdAndNB obs params@(birthRate,deathRate,samplingRate,_,occRate,_) duration
 
 -- | Evalue the LLHD function with or without conditioning upon observing the
 -- process at each of the parameter values given and write the results to file.
-llhdsWriteFile :: FilePath -> [Observation] -> [Parameters] -> Time -> Bool -> IO ()
-llhdsWriteFile fp d ps duration conditionLlhd =
+llhdsWriteFile :: FilePath -> [Observation] -> ProfileParameters -> Time -> Bool -> IO ()
+llhdsWriteFile fp d psMap duration conditionLlhd =
+   mapM_ (\(pName,pVals) -> llhdsWriteFile' fp d pName pVals duration conditionLlhd) (toList psMap)
+
+llhdsWriteFile' :: FilePath -> [Observation] -> ParameterName -> [Parameters] -> Time -> Bool -> IO ()
+llhdsWriteFile' fp d paramName ps duration conditionLlhd =
   case ps of
     [] -> return ()
     (p:ps') -> do
       let x = condLlhdAndNB d p duration conditionLlhd
       appendFile fp $ output p x
-      llhdsWriteFile fp d ps' duration conditionLlhd
+      llhdsWriteFile' fp d paramName ps' duration conditionLlhd
       where output (x1, x2, x3, ((_, x4):_), x5, ((_, x6)):_) (x7, x8) =
-              intercalate "," $
+              intercalate "," . ((show paramName):) $
               map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
 
 appMessage :: String
@@ -85,21 +102,28 @@ instance Json.FromJSON SimStudyParams
 readConfigFile :: FilePath -> IO (Maybe SimStudyParams)
 readConfigFile fp = Json.decode <$> L.readFile fp
 
+-- inferenceParameters :: SimStudyParams -> ProfileParameters
+inferenceParameters SimStudyParams{..} =
+  fromList [lambdaParams,muParams,psiParams,rhoParams,omegaParams,nuParams]
+  where
+      probRange = linspace 0.2 0.4 200
+      lambdaParams = (ParamLambda, [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- linspace 1.2 1.8 200])
+      muParams = (ParamMu, [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- linspace 0.1 0.6 200])
+      psiParams = (ParamPsi, [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- linspace 0.2 0.4 200])
+      rhoParams = (ParamRho, [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | r <- probRange])
+      omegaParams = (ParamOmega, [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(nt,simNu) | nt <- simNuTimes]) | o <- linspace 0.2 0.4 200])
+      nuParams = (ParamNu, [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,n) | nt <- simNuTimes]) | n <- probRange])
+
 main :: IO ()
 main = do
-  config <- readConfigFile "out/config.json"
+  (configFilePath:_) <- getArgs
+  config <- readConfigFile configFilePath
   if isJust config
     then putStrLn "Configuration file read successfully!"
     else putStrLn "Could not read configuration JSON!!!"
-  let SimStudyParams{..} = fromJust config
+  let simStudyParams@(SimStudyParams{..}) = fromJust config
       simParams = (simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes])
-      infParamss =
-        [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- linspace 1.2 1.8 200] ++
-        [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- linspace 0.1 0.6 200] ++
-        [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- linspace 0.2 0.4 200] ++
-        [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | r <- linspace 0.1 0.50 200] ++
-        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(nt,simNu) | nt <- simNuTimes]) | o <- linspace 0.2 0.4 200] ++
-        [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,n) | nt <- simNuTimes]) | n <- linspace 0.1 0.50 200]
+      infParamss = inferenceParameters simStudyParams
       simConfig = SimBDSCOD.configuration simDuration simParams
       conditionUponObservation = True
    in if isNothing simConfig

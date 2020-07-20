@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.2.6
+version:             0.1.2.7
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -64,6 +64,7 @@ executable simulation-study
     , aeson
     , bytestring
     , cassava
+    , containers >= 0.6
     , directory
     , epi-sim >= 0.2.0.0
     , epi-types >= 0.2.1.1

@@ -7,13 +7,6 @@ import BDSCOD.Utility
 import Epidemic.Types.Parameter
 
 
--- | The parameters of the constant rate BDSCOD are the birth rate, the natural
--- removal rate, the sampling rate, the timing and probability of catastrophic
--- removal, the occurrence rate, and the timing the probability of removal due
--- to disaster.
-type Parameters
-   = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
-
 -- | Predicate for whether the parameters could possibly have given rise to the
 -- observations.
 arePlausible :: [Observation]
@@ -218,11 +211,11 @@ eventLlhd _ (_, _, _, _, om, _) OOccurrence k nb@(NegBinom r p) =
   (log om + log (nbPGF' nb 1), k, NegBinom (r + 1) p)
 eventLlhd t (_, _, _, rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
   let rh = snd . fromJust $ find ((== t) . fst) rhs
-      logL = n * log rh + log (nbPGF nb (1 - rh))
+      logL = n * log rh + log (nbPGF nb (1 - rh)) + (k - n) * log (1 - rh)
    in (logL, k - n, NegBinom r ((1 - rh) * p))
 eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
   let nu = snd . fromJust $ find ((== t) . fst) nus
-      logL = n * log nu + log (nbPGFdash n nb (1 - nu))
+      logL = n * log nu + log (nbPGFdash n nb (1 - nu)) + k * log (1 - nu)
    in (logL, k, NegBinom (r + n) ((1 - nu) * p))
 
 
