@@ -2,6 +2,8 @@
 
 ## 0.1.2.7
 
+- Generate a LaTeX table of the simulation parameters.
+- Refactor the =simulation-study= example for clarity.
 - Fix a bug in the likelihood which appeared when there are observations after a
   scheduled event.
 
