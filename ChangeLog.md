@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.1.2.8
+
+- Update to `epi-types-0.2.1.2` and `epi-sim-0.2.0.1` to get a bug fix.
+
 ## 0.1.2.7
 
 - Generate a LaTeX table of the simulation parameters.

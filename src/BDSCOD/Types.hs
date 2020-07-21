@@ -40,6 +40,7 @@ data NegativeBinomial
 data PDESolution = PDESol NegativeBinomial NumLineages
 
 type LogLikelihood = Double
+
 type LlhdCalcState = (LogLikelihood
                      ,Time
                      ,NumLineages
