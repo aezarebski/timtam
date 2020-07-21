@@ -44,6 +44,8 @@ data Configuration =
     , simulationDuration :: Time
     , reconstructedTreeOutputFiles :: (FilePath,FilePath)
     , observationsOutputCsv :: FilePath
+    , evaluationParameters :: [Parameters]
+    , llhdOutputCsv :: FilePath
     }
   deriving (Show, Generic)
 
@@ -78,12 +80,25 @@ simulatedObservations bdscodConfig = do
                      return obs
     Nothing -> throwError "Failed to simulate observations."
 
+
+
+-- Run the evaluation of the log-likelihood profiles on a given set of
+-- observations and write the result to file.
+evaluateLLHD :: [Observation] -> Simulation ()
+evaluateLLHD obs = do
+  llhdsCsv <- asks llhdOutputCsv
+  evalParams <- asks evaluationParameters
+  let comma = BBuilder.charUtf8 ','
+      llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams] :: [LogLikelihood]
+      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . map BBuilder.doubleDec
+  liftIO $ L.writeFile llhdsCsv (doublesAsString llhdVals)
+
 -- Definition of the simulation study.
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
   obs <- simulatedObservations bdscodConfig
-  liftIO $ print (show obs)
+  evaluateLLHD obs
   return ()
 
 -- Run the actual simulation study.
@@ -94,9 +109,6 @@ runSimulationStudy config = do
     Left errMsg -> putStrLn errMsg
     Right _ -> return ()
 
--- Demonstration values to assist while prototyping.
-demoConfig = getConfiguration "/home/aez/projects/bdscod/examples/simulation-study-time-series/ts-config.json"
--- (Just config) <- demoConfig
 
 main :: IO ()
 main = do
