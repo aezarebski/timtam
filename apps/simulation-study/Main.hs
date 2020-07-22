@@ -102,17 +102,19 @@ instance Json.FromJSON SimStudyParams
 readConfigFile :: FilePath -> IO (Maybe SimStudyParams)
 readConfigFile fp = Json.decode <$> L.readFile fp
 
--- inferenceParameters :: SimStudyParams -> ProfileParameters
+inferenceParameters :: SimStudyParams -> ProfileParameters
 inferenceParameters SimStudyParams{..} =
   fromList [lambdaParams,muParams,psiParams,rhoParams,omegaParams,nuParams]
   where
-      probRange = linspace 0.2 0.4 200
-      lambdaParams = (ParamLambda, [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- linspace 1.2 1.8 200])
-      muParams = (ParamMu, [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- linspace 0.1 0.6 200])
-      psiParams = (ParamPsi, [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- linspace 0.2 0.4 200])
-      rhoParams = (ParamRho, [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | r <- probRange])
-      omegaParams = (ParamOmega, [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(nt,simNu) | nt <- simNuTimes]) | o <- linspace 0.2 0.4 200])
-      nuParams = (ParamNu, [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,n) | nt <- simNuTimes]) | n <- probRange])
+    rateRadius = 0.1
+    rateRange r = linspace (r - rateRadius) (r + rateRadius) 200
+    probRange = linspace 0.2 0.3 200
+    lambdaParams = (ParamLambda, [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- rateRange simLambda])
+    muParams = (ParamMu, [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- rateRange simMu])
+    psiParams = (ParamPsi, [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- rateRange simPsi])
+    rhoParams = (ParamRho, [(simLambda, simMu, simPsi, [(rt,r) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | r <- probRange])
+    omegaParams = (ParamOmega, [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], o, [(nt,simNu) | nt <- simNuTimes]) | o <- rateRange simOmega])
+    nuParams = (ParamNu, [(simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,n) | nt <- simNuTimes]) | n <- probRange])
 
 main :: IO ()
 main = do
