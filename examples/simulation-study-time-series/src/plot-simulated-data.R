@@ -27,6 +27,8 @@ reconstructed_events <- read.csv("out/simulated-observations.csv", header = FALS
 
 tree <- ape::read.tree(text=sprintf("(%s);", readLines("out/reconstructed-newick-tree.txt")))
 
+print(tree)
+
 png("out/reconstructed-tree.png")
 plot(tree, show.tip.label = FALSE)
 dev.off()
