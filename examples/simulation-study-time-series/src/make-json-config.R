@@ -6,7 +6,11 @@ output_file <- "ts-config.json"
 
 simulation_duration <- 18
 
-birth_rate <- 2.5
+## Toggling the birth rate between 2.5 and 2.6 will break the likelihood for an
+## unknown reason.
+## birth_rate <- 2.5
+birth_rate <- 2.6
+
 death_rate <- 0.70
 
 disaster_times <- seq(from = 2, to = simulation_duration, by = 1)
