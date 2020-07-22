@@ -24,7 +24,9 @@ library
   hs-source-dirs:
       src
   build-depends: base >= 4.7 && < 5
+               , bytestring >= 0.10
                , deepseq >= 1.4.4.0
+               , cassava >= 0.5
                , epi-sim >= 0.2.0.1
                , vector
                , aeson

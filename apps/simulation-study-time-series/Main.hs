@@ -37,6 +37,7 @@ import System.Environment (getArgs)
 -- import GHC.Generics
 -- import System.Environment (getArgs)
 
+
 data Configuration =
   Configuration
     { simulatedEventsOutputCsv :: FilePath
@@ -76,7 +77,7 @@ simulatedObservations bdscodConfig = do
                      liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
                      liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
                      obsCsv <- asks observationsOutputCsv
-                     liftIO $ L.writeFile obsCsv (Csv.encode simEvents)
+                     liftIO $ L.writeFile obsCsv (Csv.encode obs)
                      return obs
     Nothing -> throwError "Failed to simulate observations."
 
