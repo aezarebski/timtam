@@ -37,7 +37,8 @@ result <- list(
     reconstructedTreeOutputFiles = c("out/reconstructed-newick-tree.txt","out/reconstructed-newick-metadata.csv"),
     observationsOutputCsv = "out/simulated-observations.csv",
     evaluationParameters = eval_params,
-    llhdOutputCsv = "out/llhd-evaluations.csv"
+    llhdOutputCsv = "out/llhd-evaluations.csv",
+    prevalenceDistributionTxt = "out/prevalence-distribution.txt"
 )
 
 write_json(result, output_file, pretty = FALSE, auto_unbox = TRUE, digits = 7)
