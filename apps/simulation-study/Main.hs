@@ -106,8 +106,8 @@ inferenceParameters :: SimStudyParams -> ProfileParameters
 inferenceParameters SimStudyParams{..} =
   fromList [lambdaParams,muParams,psiParams,rhoParams,omegaParams,nuParams]
   where
-    rateRange radius r = linspace (r - radius) (r + radius) 200
-    probRange = linspace 0.2 0.3 200
+    rateRange radius r = filter (>0) $ linspace (r - radius) (r + radius) 200
+    probRange = linspace 0.01 0.99 300
     lambdaParams = (ParamLambda, [(l, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | l <- rateRange 0.20 simLambda])
     muParams = (ParamMu, [(simLambda, m, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | m <- rateRange 0.20 simMu])
     psiParams = (ParamPsi, [(simLambda, simMu, p, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes]) | p <- rateRange 0.1 simPsi])
