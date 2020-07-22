@@ -10,7 +10,9 @@ primary_count <- function(ps) {
     unlist(map(strsplit(x = ps, split = ":"), length))
 }
 
-all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
+all_events <- read.csv("out/all-simulated-events.csv",
+                       header = FALSE,
+                       stringsAsFactors = FALSE) %>%
     set_names(c("event", "time", "primary", "secondary")) %>%
     mutate(delta = primary_count(primary)) %>%
     select(event,time,delta)
@@ -23,7 +25,9 @@ g <- ggplot(mapping = aes(x = time, y = population_size)) +
 
 ggsave("out/total-prevalence.png", g)
 
-reconstructed_events <- read.csv("out/simulated-observations.csv", header = FALSE)
+reconstructed_events <- read.csv("out/simulated-observations.csv",
+                                 header = FALSE,
+                                 stringsAsFactors = FALSE)
 
 tree <- ape::read.tree(text=sprintf("(%s);", readLines("out/reconstructed-newick-tree.txt")))
 

@@ -8,10 +8,12 @@ config <- read_json("ts-config.json")
 
 
 ## Make profile plots of the LLHD function.
-eval_df <- read.table("out/evaluation-parameters.csv", header = TRUE)
+eval_df <- read.table("out/evaluation-parameters.csv",
+                      header = TRUE)
 eval_df$llhd <- as.double(as_vector(strsplit(x = readLines(config$llhdOutputCsv), split = ",")))
 
-true_parameters <- read.table("out/true-parameters.csv", header = TRUE)
+true_parameters <- read.table("out/true-parameters.csv",
+                              header = TRUE)
 
 profiles_fig <- ggplot(eval_df, mapping = aes(x = value, y = llhd)) +
     geom_line() +
@@ -31,7 +33,9 @@ primary_count <- function(ps) {
     unlist(map(strsplit(x = ps, split = ":"), length))
 }
 
-all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
+all_events <- read.csv("out/all-simulated-events.csv",
+                       header = FALSE,
+                       stringsAsFactors = FALSE) %>%
     set_names(c("event", "time", "primary", "secondary")) %>%
     mutate(delta = primary_count(primary)) %>%
     select(event,time,delta)
