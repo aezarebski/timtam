@@ -29,7 +29,14 @@ reconstructed_events <- read.csv("out/simulated-observations.csv",
                                  header = FALSE,
                                  stringsAsFactors = FALSE)
 
-tree <- ape::read.tree(text=sprintf("(%s);", readLines("out/reconstructed-newick-tree.txt")))
+## If the node labels are too long this will throw an error from deep within
+## \code{ape} so we replace all the node labels with 'x'.
+raw_newick_string <- readLines("out/reconstructed-newick-tree.txt")
+smaller_newick_string <- gsub(pattern = "([0-9]+&)*[0-9]+:",
+                              replacement = "x:",
+                              x = raw_newick_string)
+tree <- ape::read.tree(text=sprintf("(%s);", smaller_newick_string))
+## tree <- ape::read.tree(text=sprintf("(%s);", raw_newick_string))
 
 print(tree)
 
