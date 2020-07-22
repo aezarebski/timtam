@@ -47,6 +47,7 @@ data Configuration =
     , observationsOutputCsv :: FilePath
     , evaluationParameters :: [Parameters]
     , llhdOutputCsv :: FilePath
+    , prevalenceDistributionTxt :: FilePath
     }
   deriving (Show, Generic)
 
@@ -94,12 +95,22 @@ evaluateLLHD obs = do
       doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . map BBuilder.doubleDec
   liftIO $ L.writeFile llhdsCsv (doublesAsString llhdVals)
 
+-- Write the final estiamte of the NB distribution to file for subsequent
+-- plotting.
+estimatePrevalence :: [Observation] -> Simulation ()
+estimatePrevalence obs = do
+  prevDistTxt <- asks prevalenceDistributionTxt
+  simParams <- asks simulationParameters
+  let nb = snd $ llhdAndNB obs simParams initLlhdState
+  liftIO $ Prelude.writeFile prevDistTxt (show nb)
+
 -- Definition of the simulation study.
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
   obs <- simulatedObservations bdscodConfig
   evaluateLLHD obs
+  estimatePrevalence obs
   return ()
 
 -- Run the actual simulation study.
