@@ -59,6 +59,7 @@ lambda_figure <- ggplot(filter(x, variedParameter == "ParamLambda"), aes(x = lam
     labs(x = "Birth rate",
          y = "Log-Likelihood") +
     scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 4)) +
     fig_theme
 
 if (save_figures) {
@@ -101,6 +102,7 @@ rho_figure <- ggplot(filter(x, variedParameter == "ParamRho"), aes(x = rho, y = 
     labs(x = "Catastrophe extinction\nprobability",
          y = "Log-Likelihood") +
     scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 3)) +
     fig_theme
 
 if (save_figures) {
@@ -129,6 +131,7 @@ nu_figure <- ggplot(filter(x, variedParameter == "ParamNu"), aes(x = nu, y = llh
     labs(x = "Disaster extinction\nprobability",
          y = "Log-Likelihood") +
     scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 3)) +
     fig_theme
 
 if (save_figures) {
@@ -161,7 +164,7 @@ unique_thresh <- 0.006
 curr_nb <- as.list(filter(x, abs(lambda - PARAMS$lambda) < unique_thresh, mu == PARAMS$mu, psi == PARAMS$psi, abs(rho - PARAMS$rho) < unique_thresh, omega == PARAMS$omega, abs(nu - PARAMS$nu) < unique_thresh) %>% select(starts_with("neg_binom")))
 curr_nb <- list(neg_binom_r = mean(curr_nb$neg_binom_r), neg_binom_p = mean(curr_nb$neg_binom_p))
 
-prev_mesh <- 50:550
+prev_mesh <- seq(from = max(num_unobserved_lineages - 100,0), to = min(num_unobserved_lineages + 100,1e3), by = 1)
 plot_df <- data.frame(prevalence = prev_mesh, log_prob = dnbinom(prev_mesh, size = curr_nb$neg_binom_r, prob = curr_nb$neg_binom_p, log = TRUE))
 
 prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
