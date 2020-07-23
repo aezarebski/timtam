@@ -31,7 +31,7 @@ finiteDifference :: Fractional a
 finiteDifference h f x = (f (x+h) - f (x-h)) / (2*h)
 
 testNbPGF = do
-  describe "Test nbPGF" $ do
+  describe "Test nbPGF: 1" $ do
     it "known value of PGF is correct 1" $
       nbPGF Zero 0.0 `shouldBe` 1
 
@@ -67,6 +67,18 @@ testNbPGF = do
 
     it "PGF second partial derivative seems correct 3" $
       nbPGF'' (NegBinom 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinom 1 0.5) x) 0.0))
+
+  describe "Test nbPGF: 2" $ do
+    it "test pochhammer and logPochhammer" $ do
+      pochhammer 2 5 > 2 `shouldBe` True
+      let pochhammersWorking (a,b) = withinDeltaOf 1e-5 (log $ pochhammer a b) (logPochhammer a b)
+      all pochhammersWorking [(a,b) | a <- [1..10], b <- [1..10], a <= b] `shouldBe` True
+      all pochhammersWorking [(a+0.1,b) | a <- [1..10], b <- [1..10], a <= b] `shouldBe` True
+
+    it "test nbPGFdash and logNbPGFdash" $ do
+      let nbPGFdashWorking (j,r,p,z) = withinDeltaOf 1e-5 (log $ nbPGFdash j (NegBinom r p) z) (logNbPGFdash j (NegBinom r p) z)
+      all nbPGFdashWorking [(j,r,p,z) | j <- [2..50], r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
+
 
 
 testp0 = do
