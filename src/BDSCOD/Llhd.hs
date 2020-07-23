@@ -226,36 +226,55 @@ eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
 -- | This is the state of the likelihood calculation: llhd, time, LTT, NB of
 -- hidden lineages
 initLlhdState :: LlhdCalcState
-initLlhdState = (0,0,1,Zero)
-
-
-
+initLlhdState = ((0,Zero),0,1)
 
 -- | The log-likelihood and the distribution of prevalence.
 llhdAndNB :: [Observation]  -- ^ The observed events
           -> Parameters     -- ^ The parameters
           -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
-          -> (LogLikelihood,NegativeBinomial)
-llhdAndNB obs params state0 =
-  if arePlausible obs params
-    then llhdAndNB' obs params state0
-    else (-1 / 0, Zero)
+          -> LlhdAndNB
+llhdAndNB obs params state0 = fst $ verboseLlhdAndNB obs params state0
 
+-- | The log-likelihood and the distribution of the prevalence along with their
+-- partial values.
+verboseLlhdAndNB :: [Observation]  -- ^ The observed events
+                 -> Parameters     -- ^ The parameters
+                 -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
+                 -> (LlhdAndNB,[LlhdAndNB])
+verboseLlhdAndNB obs params state0 =
+  if arePlausible obs params
+  then verboseLlhdAndNB' obs params state0 mempty
+  else ((-1 / 0, Zero),mempty)
+
+updatedLlhdCalcState :: Parameters -> Observation -> LlhdCalcState -> LlhdCalcState
+updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
+  ((l+l'+l'',nb''),t',k'')
+  where
+    t' = t + delay
+    (l',nb') = intervalLlhd params delay k nb
+    (l'',k'',nb'') = eventLlhd t' params event k nb'
+
+-- | Compute the log-likelihood and distribution of the prevalence along with
+-- their partial values assuming plausible parameters.
+verboseLlhdAndNB' :: [Observation]  -- ^ The observed events
+                  -> Parameters     -- ^ The parameters
+                  -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
+                  -> [LlhdAndNB]    -- ^ The accumulator of the partial results
+                  -> (LlhdAndNB,[LlhdAndNB])
+verboseLlhdAndNB' [] _ (lnb,_,_) partialResult = (lnb,lnb:partialResult)
+verboseLlhdAndNB' (o:obs) params calcState partialResult =
+  let calcState'@(lnb,_,_) = updatedLlhdCalcState params o calcState
+  in verboseLlhdAndNB' obs params calcState' (lnb:partialResult)
 
 -- | Compute the log-likelihood and distribution of prevalence assuming
 -- plausible parameters.
+--
+-- __WARNING__ This function is deprecated!
+--
 llhdAndNB' :: [Observation]
            -> Parameters
            -> LlhdCalcState
-           -> (LogLikelihood,NegativeBinomial)
-llhdAndNB' [] _ (l,_,_,nb) = (l,nb)
-llhdAndNB' ((delay,event):events) params (l,t,k,nb) =
-  llhdAndNB' events params (l+l'+l'',t',k'',nb'')
-    where
-      t' = t + delay
-      (l',nb') = intervalLlhd params delay k nb
-      (l'',k'',nb'') = eventLlhd t' params event k nb'
-
-
-
-
+           -> LlhdAndNB
+llhdAndNB' [] _ (lnb,_,_) = lnb
+llhdAndNB' ((delay,event):events) params ((l,nb),t,k) =
+  llhdAndNB' events params (updatedLlhdCalcState params (delay,event) ((l,nb),t,k))

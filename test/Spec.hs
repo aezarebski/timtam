@@ -226,11 +226,11 @@ testInhomBDSLlhd = do
           tlams'''' = fromJust $ asTimed [(0,1.3),(1.5,1.3),(2.5,1.3)]
           lam = fromJust $ cadlagValue tlams 0.1
           lam'' = fromJust $ cadlagValue tlams'' 0.1
-          (llhdValXXX1,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams,1.0,0.3)) initLlhdState
-          (llhdValXXX2,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams',1.0,0.3)) initLlhdState
-          (llhdValXXX3,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'',1.0,0.3)) initLlhdState
-          (llhdValXXX4,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams''',1.0,0.3)) initLlhdState
-          (llhdValXXX5,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'''',1.0,0.3)) initLlhdState
+          (llhdValXXX1,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams,1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX2,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams',1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX3,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'',1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX4,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams''',1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX5,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'''',1.0,0.3)) InhomBDSLlhd.initLlhdState
           (llhdValYYY1,_) = llhdAndNB obs (lam,1.0,0.3,[],0.0,[]) initLlhdState
           (llhdValYYY2,_) = llhdAndNB obs (lam'',1.0,0.3,[],0.0,[]) initLlhdState
           (llhdValYYY3,_) = llhdAndNB obs (lam'' + 0.1,1.0,0.3,[],0.0,[]) initLlhdState
@@ -245,11 +245,11 @@ testInhomBDSLlhd = do
       let infParams = (InhomBDSLlhd.InhomParams (fromJust $ asTimed [(0.0,1.0),(1.0,1.0)],0.4,0.4)) :: InhomBDSLlhd.InhomParams
           (InhomBDSLlhd.InhomParams (tlams,_,_)) = infParams
           obs = [(0.3,OBirth),(0.5,OBirth),(0.19,OSample)]
-          llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
+          llhdVal = fst $ InhomBDSLlhd.inhomLlhdAndNB obs infParams InhomBDSLlhd.initLlhdState
           obs' = [(0.3,OBirth),(0.5,OBirth),(0.20,OSample)]
-          llhdVal' = fst $ InhomBDSLlhd.llhdAndNB obs' infParams initLlhdState
+          llhdVal' = fst $ InhomBDSLlhd.inhomLlhdAndNB obs' infParams InhomBDSLlhd.initLlhdState
           obs'' = [(0.3,OBirth),(0.5,OBirth),(0.21,OSample)]
-          llhdVal'' = fst $ InhomBDSLlhd.llhdAndNB obs'' infParams initLlhdState
+          llhdVal'' = fst $ InhomBDSLlhd.inhomLlhdAndNB obs'' infParams InhomBDSLlhd.initLlhdState
        in do
         it "Check cadlagValue" $ do
           cadlagValue tlams 1.1 == Just 1.0 `shouldBe` True
