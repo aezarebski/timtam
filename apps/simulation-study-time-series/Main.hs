@@ -47,7 +47,6 @@ data Configuration =
     , observationsOutputCsv :: FilePath
     , evaluationParameters :: [Parameters]
     , llhdOutputCsv :: FilePath
-    , prevalenceDistributionTxt :: FilePath
     }
   deriving (Show, Generic)
 
@@ -95,14 +94,15 @@ evaluateLLHD obs = do
       doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . map BBuilder.doubleDec
   liftIO $ L.writeFile llhdsCsv (doublesAsString llhdVals)
 
--- Write the final estiamte of the NB distribution to file for subsequent
--- plotting.
-estimatePrevalence :: [Observation] -> Simulation ()
-estimatePrevalence obs = do
-  prevDistTxt <- asks prevalenceDistributionTxt
+-- | Record the partial results of the LLHD and NB to a CSV at the parameters
+-- used in the simulation.
+partialEvaluations :: [Observation] -> Simulation ()
+partialEvaluations obs = do
   simParams <- asks simulationParameters
-  let nb = snd $ llhdAndNB obs simParams initLlhdState
-  liftIO $ Prelude.writeFile prevDistTxt (show nb)
+  let partialResults = snd $ verboseLlhdAndNB obs simParams initLlhdState
+      records = [show l ++ "," ++ show nb | (l,nb) <- partialResults]
+      partialEvalsCsv = "out/partial-evaluations.csv"
+  liftIO $ Prelude.writeFile partialEvalsCsv (intercalate "\n" records)
 
 -- Definition of the simulation study.
 simulationStudy :: Simulation ()
@@ -110,17 +110,8 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration
   obs <- simulatedObservations bdscodConfig
   evaluateLLHD obs
-  estimatePrevalence obs
+  partialEvaluations obs
   return ()
-
--- Run the actual simulation study.
-runSimulationStudy :: Configuration -> IO ()
-runSimulationStudy config = do
-  result <- runExceptT (runReaderT simulationStudy config)
-  case result of
-    Left errMsg -> putStrLn errMsg
-    Right _ -> return ()
-
 
 main :: IO ()
 main = do
@@ -129,7 +120,11 @@ main = do
   case maybeConfig of
     Nothing ->
       putStrLn $ "Could not get configuration from file: " ++ configFilePath
-    Just config -> runSimulationStudy config
+    Just config -> do
+      result <- runExceptT (runReaderT simulationStudy config)
+      case result of
+        Left errMsg -> putStrLn errMsg
+        Right _ -> return ()
 
 getConfiguration :: FilePath -> IO (Maybe Configuration)
 getConfiguration fp = Json.decode <$> L.readFile fp
