@@ -215,7 +215,7 @@ eventLlhd t (_, _, _, rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
    in (logL, k - n, NegBinom r ((1 - rh) * p))
 eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
   let nu = snd . fromJust $ find ((== t) . fst) nus
-      logL = n * log nu + log (nbPGFdash n nb (1 - nu)) + k * log (1 - nu)
+      logL = n * log nu + logNbPGFdash n nb (1 - nu) + k * log (1 - nu)
    in (logL, k, NegBinom (r + n) ((1 - nu) * p))
 
 
