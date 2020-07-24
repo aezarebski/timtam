@@ -48,6 +48,7 @@ mAndVFromNb (NegBinom r p) = (m, v)
   where
     m = p * r / (1 - p)
     v = m / (1 - p)
+mAndVFromNb Zero = (0,0)
 
 nbPGF :: NegativeBinomial -> Double -> Double
 nbPGF nb z = case nb of
