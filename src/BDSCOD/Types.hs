@@ -19,8 +19,10 @@ import GHC.Generics (Generic)
 type Parameters
    = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
 
+-- | The number of lineages that exist in a phylogeny
 type NumLineages = Double
 
+-- | The type of events that can be observed under the BDSCOD.
 data ObservedEvent
   = OBirth
   | OSample
@@ -54,8 +56,15 @@ instance Csv.ToField ObservedEvent where
 
 type Observation = (Time, ObservedEvent)
 
+-- | The negative binomial distribution extended to include the limiting case of
+-- a point mass at zero. The parameterisation is in terms of a positive
+-- parameter /r/, the size, and a probability /p/, the mean of the distribution
+-- is /p * r \/ (1 - p)/.
+--
+-- __WARNING__ The parameterisation used is the same as the one on Wikipedia,
+-- but not the same as the one used by R which uses /1-p/ as the probability.
 data NegativeBinomial
-  = Zero
+  = Zero -- ^ A point mass at zero
   | NegBinom Double Probability
   deriving (Show)
 
