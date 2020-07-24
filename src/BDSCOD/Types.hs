@@ -44,8 +44,12 @@ instance Csv.ToField ObservedEvent where
   toField OBirth = "obirth"
   toField OSample = "osample"
   toField OOccurrence = "ooccurrence"
-  toField (OCatastrophe nl) = strictByteString . BBuilder.toLazyByteString $ mconcat [BBuilder.stringUtf8 "ocatastrophe:", BBuilder.doubleDec nl]
-  toField (ODisaster nl) = strictByteString . BBuilder.toLazyByteString $ mconcat [BBuilder.stringUtf8 "odisaster:", BBuilder.doubleDec nl]
+  toField (OCatastrophe nl) =
+    strictByteString . BBuilder.toLazyByteString $
+    BBuilder.stringUtf8 "ocatastrophe:" <> BBuilder.doubleDec nl
+  toField (ODisaster nl) =
+    strictByteString . BBuilder.toLazyByteString $
+    BBuilder.stringUtf8 "odisaster:" <> BBuilder.doubleDec nl
 
 
 type Observation = (Time, ObservedEvent)
