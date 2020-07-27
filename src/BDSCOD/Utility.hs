@@ -111,7 +111,7 @@ logNbPGFdash j nb z =
     Zero -> log 0
     (NegBinom r p) ->
       logPochhammer r j + j * log (p / (1 - p)) +
-      log (nbPGF (NegBinom (r + j) p) z)
+      logNbPGF (NegBinom (r + j) p) z
 
 pochhammer :: (Eq p, Num p) => p -> p -> p
 pochhammer _ 0 = 1
