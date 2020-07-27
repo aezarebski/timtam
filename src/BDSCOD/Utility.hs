@@ -50,6 +50,11 @@ mAndVFromNb (NegBinom r p) = (m, v)
     v = m / (1 - p)
 mAndVFromNb Zero = (0,0)
 
+-- | The PGF of the negative binomial distribution
+--
+-- __WARNING__ It is easy to get infinite values so try to use the @logNbPGF@
+-- function instead if possible.
+--
 nbPGF :: NegativeBinomial -> Double -> Double
 nbPGF nb z = case nb of
   Zero -> 1
@@ -65,6 +70,12 @@ nbPGF'' nb z = case nb of
   Zero -> 0
   (NegBinom r p) -> (r * (r + 1) * (p / (1 - p)) ** 2.0) *
                       nbPGF (NegBinom (r+2) p) z
+
+-- | The log of the PGF of the negative binomial distribution.
+logNbPGF :: NegativeBinomial -> Double -> Double
+logNbPGF nb z = case nb of
+  Zero -> 0
+  (NegBinom r p) -> r * (log (1 - p) - log (1 - p * z))
 
 -- | The jth derivative of the negative binomial PGF.
 --
