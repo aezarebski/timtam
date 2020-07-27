@@ -77,6 +77,21 @@ logNbPGF nb z = case nb of
   Zero -> 0
   (NegBinom r p) -> r * (log (1 - p) - log (1 - p * z))
 
+logNbPGF' :: NegativeBinomial -> Double -> Double
+logNbPGF' nb z =
+  case nb of
+    Zero -> log 0
+    (NegBinom r p) ->
+      log (r * p) - log (1 - p) + logNbPGF (NegBinom (r + 1) p) z
+
+logNbPGF'' :: NegativeBinomial -> Double -> Double
+logNbPGF'' nb z =
+  case nb of
+    Zero -> log 0
+    (NegBinom r p) ->
+      log (r * (r + 1)) + 2 * log (p / (1 - p)) +
+      logNbPGF (NegBinom (r + 2) p) z
+
 -- | The jth derivative of the negative binomial PGF.
 --
 -- __WARNING__ It is easy to get an Infinite value out of this.
