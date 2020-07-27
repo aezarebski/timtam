@@ -198,7 +198,9 @@ intervalLlhd ::
   -> (Probability, NegativeBinomial)
 intervalLlhd params delay k nb =
   let (c, m, v) = pdeStatistics params delay (PDESol nb k)
-   in (log c, nbFromMAndV (m, v))
+   in if isInfinite (log c)
+      then error "infinite log(c) in intervalLlhd function..."
+      else (log c, nbFromMAndV (m, v))
 
 
 
@@ -208,15 +210,19 @@ eventLlhd :: Time -> Parameters -> ObservedEvent -> NumLineages -> NegativeBinom
 eventLlhd _ (lam, _, _, _, _, _) OBirth k nb = (log lam, k + 1, nb)
 eventLlhd _ (_, _, psi, _, _, _) OSample k nb = (log psi, k - 1, nb)
 eventLlhd _ (_, _, _, _, om, _) OOccurrence k nb@(NegBinom r p) =
-  (log om + log (nbPGF' nb 1), k, NegBinom (r + 1) p)
+  (log om + logNbPGF' nb 1, k, NegBinom (r + 1) p)
 eventLlhd t (_, _, _, rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
   let rh = snd . fromJust $ find ((== t) . fst) rhs
-      logL = n * log rh + log (nbPGF nb (1 - rh)) + (k - n) * log (1 - rh)
-   in (logL, k - n, NegBinom r ((1 - rh) * p))
+      logL = n * log rh + logNbPGF nb (1 - rh) + (k - n) * log (1 - rh)
+   in if isInfinite logL
+      then error "numerical error: infinite logL in eventLlhd function while processing catastrophe"
+      else (logL, k - n, NegBinom r ((1 - rh) * p))
 eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
   let nu = snd . fromJust $ find ((== t) . fst) nus
       logL = n * log nu + logNbPGFdash n nb (1 - nu) + k * log (1 - nu)
-   in (logL, k, NegBinom (r + n) ((1 - nu) * p))
+   in if isInfinite logL
+      then error "numerical error: infinite logL in eventLlhd function while processing disaster"
+      else (logL, k, NegBinom (r + n) ((1 - nu) * p))
 
 
 
