@@ -190,12 +190,11 @@ pdeStatistics params delay pdeSol@PDESol{} =
 
 
 
-intervalLlhd ::
-     Parameters
-  -> Double
-  -> Double
-  -> NegativeBinomial
-  -> (Probability, NegativeBinomial)
+intervalLlhd :: Parameters
+             -> Double
+             -> Double
+             -> NegativeBinomial
+             -> (Probability, NegativeBinomial)
 intervalLlhd params delay k nb =
   let (c, m, v) = pdeStatistics params delay (PDESol nb k)
    in if isInfinite (log c)
@@ -206,7 +205,12 @@ intervalLlhd params delay k nb =
 
 
 
-eventLlhd :: Time -> Parameters -> ObservedEvent -> NumLineages -> NegativeBinomial -> (LogLikelihood, NumLineages, NegativeBinomial)
+eventLlhd :: Time -- ^ Absolute time used to look up the parameter in the case of a scheduled event
+          -> Parameters
+          -> ObservedEvent
+          -> NumLineages -- ^ The number of lineages in the reconstructed tree prior to the event
+          -> NegativeBinomial
+          -> (LogLikelihood, NumLineages, NegativeBinomial)
 eventLlhd _ (lam, _, _, _, _, _) OBirth k nb = (log lam, k + 1, nb)
 eventLlhd _ (_, _, psi, _, _, _) OSample k nb = (log psi, k - 1, nb)
 eventLlhd _ (_, _, _, _, om, _) OOccurrence k nb@(NegBinom r p) =
@@ -223,9 +227,9 @@ eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
    in if isInfinite logL
       then error "numerical error: infinite logL in eventLlhd function while processing disaster"
       else (logL, k, NegBinom (r + n) ((1 - nu) * p))
-
-
-
+eventLlhd _ (_, _, _, _, _, _) OOccurrence k Zero = (log 0, k, Zero)
+eventLlhd _ (_, _, _, _, _, _) (ODisaster _) k Zero = (log 0, k, Zero)
+eventLlhd _ (_, _, _, _, _, _) (OCatastrophe _) _ Zero = undefined
 
 
 
