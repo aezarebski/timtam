@@ -32,8 +32,8 @@ library
                , aeson
                , epi-types >= 0.2.1.2
   default-language:    Haskell2010
-  ghc-options:         -fwarn-tabs -Wmissing-signatures -threaded -O2 -fwarn-incomplete-patterns
-  -- ghc-options:        
+  -- ghc-options:         -fwarn-tabs -Wmissing-signatures -threaded -O2 -fwarn-incomplete-patterns
+  ghc-options:        
 
 
 executable manceau-comparison
