@@ -12,7 +12,7 @@ import Epidemic.Types.Parameter
 arePlausible :: [Observation]
              -> Parameters
              -> Bool
-arePlausible obs (l, m, r, trs, o, tns)
+arePlausible obs (l, m, r, _, o, _)
   | minimum [l, m, r, o] < 0 = False
   | any isBirth obs && l == 0 = False
   | any isSample obs && r == 0 = False
@@ -28,7 +28,7 @@ eventRate (lam, mu, psi, _, om, _) = lam + mu + psi + om
 
 discriminant :: Parameters -> Double
 discriminant params@(lam, mu, _, _, _, _) =
-  (eventRate params) ^ 2 - 4.0 * lam * mu
+  eventRate params ** 2.0 - 4.0 * lam * mu
 
 x1and2 :: Parameters -> (Double, Double)
 x1and2 params@(lam, _, _, _, _, _) =
@@ -40,7 +40,7 @@ odeHelpers :: Parameters -> Time -> (Double,Double,Double,Double)
 odeHelpers params delay = (x1,x2,disc,expFact)
   where
     (x1,x2) = x1and2 params
-    disc = discriminant params 
+    disc = discriminant params
     expFact = exp ((- sqrt disc) * delay)
 
 
@@ -52,7 +52,7 @@ p0' :: Parameters -> Time -> Probability -> Double
 p0' params delay z =
   (expFact * x2 - x1) / (x2 - expFact * (x1 - z) - z) -
   ((expFact - 1) * (x1 * (x2 - z) - expFact * x2 * (x1 - z))) /
-  (x2 - expFact * (x1 - z) - z) ^ 2
+  (x2 - expFact * (x1 - z) - z) ** 2.0
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
@@ -60,25 +60,25 @@ p0' params delay z =
 -- @z@.
 p0'' :: Parameters -> Time -> Probability -> Double
 p0'' params delay z =
-  (2 * (expFact - 1) ^ 2 * (x1 * (x2 - z) -
+  (2 * (expFact - 1) ** 2.0 * (x1 * (x2 - z) -
   expFact * x2 * (x1 - z))) /
-  (x2 - expFact * (x1 - z) - z) ^ 3 -
+  (x2 - expFact * (x1 - z) - z) ** 3.0 -
   (2 * (expFact - 1) * (expFact * x2 - x1))
-  / (x2 - expFact * (x1 - z) - z) ^ 2
+  / (x2 - expFact * (x1 - z) - z) ** 2.0
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
 rr' :: Parameters -> Time -> Probability -> Double
 rr' params@(lam, _, _, _, _, _) delay z =
   (2 * (1 - expFact) * expFact * disc) /
-  (lam ^ 2 * (x2 - expFact * (x1 - z) - z) ^ 3)
+  (lam ** 2.0 * (x2 - expFact * (x1 - z) - z) ** 3.0)
   where
     (x1, x2, disc, expFact) = odeHelpers params delay
 
 rr'' :: Parameters -> Time -> Probability -> Double
 rr'' params@(lam, _, _, _, _, _) delay z =
-  (6 * (expFact - 1) ^ 2 * expFact * disc) /
-  (lam ^ 2 * (x2 - expFact * (x1 - z) - z) ^ 4)
+  (6 * (expFact - 1) ** 2.0 * expFact * disc) /
+  (lam ** 2.0 * (x2 - expFact * (x1 - z) - z) ** 4.0)
   where
     (x1, x2, disc, expFact) = odeHelpers params delay
 
@@ -103,7 +103,7 @@ p0 params delay z =
 rr :: Parameters -> Time -> Probability -> Probability
 rr params@(lam, _, _, _, _, _) delay z =
   disc * expFact /
-  ((lam ^ 2) * (((x2 - z) - (x1 - z) * expFact) ^ 2))
+  ((lam ** 2.0) * (((x2 - z) - (x1 - z) * expFact) ** 2.0))
   where
     (x1, x2, disc, expFact) = odeHelpers params delay
 
@@ -122,9 +122,9 @@ pdeGF :: Parameters -> Time -> PDESolution -> Double -> Double
 pdeGF params delay (PDESol Zero 1) z = rz
   where
     rz = rr params delay z
-pdeGF params delay (PDESol nb k) z = f ( p0z ) * (rz ** k)
+pdeGF params delay (PDESol nb k) z = f p0z * (rz ** k)
   where
-    f z = nbPGF nb z
+    f = nbPGF nb
     p0z = p0 params delay z
     rz = rr params delay z
 
@@ -133,11 +133,11 @@ pdeGF' params delay (PDESol Zero 1) z = rdashz
   where
     rdashz = rr' params delay z
 pdeGF' params delay (PDESol nb k) z =
-  (fdash ( p0z )) * p0dashz * rz ** k +
-  k * rz ** ( k - 1 ) * rdashz * f ( p0z )
+  fdash p0z * p0dashz * rz ** k +
+  k * rz ** ( k - 1 ) * rdashz * f p0z
   where
-    f z = nbPGF nb z
-    fdash z = nbPGF' nb z
+    f = nbPGF nb
+    fdash = nbPGF' nb
     p0z = p0 params delay z
     p0dashz = p0' params delay z
     rz = rr params delay z
@@ -148,15 +148,15 @@ pdeGF'' params delay (PDESol Zero 1) z = rdashdashz
   where
     rdashdashz = rr'' params delay z
 pdeGF'' params delay (PDESol nb k) z =
-  fdashdash ( p0z ) * p0dashz ** 2 * rz ** k +
-  fdash ( p0z ) * p0dashdashz * rz ** k +
-  2 * (fdash ( p0z )) * p0dashz * k * rz ** (k-1) * rdashz +
-  f ( p0z ) * k * (k-1) * rz ** (k-2) * rdashz ** 2 +
-  f ( p0z ) * k * rz ** (k-1) * rdashdashz
+  fdashdash p0z * p0dashz ** 2 * rz ** k +
+  fdash p0z * p0dashdashz * rz ** k +
+  2 * fdash p0z * p0dashz * k * rz ** (k-1) * rdashz +
+  f p0z * k * (k-1) * rz ** (k-2) * rdashz ** 2 +
+  f p0z * k * rz ** (k-1) * rdashdashz
   where
-    f z = nbPGF nb z
-    fdash z = nbPGF' nb z
-    fdashdash z = nbPGF'' nb z
+    f = nbPGF nb
+    fdash = nbPGF' nb
+    fdashdash = nbPGF'' nb
     p0z = p0 params delay z
     p0dashz = p0' params delay z
     p0dashdashz = p0'' params delay z
@@ -173,7 +173,7 @@ pdeStatistics :: Parameters
               -> Time
               -> PDESolution
               -> (Probability, Double, Double)
-pdeStatistics params delay pdeSol@(PDESol nb k) =
+pdeStatistics params delay pdeSol@PDESol{} =
   if c > 1e-300
     then (c, m, v)
     else error $ "pdeStatistics had a c: " ++ show c
@@ -252,7 +252,10 @@ verboseLlhdAndNB obs params state0 =
   then verboseLlhdAndNB' obs params state0 mempty
   else ((-1 / 0, Zero),mempty)
 
-updatedLlhdCalcState :: Parameters -> Observation -> LlhdCalcState -> LlhdCalcState
+updatedLlhdCalcState :: Parameters
+                     -> Observation
+                     -> LlhdCalcState
+                     -> LlhdCalcState
 updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
   ((l+l'+l'',nb''),t',k'')
   where
@@ -275,7 +278,7 @@ verboseLlhdAndNB' (o:obs) params calcState partialResult =
 -- | Compute the log-likelihood and distribution of prevalence assuming
 -- plausible parameters.
 --
--- __WARNING__ This function is deprecated!
+-- __WARNING__ This function is deprecated in favour of @llhdAndNB@.
 --
 llhdAndNB' :: [Observation]
            -> Parameters
