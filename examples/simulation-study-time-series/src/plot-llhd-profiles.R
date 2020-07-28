@@ -111,5 +111,5 @@ prev_fig <- ggplot(mapping = aes(x = time)) +
     theme_classic()
 
 ## print(prev_fig)
-ggsave("out/prevalence-profiles.png", prev_fig, height = 5, width = 1.618 * 5, units = "cm")
+ggsave("out/prevalence-profiles.pdf", prev_fig, height = 5, width = 1.618 * 5, units = "cm")
 
