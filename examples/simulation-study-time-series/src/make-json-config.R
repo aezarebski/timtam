@@ -4,9 +4,9 @@ library(jsonlite)
 output_file <- "ts-config.json"
 
 
-simulation_duration <- 15
+simulation_duration <- 17
 
-inference_times <- seq(from = 7, to = 15, by = 2) # times to evaluate the llhd and prevalence distribution
+inference_times <- seq(from = 7, to = 17, by = 2) # times to evaluate the llhd and prevalence distribution
 
 
 birth_rate <- 1.5

@@ -95,7 +95,7 @@ read_nb_params <- function(nb_csv) {
 
 instantaneous_prevalence <- function(inf_config) {
     nb_params <- read_nb_params(pluck(inf_config, "negBinomCsv"))
-    result <- set_names(as.list(qnbinom(p = c(0.005,0.5,0.995), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+    result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
     result$time <- pluck(inf_config, "inferenceTime")
     as.data.frame(result)
 }
@@ -105,8 +105,11 @@ prev_estimates <- config$inferenceConfigurations %>% map(instantaneous_prevalenc
 
 prev_fig <- ggplot(mapping = aes(x = time)) +
     geom_ribbon(data = prev_estimates, mapping = aes(ymin = lower, ymax = upper), alpha = 0.1) +
-    geom_line(data = prev_estimates, mapping = aes(y = mid)) +
-    geom_line(data = all_events, mapping = aes(y = population_size), colour = "red")
+    geom_line(data = prev_estimates, mapping = aes(y = mid), colour = "grey") +
+    geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
+    labs(x = "Time", y = "Infection prevalence") +
+    theme_classic()
 
-ggsave("out/prevalence-profiles.png", prev_fig)
+## print(prev_fig)
+ggsave("out/prevalence-profiles.png", prev_fig, height = 5, width = 1.618 * 5, units = "cm")
 
