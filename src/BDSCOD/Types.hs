@@ -66,7 +66,9 @@ type Observation = (Time, ObservedEvent)
 data NegativeBinomial
   = Zero -- ^ A point mass at zero
   | NegBinom Double Probability
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance Csv.ToRecord NegativeBinomial
 
 data PDESolution = PDESol NegativeBinomial NumLineages
 
