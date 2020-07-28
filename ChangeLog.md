@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 0.1.2.8
+
+- Do more of the likelihood calculation in log-space to avoid numerical errors
+  and test the new functions against the old ones.
+- Include a simulation study which tracks the prevalence through time and allows
+  for more flexible study of the use of scheduled data. See
+  `./examples/simulation-study-time-series/` for the details of this.
+- Update to `epi-types-0.2.1.2` and `epi-sim-0.2.0.1` to get a bug fix.
+
 ## 0.1.2.7
 
 - Generate a LaTeX table of the simulation parameters.

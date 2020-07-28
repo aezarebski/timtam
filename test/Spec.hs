@@ -31,7 +31,7 @@ finiteDifference :: Fractional a
 finiteDifference h f x = (f (x+h) - f (x-h)) / (2*h)
 
 testNbPGF = do
-  describe "Test nbPGF" $ do
+  describe "Test nbPGF: 1" $ do
     it "known value of PGF is correct 1" $
       nbPGF Zero 0.0 `shouldBe` 1
 
@@ -68,6 +68,28 @@ testNbPGF = do
     it "PGF second partial derivative seems correct 3" $
       nbPGF'' (NegBinom 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinom 1 0.5) x) 0.0))
 
+  describe "Test nbPGF: 2" $ do
+    it "test pochhammer and logPochhammer" $ do
+      pochhammer 2 5 > 2 `shouldBe` True
+      let pochhammersWorking (a,b) = withinDeltaOf 1e-5 (log $ pochhammer a b) (logPochhammer a b)
+      all pochhammersWorking [(a,b) | a <- [1..10], b <- [1..10], a <= b] `shouldBe` True
+      all pochhammersWorking [(a+0.1,b) | a <- [1..10], b <- [1..10], a <= b] `shouldBe` True
+
+    it "test nbPGFdash and logNbPGFdash" $ do
+      let nbPGFdashWorking (j,r,p,z) = withinDeltaOf 1e-5 (log $ nbPGFdash j (NegBinom r p) z) (logNbPGFdash j (NegBinom r p) z)
+      all nbPGFdashWorking [(j,r,p,z) | j <- [2..50], r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
+
+    it "test nbPGF and logNbPGF" $ do
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF (NegBinom r p) z) (logNbPGF (NegBinom r p) z)
+      all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
+
+    it "test nbPGF' and logNbPGF'" $ do
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF' (NegBinom r p) z) (logNbPGF' (NegBinom r p) z)
+      all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
+
+    it "test nbPGF'' and logNbPGF''" $ do
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF'' (NegBinom r p) z) (logNbPGF'' (NegBinom r p) z)
+      all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
 testp0 = do
   describe "Test p0" $ do
@@ -226,11 +248,11 @@ testInhomBDSLlhd = do
           tlams'''' = fromJust $ asTimed [(0,1.3),(1.5,1.3),(2.5,1.3)]
           lam = fromJust $ cadlagValue tlams 0.1
           lam'' = fromJust $ cadlagValue tlams'' 0.1
-          (llhdValXXX1,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams,1.0,0.3)) initLlhdState
-          (llhdValXXX2,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams',1.0,0.3)) initLlhdState
-          (llhdValXXX3,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'',1.0,0.3)) initLlhdState
-          (llhdValXXX4,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams''',1.0,0.3)) initLlhdState
-          (llhdValXXX5,_) = InhomBDSLlhd.llhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'''',1.0,0.3)) initLlhdState
+          (llhdValXXX1,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams,1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX2,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams',1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX3,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'',1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX4,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams''',1.0,0.3)) InhomBDSLlhd.initLlhdState
+          (llhdValXXX5,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'''',1.0,0.3)) InhomBDSLlhd.initLlhdState
           (llhdValYYY1,_) = llhdAndNB obs (lam,1.0,0.3,[],0.0,[]) initLlhdState
           (llhdValYYY2,_) = llhdAndNB obs (lam'',1.0,0.3,[],0.0,[]) initLlhdState
           (llhdValYYY3,_) = llhdAndNB obs (lam'' + 0.1,1.0,0.3,[],0.0,[]) initLlhdState
@@ -245,11 +267,11 @@ testInhomBDSLlhd = do
       let infParams = (InhomBDSLlhd.InhomParams (fromJust $ asTimed [(0.0,1.0),(1.0,1.0)],0.4,0.4)) :: InhomBDSLlhd.InhomParams
           (InhomBDSLlhd.InhomParams (tlams,_,_)) = infParams
           obs = [(0.3,OBirth),(0.5,OBirth),(0.19,OSample)]
-          llhdVal = fst $ InhomBDSLlhd.llhdAndNB obs infParams initLlhdState
+          llhdVal = fst $ InhomBDSLlhd.inhomLlhdAndNB obs infParams InhomBDSLlhd.initLlhdState
           obs' = [(0.3,OBirth),(0.5,OBirth),(0.20,OSample)]
-          llhdVal' = fst $ InhomBDSLlhd.llhdAndNB obs' infParams initLlhdState
+          llhdVal' = fst $ InhomBDSLlhd.inhomLlhdAndNB obs' infParams InhomBDSLlhd.initLlhdState
           obs'' = [(0.3,OBirth),(0.5,OBirth),(0.21,OSample)]
-          llhdVal'' = fst $ InhomBDSLlhd.llhdAndNB obs'' infParams initLlhdState
+          llhdVal'' = fst $ InhomBDSLlhd.inhomLlhdAndNB obs'' infParams InhomBDSLlhd.initLlhdState
        in do
         it "Check cadlagValue" $ do
           cadlagValue tlams 1.1 == Just 1.0 `shouldBe` True

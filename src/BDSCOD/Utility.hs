@@ -48,7 +48,13 @@ mAndVFromNb (NegBinom r p) = (m, v)
   where
     m = p * r / (1 - p)
     v = m / (1 - p)
+mAndVFromNb Zero = (0,0)
 
+-- | The PGF of the negative binomial distribution
+--
+-- __WARNING__ It is easy to get infinite values so try to use the @logNbPGF@
+-- function instead if possible.
+--
 nbPGF :: NegativeBinomial -> Double -> Double
 nbPGF nb z = case nb of
   Zero -> 1
@@ -65,6 +71,31 @@ nbPGF'' nb z = case nb of
   (NegBinom r p) -> (r * (r + 1) * (p / (1 - p)) ** 2.0) *
                       nbPGF (NegBinom (r+2) p) z
 
+-- | The log of the PGF of the negative binomial distribution.
+logNbPGF :: NegativeBinomial -> Double -> Double
+logNbPGF nb z = case nb of
+  Zero -> 0
+  (NegBinom r p) -> r * (log (1 - p) - log (1 - p * z))
+
+logNbPGF' :: NegativeBinomial -> Double -> Double
+logNbPGF' nb z =
+  case nb of
+    Zero -> log 0
+    (NegBinom r p) ->
+      log (r * p) - log (1 - p) + logNbPGF (NegBinom (r + 1) p) z
+
+logNbPGF'' :: NegativeBinomial -> Double -> Double
+logNbPGF'' nb z =
+  case nb of
+    Zero -> log 0
+    (NegBinom r p) ->
+      log (r * (r + 1)) + 2 * log (p / (1 - p)) +
+      logNbPGF (NegBinom (r + 2) p) z
+
+-- | The jth derivative of the negative binomial PGF.
+--
+-- __WARNING__ It is easy to get an Infinite value out of this.
+--
 nbPGFdash :: Double -> NegativeBinomial -> Double -> Double
 nbPGFdash j nb z =
   case nb of
@@ -73,6 +104,19 @@ nbPGFdash j nb z =
       pochhammer r j * (p / (1 - p)) ** j *
         nbPGF (NegBinom (r + j) p) z
 
+-- | The log of the jth derivative of the negative binomial PGF.
+logNbPGFdash :: Double -> NegativeBinomial -> Double -> Double
+logNbPGFdash j nb z =
+  case nb of
+    Zero -> log 0
+    (NegBinom r p) ->
+      logPochhammer r j + j * log (p / (1 - p)) +
+      logNbPGF (NegBinom (r + j) p) z
+
 pochhammer :: (Eq p, Num p) => p -> p -> p
 pochhammer _ 0 = 1
 pochhammer a i = (a + i - 1) * pochhammer a (i - 1)
+
+logPochhammer :: (Eq p, Floating p) => p -> p -> p
+logPochhammer _ 0 = 0
+logPochhammer a i = log (a + i - 1) + logPochhammer a (i - 1)

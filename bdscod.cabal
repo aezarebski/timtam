@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.2.7
+version:             0.1.2.8
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -24,13 +24,16 @@ library
   hs-source-dirs:
       src
   build-depends: base >= 4.7 && < 5
+               , bytestring >= 0.10
                , deepseq >= 1.4.4.0
-               , epi-sim >= 0.2.0.0
+               , cassava >= 0.5
+               , epi-sim >= 0.2.0.1
                , vector
                , aeson
-               , epi-types >= 0.2.1.1
+               , epi-types >= 0.2.1.2
   default-language:    Haskell2010
-  ghc-options:         -fwarn-tabs -Wmissing-signatures
+  -- ghc-options:         -fwarn-tabs -Wmissing-signatures -threaded -O2 -fwarn-incomplete-patterns
+  ghc-options:        
 
 
 executable manceau-comparison
@@ -39,13 +42,13 @@ executable manceau-comparison
       Paths_bdscod
   hs-source-dirs:
       apps/manceau-comparison
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2 -Wall
+  ghc-options: 
   build-depends:
       base >=4.7 && <5
     , bytestring
     , cassava
-    , epi-types >= 0.2.1.1
-    , epi-sim >= 0.2.0.0
+    , epi-types >= 0.2.1.2
+    , epi-sim >= 0.2.0.1
     , bdscod
     , hspec
     , vector
@@ -58,7 +61,7 @@ executable simulation-study
       Paths_bdscod
   hs-source-dirs:
       apps/simulation-study
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  ghc-options: 
   build-depends:
       base >=4.7 && <5
     , aeson
@@ -66,13 +69,32 @@ executable simulation-study
     , cassava
     , containers >= 0.6
     , directory
-    , epi-sim >= 0.2.0.0
-    , epi-types >= 0.2.1.1
+    , epi-sim >= 0.2.0.1
+    , epi-types >= 0.2.1.2
     , bdscod
     , hspec
     , vector
   default-language: Haskell2010
 
+executable simulation-study-time-series
+  main-is: Main.hs
+  other-modules:
+      Paths_bdscod
+  hs-source-dirs:
+      apps/simulation-study-time-series
+  ghc-options: 
+  build-depends:
+      base >=4.7 && <5
+    , aeson
+    , bdscod
+    , bytestring
+    , cassava
+    , directory
+    , epi-sim >= 0.2.0.1
+    , epi-types >= 0.2.1.2
+    , mtl >= 2.2
+    , vector
+  default-language: Haskell2010
 
 executable simulation-study-time-dependent-rates
   main-is: Main.hs
@@ -80,14 +102,14 @@ executable simulation-study-time-dependent-rates
       Paths_bdscod
   hs-source-dirs:
       apps/simulation-study-time-dependent-rates
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  ghc-options: 
   build-depends:
       base >=4.7 && <5
     , bytestring
     , aeson
     , cassava
-    , epi-types >= 0.2.1.1
-    , epi-sim >= 0.2.0.0
+    , epi-types >= 0.2.1.2
+    , epi-sim >= 0.2.0.1
     , bdscod
   default-language: Haskell2010
 
@@ -98,7 +120,7 @@ executable timing-evaluation
       Paths_bdscod
   hs-source-dirs:
       apps/timing-evaluation
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  ghc-options: 
   build-depends:
                   base             >=4.7 && <5
                 , abstract-par
@@ -108,8 +130,8 @@ executable timing-evaluation
                 , criterion        == 1.5.6.2
                 , cassava >= 0.5
                 , deepseq          >= 1.4.4.0
-                , epi-types >= 0.2.1.1
-                , epi-sim >= 0.2.0.0
+                , epi-types >= 0.2.1.2
+                , epi-sim >= 0.2.0.1
                 , statistics       >= 0.15
   default-language: Haskell2010
 
@@ -121,12 +143,12 @@ test-suite tests
       Paths_bdscod
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  ghc-options:
   build-depends:
       base >=4.7 && <5
-    , epi-sim >= 0.2.0.0
+    , epi-sim >= 0.2.0.1
     , bdscod
     , hspec
     , vector
-    , epi-types >= 0.2.1.1
+    , epi-types >= 0.2.1.2
   default-language: Haskell2010

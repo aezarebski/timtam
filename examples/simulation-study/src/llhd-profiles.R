@@ -50,6 +50,7 @@ fig_theme <- theme(
     panel.background = ggplot2::element_blank(),
     strip.background = ggplot2::element_rect(fill="white"))
 
+y_axis_breaks <- seq(from = -2e3, to = 1e3, by = 5)
 
 truth_linetype <- "dashed"
 
@@ -58,7 +59,8 @@ lambda_figure <- ggplot(filter(x, variedParameter == "ParamLambda"), aes(x = lam
     geom_vline(xintercept = PARAMS$lambda, linetype = truth_linetype) +
     labs(x = "Birth rate",
          y = "Log-Likelihood") +
-    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_y_continuous(breaks = y_axis_breaks) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 4)) +
     fig_theme
 
 if (save_figures) {
@@ -72,7 +74,7 @@ mu_figure <- ggplot(filter(x, variedParameter == "ParamMu"), aes(x = mu, y = llh
     geom_vline(xintercept = PARAMS$mu, linetype = truth_linetype) +
     labs(x = "Death rate",
          y = "Log-Likelihood") +
-    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_y_continuous(breaks = y_axis_breaks) +
     fig_theme
 
 if (save_figures) {
@@ -86,7 +88,7 @@ psi_figure <- ggplot(filter(x, variedParameter == "ParamPsi"), aes(x = psi, y = 
     geom_vline(xintercept = PARAMS$psi, linetype = truth_linetype) +
     labs(x = "Sampling rate",
          y = "Log-Likelihood") +
-    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_y_continuous(breaks = y_axis_breaks) +
     fig_theme
 
 if (save_figures) {
@@ -100,7 +102,8 @@ rho_figure <- ggplot(filter(x, variedParameter == "ParamRho"), aes(x = rho, y = 
     geom_vline(xintercept = PARAMS$rho, linetype = truth_linetype) +
     labs(x = "Catastrophe extinction\nprobability",
          y = "Log-Likelihood") +
-    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_y_continuous(breaks = y_axis_breaks) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 3)) +
     fig_theme
 
 if (save_figures) {
@@ -114,7 +117,7 @@ omega_figure <- ggplot(filter(x, variedParameter == "ParamOmega"), aes(x = omega
     geom_vline(xintercept = PARAMS$omega, linetype = truth_linetype) +
     labs(x = "Occurrence rate",
          y = "Log-Likelihood") +
-    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_y_continuous(breaks = y_axis_breaks) +
     fig_theme
 
 if (save_figures) {
@@ -128,12 +131,33 @@ nu_figure <- ggplot(filter(x, variedParameter == "ParamNu"), aes(x = nu, y = llh
     geom_vline(xintercept = PARAMS$nu, linetype = truth_linetype) +
     labs(x = "Disaster extinction\nprobability",
          y = "Log-Likelihood") +
-    scale_y_continuous(breaks = seq(from = -1e3, to = 1e3, by = 5)) +
+    scale_y_continuous(breaks = y_axis_breaks) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 3)) +
     fig_theme
 
 if (save_figures) {
     ggsave("out/llhd-profile-nu.pdf",
            plot = nu_figure + labs(title = "Log-likelihood profile", subtitle = "Known observation model parameters"),
+           height = 10.5, width = 14.8, units = "cm")
+}
+
+
+
+## We want a plot combining the profiles for all of the parameters so we need to
+## combine them now.
+
+combined_llhd_profiles <- grid.arrange(lambda_figure,
+                                       mu_figure,
+                                       psi_figure,
+                                       rho_figure,
+                                       omega_figure,
+                                       nu_figure,
+                                       ncol=3,
+                                       left = "Log-Likelihood")
+
+if (save_figures) {
+    ggsave("out/parameter-llhd-profiles.pdf",
+           plot = combined_llhd_profiles,
            height = 10.5, width = 14.8, units = "cm")
 }
 
@@ -154,14 +178,13 @@ rm(mask)
 num_unobserved_lineages <- 1 + et$Infection - et$Occurrence - et$Removal - et$Sampling - sum(num_catastropheed) - sum(num_disastered)
 cat(sprintf("\nThe number of unobserved lineages, a.k.a. the final prevalence, is %d\n\n", num_unobserved_lineages))
 
-
 ## Because we do not include the true parameters in the LLHD evaluations, we
 ## need to get the closest match to them among those that we have.
 unique_thresh <- 0.006
 curr_nb <- as.list(filter(x, abs(lambda - PARAMS$lambda) < unique_thresh, mu == PARAMS$mu, psi == PARAMS$psi, abs(rho - PARAMS$rho) < unique_thresh, omega == PARAMS$omega, abs(nu - PARAMS$nu) < unique_thresh) %>% select(starts_with("neg_binom")))
 curr_nb <- list(neg_binom_r = mean(curr_nb$neg_binom_r), neg_binom_p = mean(curr_nb$neg_binom_p))
 
-prev_mesh <- 50:550
+prev_mesh <- seq(from = max(num_unobserved_lineages - 100,0), to = min(num_unobserved_lineages + 100,1e3), by = 1)
 plot_df <- data.frame(prevalence = prev_mesh, log_prob = dnbinom(prev_mesh, size = curr_nb$neg_binom_r, prob = curr_nb$neg_binom_p, log = TRUE))
 
 prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
@@ -174,23 +197,4 @@ prev_figure <- ggplot(plot_df, aes(x = prevalence, y = log_prob)) +
 
 if (save_figures) {
     ggsave("out/llhd-profile-prevalence.pdf", plot = prev_figure, height = 10.5, width = 14.8, units = "cm")
-}
-
-
-## We want a plot combining the profiles for all of the parameters so we need to
-## combine them now.
-
-combined_llhd_profiles <- grid.arrange(lambda_figure,
-                                       mu_figure,
-                                       psi_figure,
-                                       rho_figure,
-                                       omega_figure,
-                                       nu_figure,
-                                       ncol=3,
-                                       left = "Log-Likelihood")
-
-if (save_figures) {
-    ggsave("out/parameter-llhd-profiles.pdf",
-           plot = combined_llhd_profiles,
-           height = 10.5, width = 14.8, units = "cm")
 }

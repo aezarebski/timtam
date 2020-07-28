@@ -73,7 +73,7 @@ getSimEvents _ _ =
      return Nothing
 
 llhdEvaluations :: [Observation] -> [InhomParams] -> [LlhdEval]
-llhdEvaluations obs = map (\ips -> LlhdEval ips (fst $ llhdAndNB obs ips initLlhdState))
+llhdEvaluations obs = map (\ips -> LlhdEval ips (fst $ inhomLlhdAndNB obs ips initLlhdState))
 
 readConfigFile :: FilePath -> IO (Maybe Config)
 readConfigFile fp = B.readFile fp >>= return . Json.decode

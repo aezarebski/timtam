@@ -24,12 +24,12 @@ instance Json.FromJSON InhomParams
 --
 -- This unpacks the constant rate portions of the process and uses the functions
 -- in @BDSCOD.Llhd@ to compute the corresponding interval and event likelihoods.
-llhdAndNB' :: [Observation]
+inhomLlhdAndNB' :: [Observation]
            -> InhomParams
-           -> LlhdCalcState
+           -> InhomLlhdCalcState
            -> Maybe (LogLikelihood,NegativeBinomial)
-llhdAndNB' [] _ (l,_,_,nb) = Just (l,nb)
-llhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) (l,t,k,nb) =
+inhomLlhdAndNB' [] _ (l,_,_,nb) = Just (l,nb)
+inhomLlhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) (l,t,k,nb) =
   do
     rateChangeTime <- nextTime tlams t
     if rateChangeTime - t > delay
@@ -37,19 +37,20 @@ llhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) (l,t,
                t' = t + delay
                (l',nb') = intervalLlhd bdscodParams delay k nb
                (l'',k'',nb'') = eventLlhd t' bdscodParams event k nb'
-             in llhdAndNB' events inhomParams (l+l'+l'',t',k'',nb'')
+             in inhomLlhdAndNB' events inhomParams (l+l'+l'',t',k'',nb'')
       else let bdscodParams = (fromJust $ cadlagValue tlams t, mu, psi, [], 0.0, [])
                t' = rateChangeTime
                (l',nb') = intervalLlhd bdscodParams (rateChangeTime-t) k nb
-             in llhdAndNB' ((delay-(rateChangeTime-t),event):events) inhomParams (l+l',t',k,nb')
+             in inhomLlhdAndNB' ((delay-(rateChangeTime-t),event):events) inhomParams (l+l',t',k,nb')
 
 -- | The log-likelihood and the distribution of prevalence of the inhomogenoues BDS.
-llhdAndNB :: [Observation]  -- ^ The observed events
+inhomLlhdAndNB :: [Observation]  -- ^ The observed events
           -> InhomParams    -- ^ The parameters
-          -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
+          -> InhomLlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
           -> (LogLikelihood,NegativeBinomial)
-llhdAndNB obs params state0 =
-  fromMaybe (-1 / 0, Zero) $ llhdAndNB' obs params state0
+inhomLlhdAndNB obs params state0 =
+  fromMaybe (-1 / 0, Zero) $ inhomLlhdAndNB' obs params state0
 
-initLlhdState :: LlhdCalcState
+type InhomLlhdCalcState = (LogLikelihood,Time,NumLineages,NegativeBinomial)
+initLlhdState :: InhomLlhdCalcState
 initLlhdState = (0,0,1,Zero)
