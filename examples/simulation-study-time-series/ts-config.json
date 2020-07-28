@@ -1,7 +1,0 @@
-{
-    "simulatedEventsOutputCsv": "out/all-simulated-events.csv",
-    "simulationParameters": [4.5, 0.3, 0.0, [[1.5,0.9]], 0.0, [[1.0,0.3]]],
-    "simulationDuration": 1.500001,
-    "reconstructedTreeOutputFiles": ["out/reconstructed-newick-tree.txt","out/reconstructed-newick-metadata.csv"],
-    "observationsOutputCsv": "out/simulated-observations.csv"
-}
