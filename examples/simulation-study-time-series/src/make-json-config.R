@@ -6,7 +6,10 @@ output_file <- "ts-config.json"
 
 simulation_duration <- 15
 
-birth_rate <- 1.3
+inference_times <- seq(from = 7, to = 15, by = 2) # times to evaluate the llhd and prevalence distribution
+
+
+birth_rate <- 1.5
 death_rate <- 0.50
 sampling_rate <- 0.2
 occurrence_rate <- 0.2
@@ -21,12 +24,26 @@ num_catastrophes <- length(catastrophe_times)
 catastrophe_probs <- seq(from = 0.15, to = 0.25, length = num_catastrophes)
 catastrophe_params <- map2(catastrophe_times, catastrophe_probs, list)
 
+inference_configuration <- function(inf_time) {
+    list(inferenceTime = inf_time,
+         reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%.2f.txt",
+                                                  "out/reconstructed-newick-metadata-%.2f.csv"),
+                                                inf_time),
+         observationsOutputCsv = sprintf("out/simulated-observations-%.2f.csv",
+                                         inf_time),
+         llhdOutputCsv = sprintf("out/llhd-evaluations-%.2f.csv",
+                                 inf_time),
+         negBinomCsv = sprintf("out/final-negative-binomial-%.2f.csv",
+                               inf_time))
+}
+
+
 sim_params <- list(birth_rate, death_rate, sampling_rate, catastrophe_params, occurrence_rate, disaster_params)
 
-num_eval_steps <- 100 # the number of mesh points for plotting
-eval_lambda <- seq(from = 1.0, to = 3.0, length = num_eval_steps)
+num_eval_steps <- 10 # the number of mesh points for plotting
+eval_lambda <- seq(from = birth_rate - 1, to = birth_rate + 1, length = num_eval_steps)
 eval_params_lambda <- map(.x = eval_lambda, .f = ~ list(.x, death_rate, sampling_rate, catastrophe_params, occurrence_rate, disaster_params))
-eval_mu <- seq(from = 0.05, to = 0.5, length = num_eval_steps)
+eval_mu <- seq(from = min(0.05, death_rate - 0.5), to = death_rate + 0.5, length = num_eval_steps)
 eval_params_mu <- map(.x = eval_mu, .f = ~ list(birth_rate, .x, sampling_rate, catastrophe_params, occurrence_rate, disaster_params))
 eval_params <- c(eval_params_lambda, eval_params_mu)
 
@@ -35,10 +52,10 @@ result <- list(
     simulatedEventsOutputCsv = "out/all-simulated-events.csv",
     simulationParameters = sim_params,
     simulationDuration = simulation_duration + 1e-5,
-    reconstructedTreeOutputFiles = c("out/reconstructed-newick-tree.txt","out/reconstructed-newick-metadata.csv"),
-    observationsOutputCsv = "out/simulated-observations.csv",
+    simulationSizeBounds = c(100,100000),
+    inferenceConfigurations = map(inference_times, inference_configuration),
     evaluationParameters = eval_params,
-    llhdOutputCsv = "out/llhd-evaluations.csv"
+    partialEvaluationOutputCsv = "out/partial-evaluations.csv"
 )
 
 write_json(result, output_file, pretty = FALSE, auto_unbox = TRUE, digits = 7)
