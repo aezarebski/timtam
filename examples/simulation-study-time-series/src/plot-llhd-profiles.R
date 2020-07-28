@@ -29,7 +29,8 @@ ggsave("out/llhd-profiles.png", profiles_fig)
 
 
 
-## Plot the posterior distribution of the prevalence given the true parameters.
+## We want to know the actual prevalence in the simulation through time which we
+## obtain by processing a log of all the events in the simulation.
 primary_count <- function(ps) {
     unlist(map(strsplit(x = ps, split = ":"), length))
 }
@@ -38,9 +39,10 @@ all_events <- read.csv("out/all-simulated-events.csv",
                        header = FALSE,
                        stringsAsFactors = FALSE) %>%
     set_names(c("event", "time", "primary", "secondary")) %>%
-    mutate(delta = primary_count(primary)) %>%
-    select(event,time,delta)
-all_events$population_size <- cumsum(ifelse(all_events$event == "infection", +1, -1) * all_events$delta) + 1
+    mutate(delta = primary_count(primary),
+           delta_sign = ifelse(event == "infection", +1, -1),
+           population_size = 1 + cumsum(delta * delta_sign)) %>%
+    select(event,time,population_size)
 final_prevalence <- tail(all_events$population_size, 1)
 
 
@@ -53,8 +55,14 @@ smaller_newick_string <- gsub(pattern = "([0-9]+&)*[0-9]+:",
                               x = raw_newick_string)
 tree <- ape::read.tree(text=sprintf("(%s);", smaller_newick_string))
 tree_ltt <- as.data.frame(ltt.plot.coords(tree))
-## tree_ltt$time <- tree_ltt$time + (config$simulationParameters[[4]] %>% map(head(1)) %>% unlist %>% keep(~ .x < config$simulationDuration) %>% max)
-tree_ltt$time <- tree_ltt$time + (all_events %>% filter(event == "sampling" | event == "catastrophe") %>% select(time) %>% max)
+## When the tree is read in with \code{ape::read.tree} the last leaf is put at
+## the present so we need to know the time of the last sequenced sample so we
+## can adjust this correctly onto absolute time.
+time_shift <- all_events %>%
+    filter(event == "sampling" | event == "catastrophe") %>%
+    select(time) %>%
+    max
+tree_ltt$time <- tree_ltt$time + time_shift
 
 
 
