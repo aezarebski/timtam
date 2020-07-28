@@ -110,30 +110,3 @@ prev_fig <- ggplot(mapping = aes(x = time)) +
 
 ggsave("out/prevalence-profiles.png", prev_fig)
 
-## partial_results <- read.csv("out/partial-evaluations.csv",
-##                             header = FALSE,
-##                             stringsAsFactors = FALSE)
-
-## nb_params <- partial_results$V2 %>%
-##     strsplit(split = " ") %>%
-##     map(~ set_names(as.list(as.double(tail(.x, 2))), c("size", "prob")))
-
-## prev_bounds <- function(x) {
-##     ## We use 1 - x$prob here because R uses a different parameterisation.
-##     set_names(as.list(qnbinom(p = c(0.005,0.5,0.995), size = x$size, prob = 1-x$prob)), c("lower","mid","upper"))
-## }
-
-## sim_obs_times <- read.csv("out/simulated-observations.csv", header = FALSE)$V1 %>% cumsum
-
-## plot_df <- map(nb_params, prev_bounds) %>% rev %>% tail(-1) %>% bind_rows
-## plot_df$time <- sim_obs_times
-## plot_df <- inner_join(plot_df, tree_ltt, by = "time")
-
-
-## prev_fig <- ggplot(plot_df, aes(x = time)) +
-##     geom_ribbon(mapping = aes(ymin = lower + N, ymax = upper + N), alpha = 0.2) +
-##     geom_line(mapping = aes(y = mid + N)) +
-##     geom_line(data = all_events, mapping = aes(y = population_size), colour = "red") +
-##     theme_classic()
-## print(prev_fig)
-
