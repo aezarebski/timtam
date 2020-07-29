@@ -8,10 +8,12 @@ import Control.Monad (replicateM)
 import Data.Maybe (fromJust, isJust)
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
-import Epidemic.Types.Parameter
 import Epidemic.Types.Events
+import Epidemic.Types.Parameter
 import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
+import Numeric.GSL.SimulatedAnnealing
+import Numeric.LinearAlgebra.HMatrix
 import Test.Hspec
 
 -- | Check if @y@ is withing @delta@ of @x@
@@ -400,7 +402,17 @@ testConditioningProbability =
       x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
       x'' `shouldBe` True
 
-
+testHmatrixUsage =
+  describe "Testing hmatrix-gsl usage" $ do
+    it "test simulated annealing example" $ do
+      let foo = 1
+          bar = 2
+          exampleParams = SimulatedAnnealingParams 200 1000 1.0 1.0 0.008 1.003 2.0e-6
+          exampleE x = exp (-(x - 1)**2) * sin (8 * x)
+          exampleM x y = abs $ x - y
+          exampleS rands stepSize current = (rands ! 0) * 2 * stepSize - stepSize + current
+          exampleMin = simanSolve 0 1 exampleParams 15.5 exampleE exampleM exampleS Nothing
+      withinDeltaOf 1e-2 exampleMin 1.36 `shouldBe` True
 
 
 main :: IO ()
@@ -415,3 +427,4 @@ main = hspec $ do
   testImpossibleParameters
   testInhomBDSLlhd
   testConditioningProbability
+  testHmatrixUsage
