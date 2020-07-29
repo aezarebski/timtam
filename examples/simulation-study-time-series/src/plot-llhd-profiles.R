@@ -14,7 +14,7 @@ config <- read_json("ts-config.json")
 llhd_profile_figure <- function(infConfig) {
     eval_df <- read.table("out/evaluation-parameters.csv",
                           header = TRUE)
-    eval_df$llhd <- as.double(as_vector(strsplit(x = readLines(infConfig$llhdOutputCsv), split = ",")))
+    eval_df$llhd <- as.double(tail(as_vector(strsplit(x = readLines(infConfig$llhdOutputCsv), split = ",")), -1))
 
     true_parameters <- read.table("out/true-parameters.csv",
                                   header = TRUE)
@@ -83,10 +83,20 @@ tree_ltt_df <- function(inf_config, all_events) {
 
 
 
+parse_nb_field <- function(nb_field) {
+    set_names(map(tail(as_vector(strsplit(nb_field, split = " ")),-1), as.double), c("size", "inv_prob"))
+}
+
 ## Read the parameters of the neative binomial distribution as used by BDSCOD
 ## NOTE: The parameterisation is different between BDSCOD and R.
 read_nb_params <- function(nb_csv) {
     if (file.exists(nb_csv)) {
+        stop("Not implemented yet!")
+
+        ## The first value is an indicator of which parameters where used and
+        ## the second is a representation of NB see \code{parse_nb_field} for
+        ## details.
+        nb_lines <- as.list(readLines(nb_csv))
         set_names(flatten(map(strsplit(readLines(nb_csv), split = ","), as.numeric)), c("size", "inv_prob"))
     } else {
         stop("Could not find CSV: ", nb_csv)
@@ -94,7 +104,7 @@ read_nb_params <- function(nb_csv) {
 }
 
 instantaneous_prevalence <- function(inf_config) {
-    nb_params <- read_nb_params(pluck(inf_config, "negBinomCsv"))
+    nb_params <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
     result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
     result$time <- pluck(inf_config, "inferenceTime")
     as.data.frame(result)

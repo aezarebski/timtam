@@ -33,8 +33,8 @@ inference_configuration <- function(inf_time) {
                                          inf_time),
          llhdOutputCsv = sprintf("out/llhd-evaluations-%.2f.csv",
                                  inf_time),
-         negBinomCsv = sprintf("out/final-negative-binomial-%.2f.csv",
-                               inf_time))
+         pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
+                                     inf_time))
 }
 
 

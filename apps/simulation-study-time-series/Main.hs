@@ -43,7 +43,7 @@ data InferenceConfiguration =
     , reconstructedTreeOutputFiles :: (FilePath, FilePath)
     , observationsOutputCsv :: FilePath
     , llhdOutputCsv :: FilePath
-    , negBinomCsv :: FilePath
+    , pointEstimatesCsv :: FilePath
     }
   deriving (Show, Generic)
 
@@ -109,18 +109,29 @@ simulatedObservations infConfig@InferenceConfiguration{..} simEvents = do
 
 
 
--- Run the evaluation of the log-likelihood profiles on a given set of
--- observations and write the result to file.
+-- | Run the evaluation of the log-likelihood profiles on a given set of
+-- observations at the parameters used to simulate the data set and write the
+-- result to file.
 evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD InferenceConfiguration{..} obs = do
   simParams <- asks simulationParameters
   evalParams <- asks evaluationParameters
   let comma = BBuilder.charUtf8 ','
+      parametersUsed = "trueSimulationParameters"
+      parametersUsed' = BBuilder.stringUtf8 parametersUsed
       llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
-      nBVal = pure . snd $ llhdAndNB obs simParams initLlhdState
-      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . map BBuilder.doubleDec
+      nBVal = pure (parametersUsed,snd $ llhdAndNB obs simParams initLlhdState)
+      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . (parametersUsed':) . map BBuilder.doubleDec
   liftIO $ L.writeFile llhdOutputCsv (doublesAsString llhdVals)
-  liftIO $ L.writeFile negBinomCsv (Csv.encode nBVal)
+  liftIO $ L.writeFile pointEstimatesCsv (Csv.encode nBVal)
+
+-- | __Estimate__ the parameters of the of the model and then evaluate the LLHD
+-- profiles and prevalence and append this to the file. The first value of the
+-- CSV output now describes which parameters where used to to evaluate these
+-- things.
+estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
+estimateLLHD InferenceConfiguration{..} obs = undefined
+
 
 -- | Record the partial results of the LLHD and NB to a CSV at the parameters
 -- used in the simulation.
@@ -140,7 +151,8 @@ simulationStudy = do
   infConfigs <- asks inferenceConfigurations
   pObs <- zipWithM simulatedObservations infConfigs pEpi
   mapM_ (uncurry evaluateLLHD) pObs
-  partialEvaluations (snd $ head pObs)
+  let completeObs = snd $ head pObs
+  partialEvaluations completeObs
   return ()
 
 main :: IO ()

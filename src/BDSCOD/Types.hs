@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.Csv as Csv
 import Data.Aeson
+import Data.List (intersperse)
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
 
@@ -77,6 +78,16 @@ data NegativeBinomial
   = Zero -- ^ A point mass at zero
   | NegBinom Double Probability
   deriving (Show, Generic)
+
+instance Csv.ToField NegativeBinomial where
+  toField Zero = "Zero"
+  toField (NegBinom r p) =
+    strictByteString . BBuilder.toLazyByteString . mconcat $
+    intersperse
+      del
+      [BBuilder.stringUtf8 "NB", BBuilder.doubleDec r, BBuilder.doubleDec p]
+    where
+      del = BBuilder.charUtf8 ' '
 
 instance Csv.ToRecord NegativeBinomial
 
