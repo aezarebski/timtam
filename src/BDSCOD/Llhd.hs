@@ -215,13 +215,13 @@ eventLlhd _ (lam, _, _, _, _, _) OBirth k nb = (log lam, k + 1, nb)
 eventLlhd _ (_, _, psi, _, _, _) OSample k nb = (log psi, k - 1, nb)
 eventLlhd _ (_, _, _, _, om, _) OOccurrence k nb@(NegBinom r p) =
   (log om + logNbPGF' nb 1, k, NegBinom (r + 1) p)
-eventLlhd t (_, _, _, rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
+eventLlhd t (_, _, _, Timed rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
   let rh = snd . fromJust $ find ((== t) . fst) rhs
       logL = n * log rh + logNbPGF nb (1 - rh) + (k - n) * log (1 - rh)
    in if isInfinite logL
       then error "numerical error: infinite logL in eventLlhd function while processing catastrophe"
       else (logL, k - n, NegBinom r ((1 - rh) * p))
-eventLlhd t (_, _, _, _, _, nus) (ODisaster n) k nb@(NegBinom r p) =
+eventLlhd t (_, _, _, _, _, Timed nus) (ODisaster n) k nb@(NegBinom r p) =
   let nu = snd . fromJust $ find ((== t) . fst) nus
       logL = n * log nu + logNbPGFdash n nb (1 - nu) + k * log (1 - nu)
    in if isInfinite logL

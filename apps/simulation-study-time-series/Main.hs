@@ -71,7 +71,7 @@ type Simulation x = ReaderT Configuration (ExceptT String IO) x
 bdscodConfiguration = do
   simParams <- asks simulationParameters
   simDur <- asks simulationDuration
-  let bdscodConfig = SimBDSCOD.configuration simDur simParams
+  let bdscodConfig = SimBDSCOD.configuration simDur (unpackParameters simParams)
   case bdscodConfig of
     Nothing -> throwError "Could not construct BDSCOD configuration"
     (Just config) -> return config

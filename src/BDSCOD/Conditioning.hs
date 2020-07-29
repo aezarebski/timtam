@@ -16,4 +16,4 @@ probabilityUnobserved ::
   -> Probability    -- ^ probability no observed event
 probabilityUnobserved (l, m, obsRate) duration = p0 dummyParams duration 1
   where
-    dummyParams = (l, m, obsRate, [], 0, [])
+    dummyParams = (l, m, obsRate, Timed [], 0, Timed [])

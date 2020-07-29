@@ -16,8 +16,18 @@ import GHC.Generics (Generic)
 -- removal rate, the sampling rate, the timing and probability of catastrophic
 -- removal, the occurrence rate, and the timing the probability of removal due
 -- to disaster.
-type Parameters
+type Parameters = (Rate, Rate, Rate, Timed Probability, Rate, Timed Probability)
+
+type UnpackedParameters
    = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+
+unpackParameters :: Parameters -> UnpackedParameters
+unpackParameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus) =
+  (pLambda, pMu, pPsi, pRhos, pOmega, pNus)
+
+packParameters :: UnpackedParameters -> Parameters
+packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
+  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
 -- | The number of lineages that exist in a phylogeny
 type NumLineages = Double
