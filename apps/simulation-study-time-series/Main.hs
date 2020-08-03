@@ -31,8 +31,11 @@ import Epidemic.Types.Parameter
 import Epidemic.Types.Population (Person(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
+import Numeric.GSL.SimulatedAnnealing (SimulatedAnnealingParams(..), simanSolve)
+import Numeric.LinearAlgebra.HMatrix
+import Numeric.LinearAlgebra.Data (linspace,toList)
+
 import System.Environment (getArgs)
--- import Data.Map.Strict (Map(),fromList,toList)
 
 -- | These objects define the specifics for an inference evaluation which can be
 -- run at differing points in the simulation to understand how differing amounts
@@ -56,7 +59,6 @@ data Configuration =
     , simulationDuration :: Time
     , simulationSizeBounds :: (Int,Int)
     , inferenceConfigurations :: [InferenceConfiguration]
-    , evaluationParameters :: [Parameters]
     , partialEvaluationOutputCsv :: FilePath
     }
   deriving (Show, Generic)
@@ -66,6 +68,13 @@ instance Json.FromJSON Configuration
 instance Json.FromJSON InferenceConfiguration
 
 type Simulation x = ReaderT Configuration (ExceptT String IO) x
+
+-- | This type is used to indicate if parameters are the true ones used in the
+-- simulation or estimates parameters.
+data ParameterKind
+  = SimulationParameters
+  | EstimatedParameters
+  deriving (Show, Eq)
 
 -- A BDSCOD simulation configuration based on the parameters in the environment.
 bdscodConfiguration = do
@@ -108,29 +117,80 @@ simulatedObservations infConfig@InferenceConfiguration{..} simEvents = do
     Nothing -> throwError "Failed to simulate observations."
 
 
+-- | Evaluate the NB posterior approximation of the prevalence for a single
+-- point in parameter space and the LLHD over a list of points and write all of
+-- the results to CSV.
+generateLlhdProfileCurves :: InferenceConfiguration
+                          -> [Observation]
+                          -> (Parameters,ParameterKind,[Parameters])
+                          -> Simulation ()
+generateLlhdProfileCurves InferenceConfiguration{..} obs (singleParams,paramKind,evalParams) =
+  let comma = BBuilder.charUtf8 ','
+      parametersUsed = show paramKind
+      parametersUsed' = BBuilder.stringUtf8 parametersUsed
+      llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
+      nBVal = pure (parametersUsed,snd $ llhdAndNB obs singleParams initLlhdState)
+      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . (parametersUsed':) . map BBuilder.doubleDec
+  in do
+    liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+    liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
 
 -- | Run the evaluation of the log-likelihood profiles on a given set of
 -- observations at the parameters used to simulate the data set and write the
 -- result to file.
 evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
-evaluateLLHD InferenceConfiguration{..} obs = do
-  simParams <- asks simulationParameters
-  evalParams <- asks evaluationParameters
-  let comma = BBuilder.charUtf8 ','
-      parametersUsed = "trueSimulationParameters"
-      parametersUsed' = BBuilder.stringUtf8 parametersUsed
-      llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
-      nBVal = pure (parametersUsed,snd $ llhdAndNB obs simParams initLlhdState)
-      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . (parametersUsed':) . map BBuilder.doubleDec
-  liftIO $ L.writeFile llhdOutputCsv (doublesAsString llhdVals)
-  liftIO $ L.writeFile pointEstimatesCsv (Csv.encode nBVal)
+evaluateLLHD infConfig obs = do
+  simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
+  evalParams <- adjustedEvaluationParameters simParams
+  generateLlhdProfileCurves infConfig obs (simParams,SimulationParameters,evalParams)
 
--- | __Estimate__ the parameters of the of the model and then evaluate the LLHD
+-- | Estimate the parameters of the of the model and then evaluate the LLHD
 -- profiles and prevalence and append this to the file. The first value of the
 -- CSV output now describes which parameters where used to to evaluate these
 -- things.
 estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
-estimateLLHD InferenceConfiguration{..} obs = undefined
+estimateLLHD infConfig obs = do
+  simParams <- asks simulationParameters
+  let schedTimes = scheduledTimes simParams
+      mleParams = estimateParameters schedTimes obs -- get the MLE estimate of the parameters
+  evalParams <- adjustedEvaluationParameters mleParams -- generate a list of evaluation parameters
+  generateLlhdProfileCurves infConfig obs (mleParams,EstimatedParameters,evalParams)
+
+-- | Use GSL to estimate the MLE based on the observations given.
+estimateParameters :: ([Time],[Time]) -> [Observation] -> Parameters
+estimateParameters sched obs =
+  let seed = 0
+      nrand = 6 -- we generate one random number for each of the elements of the parameter vector
+      simanParams = SimulatedAnnealingParams 200 100 2.0 1.0 0.01 1.003 7.0e-3
+      randInit = fromList [log 1.2, log 0.3, log 0.2, logit 0.3, log 0.2, logit 0.3]
+      energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters sched x) initLlhdState
+      metric x y = sumElements . abs $ x - y
+      stepper rands stepSize current = scalar stepSize * (rands - 0.5) + current
+      printer = Just show
+  in vectorAsParameters sched $ simanSolve seed nrand simanParams randInit energyFunc metric stepper printer
+
+
+-- | Helper function for @estimateParameters@
+vectorAsParameters :: ([Time],[Time]) -> Vector Double -> Parameters
+vectorAsParameters (rhoTimes, nuTimes) paramVec =
+  let [lnR1, lnR2, lnR3, lnP1, lnR4, lnP2] = toList paramVec
+      p1 = invLogit lnP1
+      p2 = invLogit lnP2
+  in packParameters (exp lnR1, exp lnR2, exp lnR3, [(t,p1)|t<-rhoTimes], exp lnR4, [(t,p2)|t<-nuTimes])
+
+
+invLogit :: Double -> Probability
+invLogit a = 1 / (1 + exp (- a))
+
+logit :: Probability -> Double
+logit p = log (p / (1 - p))
+
+-- | Recenter the evaluation parametes about the parameters given.
+adjustedEvaluationParameters :: Parameters -> Simulation [Parameters]
+adjustedEvaluationParameters ps =
+  let lambdaMesh = toList $ linspace 100 (1,4)
+      muMesh = toList $ linspace 100 (0.1,2.0)
+  in return $ [putLambda ps l | l <- lambdaMesh] ++ [putMu ps m | m <- muMesh]
 
 
 -- | Record the partial results of the LLHD and NB to a CSV at the parameters
@@ -151,6 +211,7 @@ simulationStudy = do
   infConfigs <- asks inferenceConfigurations
   pObs <- zipWithM simulatedObservations infConfigs pEpi
   mapM_ (uncurry evaluateLLHD) pObs
+  mapM_ (uncurry estimateLLHD) pObs
   let completeObs = snd $ head pObs
   partialEvaluations completeObs
   return ()

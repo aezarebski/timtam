@@ -3,6 +3,7 @@ library(dplyr)
 library(jsonlite)
 library(purrr)
 library(ape)
+library(stringr)
 
 ## To avoid hardcoding the files to read data from we use the configuration JSON
 ## used by the application.
@@ -12,17 +13,47 @@ config <- read_json("ts-config.json")
 
 ## Returns a plot showing the LLHD profiles fro a given inference configuration.
 llhd_profile_figure <- function(infConfig) {
-    eval_df <- read.table("out/evaluation-parameters.csv",
-                          header = TRUE)
-    eval_df$llhd <- as.double(tail(as_vector(strsplit(x = readLines(infConfig$llhdOutputCsv), split = ",")), -1))
+    parse_doubles <- function(string, sep) {
+        map(str_split(string = string, pattern = sep), as.double)
+    }
+
+    all_llhd_vals <- readLines(infConfig$llhdOutputCsv) %>%
+        str_replace(pattern = "SimulationParameters,", replacement = "") %>%
+        str_split(pattern = "EstimatedParameters,") %>%
+        map(parse_doubles, sep = ",") %>%
+        pluck(1)
+
+    make_plot_df <- function(llhds,param_kind) {
+        if (!is.element(el = param_kind, set = c("simulation", "estimated"))) {
+            stop("Bad parameter kind: ", param_kind)
+        }
+
+        lambda_mesh <- seq(from = 1, to = 4, length = 100)
+        mu_mesh <- seq(from = 0.1, to = 2.0, length = 100)
+
+        data.frame(parameter_name = rep(c("lambda", "mu"), each = 100),
+                   parameter_value = c(lambda_mesh, mu_mesh),
+                   parameter_kind = param_kind,
+                   llhd = llhds)
+    }
+
+    plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "simulation"),
+                     make_plot_df(all_llhd_vals[[2]], "estimated"))
+
 
     true_parameters <- read.table("out/true-parameters.csv",
-                                  header = TRUE)
+                                  header = TRUE) %>%
+        rename(parameter_name = parameter,
+               parameter_value = value)
 
-    ggplot(eval_df, mapping = aes(x = value, y = llhd)) +
+    ggplot(plot_df,
+           aes(x = parameter_value, y = llhd, linetype = parameter_kind)) +
         geom_line() +
-        geom_vline(data = true_parameters, mapping = aes(xintercept = value), linetype = "dashed") +
-        facet_wrap(~parameter, scales = "free") +
+        geom_vline(data = true_parameters, mapping = aes(xintercept = parameter_value)) +
+        facet_wrap(~parameter_name, scales = "free_x") +
+        labs(x = "Parameter value",
+             y = "Log-likelihood",
+             linetype = "Parameter kind") +
         theme_classic()
 }
 
