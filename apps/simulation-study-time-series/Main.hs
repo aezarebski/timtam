@@ -31,9 +31,9 @@ import Epidemic.Types.Parameter
 import Epidemic.Types.Population (Person(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
-import Numeric.GSL.SimulatedAnnealing (SimulatedAnnealingParams(..), simanSolve)
+import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
+import Numeric.LinearAlgebra.Data (linspace, toList)
 import Numeric.LinearAlgebra.HMatrix
-import Numeric.LinearAlgebra.Data (linspace,toList)
 
 import System.Environment (getArgs)
 
@@ -156,19 +156,18 @@ estimateLLHD infConfig obs = do
   evalParams <- adjustedEvaluationParameters mleParams -- generate a list of evaluation parameters
   generateLlhdProfileCurves infConfig obs (mleParams,EstimatedParameters,evalParams)
 
--- | Use GSL to estimate the MLE based on the observations given.
+-- -- | Use GSL to estimate the MLE based on the observations given. This uses a
+-- -- | simplex method because it seems to be faster and more accurate than the
+-- -- | simulated annealing.
 estimateParameters :: ([Time],[Time]) -> [Observation] -> Parameters
 estimateParameters sched obs =
-  let seed = 0
-      nrand = 6 -- we generate one random number for each of the elements of the parameter vector
-      simanParams = SimulatedAnnealingParams 200 100 2.0 1.0 0.01 1.003 7.0e-3
-      randInit = fromList [log 1.2, log 0.3, log 0.2, logit 0.3, log 0.2, logit 0.3]
+  let maxIters = 500
+      desiredPrec = 1e-3
+      initBox = fromList [2,2,2,2,2,2]
       energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters sched x) initLlhdState
-      metric x y = sumElements . abs $ x - y
-      stepper rands stepSize current = scalar stepSize * (rands - 0.5) + current
-      printer = Just show
-  in vectorAsParameters sched $ simanSolve seed nrand simanParams randInit energyFunc metric stepper printer
-
+      randInit = fromList [0,0,0,0,0,0]
+      (est,_) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
+  in vectorAsParameters sched est
 
 -- | Helper function for @estimateParameters@
 vectorAsParameters :: ([Time],[Time]) -> Vector Double -> Parameters
