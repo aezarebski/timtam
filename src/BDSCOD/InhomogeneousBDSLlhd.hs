@@ -33,12 +33,12 @@ inhomLlhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) 
   do
     rateChangeTime <- nextTime tlams t
     if rateChangeTime - t > delay
-      then let bdscodParams = (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
+      then let bdscodParams = Parameters (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
                t' = t + delay
                (l',nb') = intervalLlhd bdscodParams delay k nb
                (l'',k'',nb'') = eventLlhd t' bdscodParams event k nb'
              in inhomLlhdAndNB' events inhomParams (l+l'+l'',t',k'',nb'')
-      else let bdscodParams = (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
+      else let bdscodParams = Parameters (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
                t' = rateChangeTime
                (l',nb') = intervalLlhd bdscodParams (rateChangeTime-t) k nb
              in inhomLlhdAndNB' ((delay-(rateChangeTime-t),event):events) inhomParams (l+l',t',k,nb')

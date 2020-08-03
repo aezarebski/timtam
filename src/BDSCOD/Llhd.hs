@@ -12,7 +12,7 @@ import Epidemic.Types.Parameter
 arePlausible :: [Observation]
              -> Parameters
              -> Bool
-arePlausible obs (l, m, r, _, o, _)
+arePlausible obs (Parameters (l, m, r, _, o, _))
   | minimum [l, m, r, o] < 0 = False
   | any isBirth obs && l == 0 = False
   | any isSample obs && r == 0 = False
@@ -24,14 +24,14 @@ arePlausible obs (l, m, r, _, o, _)
 -- In Zarebski /et al/ (2020) the net event rate is \(\gamma\).
 --
 eventRate :: Parameters -> Double
-eventRate (lam, mu, psi, _, om, _) = lam + mu + psi + om
+eventRate (Parameters (lam, mu, psi, _, om, _)) = lam + mu + psi + om
 
 discriminant :: Parameters -> Double
-discriminant params@(lam, mu, _, _, _, _) =
+discriminant params@(Parameters (lam, mu, _, _, _, _)) =
   eventRate params ** 2.0 - 4.0 * lam * mu
 
 x1and2 :: Parameters -> (Double, Double)
-x1and2 params@(lam, _, _, _, _, _) =
+x1and2 params@(Parameters (lam, _, _, _, _, _)) =
   let gam = eventRate params
       sqrtDisc = sqrt $ discriminant params
    in ((gam - sqrtDisc) / (2 * lam), (gam + sqrtDisc) / (2 * lam))
@@ -69,14 +69,14 @@ p0'' params delay z =
     (x1, x2, _, expFact) = odeHelpers params delay
 
 rr' :: Parameters -> Time -> Probability -> Double
-rr' params@(lam, _, _, _, _, _) delay z =
+rr' params@(Parameters (lam, _, _, _, _, _)) delay z =
   (2 * (1 - expFact) * expFact * disc) /
   (lam ** 2.0 * (x2 - expFact * (x1 - z) - z) ** 3.0)
   where
     (x1, x2, disc, expFact) = odeHelpers params delay
 
 rr'' :: Parameters -> Time -> Probability -> Double
-rr'' params@(lam, _, _, _, _, _) delay z =
+rr'' params@(Parameters (lam, _, _, _, _, _)) delay z =
   (6 * (expFact - 1) ** 2.0 * expFact * disc) /
   (lam ** 2.0 * (x2 - expFact * (x1 - z) - z) ** 4.0)
   where
@@ -101,7 +101,7 @@ p0 params delay z =
 -- there is a \(\rho\) sampling at present and it does not get sampled at this
 -- instant. In Zarebski /et al/ (2020) this is the function \(R(u,z)\).
 rr :: Parameters -> Time -> Probability -> Probability
-rr params@(lam, _, _, _, _, _) delay z =
+rr params@(Parameters (lam, _, _, _, _, _)) delay z =
   disc * expFact /
   ((lam ** 2.0) * (((x2 - z) - (x1 - z) * expFact) ** 2.0))
   where
@@ -211,25 +211,25 @@ eventLlhd :: Time -- ^ Absolute time used to look up the parameter in the case o
           -> NumLineages -- ^ The number of lineages in the reconstructed tree prior to the event
           -> NegativeBinomial
           -> (LogLikelihood, NumLineages, NegativeBinomial)
-eventLlhd _ (lam, _, _, _, _, _) OBirth k nb = (log lam, k + 1, nb)
-eventLlhd _ (_, _, psi, _, _, _) OSample k nb = (log psi, k - 1, nb)
-eventLlhd _ (_, _, _, _, om, _) OOccurrence k nb@(NegBinom r p) =
+eventLlhd _ (Parameters (lam, _, _, _, _, _)) OBirth k nb = (log lam, k + 1, nb)
+eventLlhd _ (Parameters (_, _, psi, _, _, _)) OSample k nb = (log psi, k - 1, nb)
+eventLlhd _ (Parameters (_, _, _, _, om, _)) OOccurrence k nb@(NegBinom r p) =
   (log om + logNbPGF' nb 1, k, NegBinom (r + 1) p)
-eventLlhd t (_, _, _, Timed rhs, _, _) (OCatastrophe n) k nb@(NegBinom r p) =
+eventLlhd t (Parameters (_, _, _, Timed rhs, _, _)) (OCatastrophe n) k nb@(NegBinom r p) =
   let rh = snd . fromJust $ find ((== t) . fst) rhs
       logL = n * log rh + logNbPGF nb (1 - rh) + (k - n) * log (1 - rh)
    in if isInfinite logL
       then error "numerical error: infinite logL in eventLlhd function while processing catastrophe"
       else (logL, k - n, NegBinom r ((1 - rh) * p))
-eventLlhd t (_, _, _, _, _, Timed nus) (ODisaster n) k nb@(NegBinom r p) =
+eventLlhd t (Parameters (_, _, _, _, _, Timed nus)) (ODisaster n) k nb@(NegBinom r p) =
   let nu = snd . fromJust $ find ((== t) . fst) nus
       logL = n * log nu + logNbPGFdash n nb (1 - nu) + k * log (1 - nu)
    in if isInfinite logL
       then error "numerical error: infinite logL in eventLlhd function while processing disaster"
       else (logL, k, NegBinom (r + n) ((1 - nu) * p))
-eventLlhd _ (_, _, _, _, _, _) OOccurrence k Zero = (log 0, k, Zero)
-eventLlhd _ (_, _, _, _, _, _) (ODisaster _) k Zero = (log 0, k, Zero)
-eventLlhd _ (_, _, _, _, _, _) (OCatastrophe _) _ Zero = undefined
+eventLlhd _ (Parameters (_, _, _, _, _, _)) OOccurrence k Zero = (log 0, k, Zero)
+eventLlhd _ (Parameters (_, _, _, _, _, _)) (ODisaster _) k Zero = (log 0, k, Zero)
+eventLlhd _ (Parameters (_, _, _, _, _, _)) (OCatastrophe _) _ Zero = undefined
 
 
 

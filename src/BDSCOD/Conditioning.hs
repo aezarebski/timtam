@@ -1,6 +1,7 @@
 module BDSCOD.Conditioning where
 
 import BDSCOD.Llhd
+import BDSCOD.Types
 import Epidemic.Types.Parameter
 
 
@@ -16,4 +17,4 @@ probabilityUnobserved ::
   -> Probability    -- ^ probability no observed event
 probabilityUnobserved (l, m, obsRate) duration = p0 dummyParams duration 1
   where
-    dummyParams = (l, m, obsRate, Timed [], 0, Timed [])
+    dummyParams = Parameters (l, m, obsRate, Timed [], 0, Timed [])

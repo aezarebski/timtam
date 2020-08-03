@@ -124,7 +124,7 @@ observationsJsonFilePath n =
 main :: IO ()
 main =
   let duration = 6.0
-      modelParams = ModelParameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed []) duration -- lambda, mu, psi, rho, omega, nu
+      modelParams = ModelParameters (Parameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed [])) duration -- lambda, mu, psi, rho, omega, nu
       simIds = [1..1000] :: [Int] -- the indicies of the simulations
       binWidth = 10
       simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]

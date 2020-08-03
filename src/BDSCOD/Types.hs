@@ -4,6 +4,7 @@
 module BDSCOD.Types where
 
 import Control.DeepSeq
+import Foreign.Storable
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Builder as BBuilder
@@ -17,41 +18,54 @@ import GHC.Generics (Generic)
 -- removal rate, the sampling rate, the timing and probability of catastrophic
 -- removal, the occurrence rate, and the timing the probability of removal due
 -- to disaster.
-type Parameters = (Rate, Rate, Rate, Timed Probability, Rate, Timed Probability)
+newtype Parameters =
+  Parameters (Rate, Rate, Rate, Timed Probability, Rate, Timed Probability)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON Parameters
+
+instance FromJSON Parameters
 
 -- | The putLambda function returns a new parameter vector with the lambda rate
 -- updated.
 putLambda :: Parameters -> Rate -> Parameters
-putLambda (_, pMu, pPsi, Timed pRhos, pOmega, Timed pNus) pLambda =
-  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+putLambda (Parameters (_, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) pLambda =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
 putMu :: Parameters -> Rate -> Parameters
-putMu (pLambda, _, pPsi, Timed pRhos, pOmega, Timed pNus) pMu =
-  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+putMu (Parameters (pLambda, _, pPsi, Timed pRhos, pOmega, Timed pNus)) pMu =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
 putRhos :: Parameters -> Timed Probability -> Parameters
-putRhos (pLambda, pMu, pPsi, _, pOmega, Timed pNus) (Timed pRhos) =
-  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+putRhos (Parameters (pLambda, pMu, pPsi, _, pOmega, Timed pNus)) (Timed pRhos) =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
 putOmega :: Parameters -> Rate -> Parameters
-putOmega (pLambda, pMu, pPsi, Timed pRhos, _, Timed pNus) pOmega =
-  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+putOmega (Parameters (pLambda, pMu, pPsi, Timed pRhos, _, Timed pNus)) pOmega =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
 putNus :: Parameters -> Timed Probability -> Parameters
-putNus (pLambda, pMu, pPsi, Timed pRhos, pOmega, _) (Timed pNus) =
-  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+putNus (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, _)) (Timed pNus) =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
 
 type UnpackedParameters
    = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
 
 unpackParameters :: Parameters -> UnpackedParameters
-unpackParameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus) =
+unpackParameters (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) =
   (pLambda, pMu, pPsi, pRhos, pOmega, pNus)
 
 packParameters :: UnpackedParameters -> Parameters
 packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
-  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+
+-- | Return the times of scheduled events: catastrophes and disasters.
+scheduledTimes :: Parameters -> ([Time],[Time])
+scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
+  let times = map fst
+  in (times pRhos, times pNus)
 
 -- | The number of lineages that exist in a phylogeny
 type NumLineages = Double

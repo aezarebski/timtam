@@ -36,7 +36,7 @@ data ParameterName
 type ProfileParameters = Map ParameterName [Parameters]
 
 condLlhdAndNB :: [Observation] -> Parameters -> Time -> Bool -> (LogLikelihood, NegativeBinomial)
-condLlhdAndNB obs params@(birthRate,deathRate,samplingRate,_,occRate,_) duration cond =
+condLlhdAndNB obs params@(Parameters (birthRate,deathRate,samplingRate,_,occRate,_)) duration cond =
   let (l,nb) = llhdAndNB obs params initLlhdState
       lnProbObs = log $ 1 - probabilityUnobserved (birthRate,deathRate,samplingRate+occRate) duration
    in (if cond then l - lnProbObs else l,nb)
@@ -55,7 +55,7 @@ llhdsWriteFile' fp d paramName ps duration conditionLlhd =
       let x = condLlhdAndNB d p duration conditionLlhd
       appendFile fp $ output p x
       llhdsWriteFile' fp d paramName ps' duration conditionLlhd
-      where output (x1, x2, x3, Timed ((_, x4):_), x5, Timed ((_, x6):_)) (x7, x8) =
+      where output (Parameters (x1, x2, x3, Timed ((_, x4):_), x5, Timed ((_, x6):_))) (x7, x8) =
               intercalate "," . ((show paramName):) $
               map show [x1, x2, x3, x4, x5, x6, x7] ++ [show x8 ++ "\n"]
 
@@ -108,12 +108,12 @@ inferenceParameters SimStudyParams{..} =
   where
     rateRange radius r = filter (>0) $ linspace (r - radius) (r + radius) 200
     probRange = linspace 0.01 0.99 300
-    lambdaParams = (ParamLambda, [(l, simMu, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes]) | l <- rateRange 0.20 simLambda])
-    muParams = (ParamMu, [(simLambda, m, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes]) | m <- rateRange 0.20 simMu])
-    psiParams = (ParamPsi, [(simLambda, simMu, p, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes]) | p <- rateRange 0.1 simPsi])
-    rhoParams = (ParamRho, [(simLambda, simMu, simPsi, Timed [(rt,r) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes]) | r <- probRange])
-    omegaParams = (ParamOmega, [(simLambda, simMu, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], o, Timed [(nt,simNu) | nt <- simNuTimes]) | o <- rateRange 0.10 simOmega])
-    nuParams = (ParamNu, [(simLambda, simMu, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,n) | nt <- simNuTimes]) | n <- probRange])
+    lambdaParams = (ParamLambda, [(Parameters (l, simMu, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes])) | l <- rateRange 0.20 simLambda])
+    muParams = (ParamMu, [(Parameters (simLambda, m, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes])) | m <- rateRange 0.20 simMu])
+    psiParams = (ParamPsi, [(Parameters (simLambda, simMu, p, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes])) | p <- rateRange 0.1 simPsi])
+    rhoParams = (ParamRho, [(Parameters (simLambda, simMu, simPsi, Timed [(rt,r) | rt <- simRhoTimes], simOmega, Timed [(nt,simNu) | nt <- simNuTimes])) | r <- probRange])
+    omegaParams = (ParamOmega, [(Parameters (simLambda, simMu, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], o, Timed [(nt,simNu) | nt <- simNuTimes])) | o <- rateRange 0.10 simOmega])
+    nuParams = (ParamNu, [(Parameters (simLambda, simMu, simPsi, Timed [(rt,simRho) | rt <- simRhoTimes], simOmega, Timed [(nt,n) | nt <- simNuTimes])) | n <- probRange])
 
 main :: IO ()
 main = do
