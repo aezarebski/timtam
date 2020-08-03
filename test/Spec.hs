@@ -402,17 +402,29 @@ testConditioningProbability =
       x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
       x'' `shouldBe` True
 
+testHmatrixUsage :: SpecWith ()
 testHmatrixUsage =
-  describe "Testing hmatrix-gsl usage" $ do
+  describe "Testing hmatrix-gsl usage" $
     it "test simulated annealing example" $ do
-      let foo = 1
-          bar = 2
-          exampleParams = SimulatedAnnealingParams 200 1000 1.0 1.0 0.008 1.003 2.0e-6
+      let exampleParams = SimulatedAnnealingParams 200 1000 1.0 1.0 0.008 1.003 2.0e-6
           exampleE x = exp (-(x - 1)**2) * sin (8 * x)
           exampleM x y = abs $ x - y
           exampleS rands stepSize current = (rands ! 0) * 2 * stepSize - stepSize + current
           exampleMin = simanSolve 0 1 exampleParams 15.5 exampleE exampleM exampleS Nothing
       withinDeltaOf 1e-2 exampleMin 1.36 `shouldBe` True
+
+testParameterUpdate :: SpecWith ()
+testParameterUpdate =
+  let params1 = (2.4, 1, 0.3, Timed [(1000, 0.5)], 0.6, Timed []) :: Parameters
+      params2 = (2.3, 1, 0.3, Timed [(1000, 0.5)], 0.6, Timed []) :: Parameters
+      params3 = (2.4, 1, 0.3, Timed [(1000, 0.6)], 0.6, Timed []) :: Parameters
+    in do describe "Testing parameter update function" $ do
+            it "test lambda update" $ do
+              (params1 /= params2) `shouldBe` True
+              (params1 == putLambda params2 2.4) `shouldBe` True
+            it "test rhos update" $ do
+              (params1 /= params3) `shouldBe` True
+              (params1 == putRhos params3 (Timed [(1000, 0.5)])) `shouldBe` True
 
 
 main :: IO ()
@@ -428,3 +440,4 @@ main = hspec $ do
   testInhomBDSLlhd
   testConditioningProbability
   testHmatrixUsage
+  testParameterUpdate

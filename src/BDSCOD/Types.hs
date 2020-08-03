@@ -19,6 +19,29 @@ import GHC.Generics (Generic)
 -- to disaster.
 type Parameters = (Rate, Rate, Rate, Timed Probability, Rate, Timed Probability)
 
+-- | The putLambda function returns a new parameter vector with the lambda rate
+-- updated.
+putLambda :: Parameters -> Rate -> Parameters
+putLambda (_, pMu, pPsi, Timed pRhos, pOmega, Timed pNus) pLambda =
+  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putMu :: Parameters -> Rate -> Parameters
+putMu (pLambda, _, pPsi, Timed pRhos, pOmega, Timed pNus) pMu =
+  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putRhos :: Parameters -> Timed Probability -> Parameters
+putRhos (pLambda, pMu, pPsi, _, pOmega, Timed pNus) (Timed pRhos) =
+  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putOmega :: Parameters -> Rate -> Parameters
+putOmega (pLambda, pMu, pPsi, Timed pRhos, _, Timed pNus) pOmega =
+  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putNus :: Parameters -> Timed Probability -> Parameters
+putNus (pLambda, pMu, pPsi, Timed pRhos, pOmega, _) (Timed pNus) =
+  (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+
 type UnpackedParameters
    = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
 
