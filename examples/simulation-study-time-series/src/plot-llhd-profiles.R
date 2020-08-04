@@ -114,43 +114,47 @@ tree_ltt_df <- function(inf_config, all_events) {
 
 
 
-parse_nb_field <- function(nb_field) {
-    set_names(map(tail(as_vector(strsplit(nb_field, split = " ")),-1), as.double), c("size", "inv_prob"))
-}
 
 ## Read the parameters of the neative binomial distribution as used by BDSCOD
 ## NOTE: The parameterisation is different between BDSCOD and R.
 read_nb_params <- function(nb_csv) {
     if (file.exists(nb_csv)) {
-        stop("Not implemented yet!")
-
-        ## The first value is an indicator of which parameters where used and
-        ## the second is a representation of NB see \code{parse_nb_field} for
-        ## details.
-        nb_lines <- as.list(readLines(nb_csv))
-        set_names(flatten(map(strsplit(readLines(nb_csv), split = ","), as.numeric)), c("size", "inv_prob"))
+        x <- read.table(nb_csv, header = FALSE, sep = ",") %>% set_names(c("parameter_kind", "negative_binomial"))
+        tmp <- x$negative_binomial %>% str_split(" ") %>% lapply(function(v) set_names(as.list(as.double(tail(v,2))), c("size", "inv_prob")))
+        map2(x$parameter_kind, tmp, function(a, b) {b$parameter_kind <- a; return(b)})
     } else {
         stop("Could not find CSV: ", nb_csv)
     }
 }
 
 instantaneous_prevalence <- function(inf_config) {
-    nb_params <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
-    result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+    nb_params_list <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
+
+    quantile_data <- function(nb_params) {
+        x <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+        x$parameter_kind <- nb_params$parameter_kind
+        as.data.frame(x)
+    }
+    ## result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+
+    result <- map(.x = nb_params_list, .f = quantile_data) %>% bind_rows
     result$time <- pluck(inf_config, "inferenceTime")
-    as.data.frame(result)
+    result
 }
 
 prev_estimates <- config$inferenceConfigurations %>% map(instantaneous_prevalence) %>% bind_rows
 
+print(prev_estimates)
 
-prev_fig <- ggplot(mapping = aes(x = time)) +
-    geom_ribbon(data = prev_estimates, mapping = aes(ymin = lower, ymax = upper), alpha = 0.1) +
-    geom_line(data = prev_estimates, mapping = aes(y = mid), colour = "grey") +
+prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time)) +
+    geom_ribbon(mapping = aes(ymin = lower, ymax = upper), alpha = 0.1) +
+    geom_line(mapping = aes(y = mid), colour = "grey") +
     geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
     labs(x = "Time", y = "Infection prevalence") +
+    facet_wrap(~ parameter_kind) +
     theme_classic()
 
 ## print(prev_fig)
-ggsave("out/prevalence-profiles.pdf", prev_fig, height = 5, width = 1.618 * 5, units = "cm")
+fig_height <- 10
+ggsave("out/prevalence-profiles.pdf", prev_fig, height = fig_height, width = 1.618 * fig_height, units = "cm")
 
