@@ -190,12 +190,19 @@ logit p = log (p / (1 - p))
 -- | Recenter the evaluation parametes about the parameters given.
 adjustedEvaluationParameters :: Parameters -> Simulation [Parameters]
 adjustedEvaluationParameters ps =
-  let lambdaMesh = toList $ linspace 100 (1,2.5)
-      muMesh = toList $ linspace 100 (0.05,1.5)
-      psiMesh = toList $ linspace 100 (0.05,1.5)
-      omegaMesh = toList $ linspace 100 (0.05,1.5)
+  let meshSize = 100
+      lambdaMesh = toList $ linspace meshSize (1,2.5)
+      muMesh = toList $ linspace meshSize (0.05,1.5)
+      psiMesh = toList $ linspace meshSize (0.05,1.5)
+      probMesh = toList $ linspace meshSize (0.05,0.6) :: [Probability]
+      (rhoTimes,nuTimes) = scheduledTimes ps
+      rhoMesh = [Timed [(t,r) | t <- rhoTimes] | r <- probMesh]
+      omegaMesh = toList $ linspace meshSize (0.05,1.5)
+      nuMesh = [Timed [(t,n) | t <- nuTimes] | n <- probMesh]
       apply f = map (f ps)
-  in return . concat $ zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
+      [lPs,mPs,pPs,oPs] = zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
+      [rPs,nPs] = zipWith apply [putRhos,putNus] [rhoMesh,nuMesh]
+  in return $ concat [lPs,mPs,pPs,rPs,oPs,nPs]
 
 -- | Record the partial results of the LLHD and NB to a CSV at the parameters
 -- used in the simulation.

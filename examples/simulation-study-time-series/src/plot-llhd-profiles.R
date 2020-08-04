@@ -33,10 +33,12 @@ llhd_profile_figure <- function(infConfig) {
         lambda_mesh <- seq(from = 1, to = 2.5, length = mesh_size)
         mu_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
         psi_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        rho_mesh <- seq(from = 0.05, to = 0.6, length = mesh_size)
         omega_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        nu_mesh <- seq(from = 0.05, to = 0.6, length = mesh_size)
 
-        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "omega"), each = mesh_size),
-                   parameter_value = c(lambda_mesh, mu_mesh, psi_mesh, omega_mesh),
+        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "rho", "omega", "nu"), each = mesh_size),
+                   parameter_value = c(lambda_mesh, mu_mesh, psi_mesh, rho_mesh, omega_mesh, nu_mesh),
                    parameter_kind = param_kind,
                    llhd = llhds)
     }
