@@ -150,32 +150,35 @@ evaluateLLHD infConfig obs = do
 -- things.
 estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 estimateLLHD infConfig obs = do
-  simParams <- asks simulationParameters
+  simParams@(Parameters (_,deathRate,_,_,_,_)) <- asks simulationParameters
   let schedTimes = scheduledTimes simParams
-      mleParams = estimateParameters schedTimes obs -- get the MLE estimate of the parameters
+      mleParams = estimateParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
   evalParams <- adjustedEvaluationParameters mleParams -- generate a list of evaluation parameters
   generateLlhdProfileCurves infConfig obs (mleParams,EstimatedParameters,evalParams)
 
--- -- | Use GSL to estimate the MLE based on the observations given. This uses a
--- -- | simplex method because it seems to be faster and more accurate than the
--- -- | simulated annealing.
-estimateParameters :: ([Time],[Time]) -> [Observation] -> Parameters
-estimateParameters sched obs =
+-- | Use GSL to estimate the MLE based on the observations given. This uses a
+-- simplex method because it seems to be faster and more accurate than the
+-- simulated annealing.
+--
+-- __NOTE__ we fix the death rate to the true value because
+-- this is assumed to be known a priori.
+estimateParameters :: Rate -> ([Time],[Time]) -> [Observation] -> Parameters
+estimateParameters deathRate sched obs =
   let maxIters = 500
       desiredPrec = 1e-3
-      initBox = fromList [2,2,2,2,2,2]
-      energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters sched x) initLlhdState
-      randInit = fromList [0,0,0,0,0,0]
+      initBox = fromList [2,2,2,2,2]
+      energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters deathRate sched x) initLlhdState
+      randInit = fromList [0,0,0,0,0]
       (est,_) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-  in vectorAsParameters sched est
+  in vectorAsParameters deathRate sched est
 
 -- | Helper function for @estimateParameters@
-vectorAsParameters :: ([Time],[Time]) -> Vector Double -> Parameters
-vectorAsParameters (rhoTimes, nuTimes) paramVec =
-  let [lnR1, lnR2, lnR3, lnP1, lnR4, lnP2] = toList paramVec
+vectorAsParameters :: Rate -> ([Time],[Time]) -> Vector Double -> Parameters
+vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
+  let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec
       p1 = invLogit lnP1
       p2 = invLogit lnP2
-  in packParameters (exp lnR1, exp lnR2, exp lnR3, [(t,p1)|t<-rhoTimes], exp lnR4, [(t,p2)|t<-nuTimes])
+  in packParameters (exp lnR1, deathRate, exp lnR2, [(t,p1)|t<-rhoTimes], exp lnR3, [(t,p2)|t<-nuTimes])
 
 
 invLogit :: Double -> Probability
