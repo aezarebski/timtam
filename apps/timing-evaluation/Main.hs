@@ -17,7 +17,7 @@ import Data.List (intercalate,find)
 import Data.Maybe (fromJust,isJust,fromMaybe,catMaybes)
 import qualified Data.Csv as CSV
 import qualified Epidemic.BDSCOD as BDSCOD
-import Epidemic.Types.Parameter
+import Epidemic.Types.Parameter hiding (Parameters(..))
 import Epidemic.Utility (simulationWithSystemRandom)
 
 appMessage :: String
@@ -37,7 +37,7 @@ appMessage =
 
 -- | This is the parameters of the likelihood function and the duration of the
 -- simulation.
-data ModelParameters = ModelParameters (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)]) Time
+data ModelParameters = ModelParameters Parameters Time
   deriving (Show, Eq, Generic)
 
 -- | The record of a computation including the size of the data set processed,
@@ -75,7 +75,7 @@ recordSimulationOutput (ModelParameters params _) sim@(obs,simNum) =
 -- an identification integer.
 getObservations :: ModelParameters -> Int -> IO Simulation
 getObservations (ModelParameters params simDuration) simId =
-  let simConfig = BDSCOD.configuration simDuration params
+  let simConfig = BDSCOD.configuration simDuration (unpackParameters params)
     in if isJust simConfig
        then do simEvents <- simulationWithSystemRandom True (fromJust simConfig) BDSCOD.allEvents
                let maybeObs = eventsAsObservations <$> BDSCOD.observedEvents simEvents
@@ -124,7 +124,7 @@ observationsJsonFilePath n =
 main :: IO ()
 main =
   let duration = 6.0
-      modelParams = ModelParameters (1.5,0.3,0.3,[(duration - 1e-6,0.5)],0.3,[]) duration -- lambda, mu, psi, rho, omega, nu
+      modelParams = ModelParameters (Parameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed [])) duration -- lambda, mu, psi, rho, omega, nu
       simIds = [1..1000] :: [Int] -- the indicies of the simulations
       binWidth = 10
       simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]

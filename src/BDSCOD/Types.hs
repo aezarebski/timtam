@@ -4,11 +4,13 @@
 module BDSCOD.Types where
 
 import Control.DeepSeq
+import Foreign.Storable
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.Csv as Csv
 import Data.Aeson
+import Data.List (intersperse)
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
 
@@ -16,8 +18,58 @@ import GHC.Generics (Generic)
 -- removal rate, the sampling rate, the timing and probability of catastrophic
 -- removal, the occurrence rate, and the timing the probability of removal due
 -- to disaster.
-type Parameters
+newtype Parameters =
+  Parameters (Rate, Rate, Rate, Timed Probability, Rate, Timed Probability)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON Parameters
+
+instance FromJSON Parameters
+
+-- | The putLambda function returns a new parameter vector with the lambda rate
+-- updated.
+putLambda :: Parameters -> Rate -> Parameters
+putLambda (Parameters (_, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) pLambda =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putMu :: Parameters -> Rate -> Parameters
+putMu (Parameters (pLambda, _, pPsi, Timed pRhos, pOmega, Timed pNus)) pMu =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putPsi :: Parameters -> Rate -> Parameters
+putPsi (Parameters (pLambda, pMu, _, Timed pRhos, pOmega, Timed pNus)) pPsi =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putRhos :: Parameters -> Timed Probability -> Parameters
+putRhos (Parameters (pLambda, pMu, pPsi, _, pOmega, Timed pNus)) (Timed pRhos) =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putOmega :: Parameters -> Rate -> Parameters
+putOmega (Parameters (pLambda, pMu, pPsi, Timed pRhos, _, Timed pNus)) pOmega =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+putNus :: Parameters -> Timed Probability -> Parameters
+putNus (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, _)) (Timed pNus) =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+
+type UnpackedParameters
    = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+
+unpackParameters :: Parameters -> UnpackedParameters
+unpackParameters (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) =
+  (pLambda, pMu, pPsi, pRhos, pOmega, pNus)
+
+packParameters :: UnpackedParameters -> Parameters
+packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+
+-- | Return the times of scheduled events: catastrophes and disasters.
+scheduledTimes :: Parameters -> ([Time],[Time])
+scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
+  let times = map fst
+  in (times pRhos, times pNus)
 
 -- | The number of lineages that exist in a phylogeny
 type NumLineages = Double
@@ -67,6 +119,16 @@ data NegativeBinomial
   = Zero -- ^ A point mass at zero
   | NegBinom Double Probability
   deriving (Show, Generic)
+
+instance Csv.ToField NegativeBinomial where
+  toField Zero = "Zero"
+  toField (NegBinom r p) =
+    strictByteString . BBuilder.toLazyByteString . mconcat $
+    intersperse
+      del
+      [BBuilder.stringUtf8 "NB", BBuilder.doubleDec r, BBuilder.doubleDec p]
+    where
+      del = BBuilder.charUtf8 ' '
 
 instance Csv.ToRecord NegativeBinomial
 

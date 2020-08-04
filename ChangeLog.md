@@ -1,5 +1,18 @@
 # ChangeLog
 
+## 0.1.2.9
+
+- The commits for both `epi-sim` and `epi-types` have been updated.
+- There is now a `Parameters` type rather than just an alias and there are some
+  setter functions to help manipulate these.
+- The way that the likelihood profiles are generated in the
+  `simulation-study-time-series` application is different now and are repeated
+  for both the true parameters and estimated ones.
+- Estimate the parameters given a simulated data set using `hmatrix` and
+  `hmatrix-gsl`. The simplex method appears to do a good job and does not
+  require gradients, the simulated annealing method was too slow. The death rate
+  is assumed known a priori.
+
 ## 0.1.2.8
 
 - Do more of the likelihood calculation in log-space to avoid numerical errors

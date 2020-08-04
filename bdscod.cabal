@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.2.8
+version:             0.1.2.9
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -32,8 +32,8 @@ library
                , aeson
                , epi-types >= 0.2.1.2
   default-language:    Haskell2010
-  -- ghc-options:         -fwarn-tabs -Wmissing-signatures -threaded -O2 -fwarn-incomplete-patterns
-  ghc-options:        
+  ghc-options:         -fwarn-tabs -Wmissing-signatures -threaded -O2 -fwarn-incomplete-patterns
+  -- ghc-options:        
 
 
 executable manceau-comparison
@@ -92,6 +92,8 @@ executable simulation-study-time-series
     , directory
     , epi-sim >= 0.2.0.1
     , epi-types >= 0.2.1.2
+    , hmatrix >= 0.20.0.0
+    , hmatrix-gsl >= 0.19.0.1
     , mtl >= 2.2
     , vector
   default-language: Haskell2010
@@ -146,9 +148,11 @@ test-suite tests
   ghc-options:
   build-depends:
       base >=4.7 && <5
-    , epi-sim >= 0.2.0.1
     , bdscod
+    , epi-sim >= 0.2.0.1
+    , epi-types >= 0.2.1.2
+    , hmatrix >= 0.20.0.0
+    , hmatrix-gsl >= 0.19.0.1
     , hspec
     , vector
-    , epi-types >= 0.2.1.2
   default-language: Haskell2010

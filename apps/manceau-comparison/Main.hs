@@ -23,7 +23,7 @@ observations =
 
 parameters :: [Parameters]
 parameters =
-  [ (lam, 1.0, 0.3, [(7,0.5)], 0.6, [])
+  [ (Parameters (lam, 1.0, 0.3, Timed [(7,0.5)], 0.6, Timed []))
   | lam <- [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
   ]
 
@@ -39,7 +39,7 @@ instance ToRecord Result
 paramsAndLlhd :: [Observation] -> Parameters -> Result
 paramsAndLlhd obs p =
   let (ll, _) = llhdAndNB obs p initLlhdState
-      (lam, _, _, _, _, _) = p
+      (Parameters (lam, _, _, _, _, _)) = p
    in Result lam ll
 
 

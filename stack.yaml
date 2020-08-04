@@ -41,9 +41,9 @@ packages:
 #
 extra-deps:
   - git: https://github.com/aezarebski/epi-sim.git
-    commit: f967e09f4be8563a8e40fdcde152d3be1d5b4dfb
+    commit: 8b8047164457306866c11170245dba8d61947a6e
   - git: https://github.com/aezarebski/epi-types.git
-    commit: b54294fd21e5a181c3322272d137eb82e191def7
+    commit: 8f7658f6f42b1d1e5c486d9ae70850cb4d75844b
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

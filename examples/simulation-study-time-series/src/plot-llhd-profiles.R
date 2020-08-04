@@ -3,6 +3,7 @@ library(dplyr)
 library(jsonlite)
 library(purrr)
 library(ape)
+library(stringr)
 
 ## To avoid hardcoding the files to read data from we use the configuration JSON
 ## used by the application.
@@ -12,17 +13,53 @@ config <- read_json("ts-config.json")
 
 ## Returns a plot showing the LLHD profiles fro a given inference configuration.
 llhd_profile_figure <- function(infConfig) {
-    eval_df <- read.table("out/evaluation-parameters.csv",
-                          header = TRUE)
-    eval_df$llhd <- as.double(as_vector(strsplit(x = readLines(infConfig$llhdOutputCsv), split = ",")))
+    parse_doubles <- function(string, sep) {
+        map(str_split(string = string, pattern = sep), as.double)
+    }
+
+    all_llhd_vals <- readLines(infConfig$llhdOutputCsv) %>%
+        str_replace(pattern = "SimulationParameters,", replacement = "") %>%
+        str_split(pattern = "EstimatedParameters,") %>%
+        map(parse_doubles, sep = ",") %>%
+        pluck(1)
+
+    make_plot_df <- function(llhds,param_kind) {
+        if (!is.element(el = param_kind, set = c("simulation", "estimated"))) {
+            stop("Bad parameter kind: ", param_kind)
+        }
+
+        mesh_size <- 100
+
+        lambda_mesh <- seq(from = 1, to = 2.5, length = mesh_size)
+        mu_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        psi_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        rho_mesh <- seq(from = 0.05, to = 0.6, length = mesh_size)
+        omega_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        nu_mesh <- seq(from = 0.05, to = 0.6, length = mesh_size)
+
+        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "rho", "omega", "nu"), each = mesh_size),
+                   parameter_value = c(lambda_mesh, mu_mesh, psi_mesh, rho_mesh, omega_mesh, nu_mesh),
+                   parameter_kind = param_kind,
+                   llhd = llhds)
+    }
+
+    plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "simulation"),
+                     make_plot_df(all_llhd_vals[[2]], "estimated"))
+
 
     true_parameters <- read.table("out/true-parameters.csv",
-                                  header = TRUE)
+                                  header = TRUE) %>%
+        rename(parameter_name = parameter,
+               parameter_value = value)
 
-    ggplot(eval_df, mapping = aes(x = value, y = llhd)) +
+    ggplot(plot_df,
+           aes(x = parameter_value, y = llhd, linetype = parameter_kind)) +
         geom_line() +
-        geom_vline(data = true_parameters, mapping = aes(xintercept = value), linetype = "dashed") +
-        facet_wrap(~parameter, scales = "free") +
+        geom_vline(data = true_parameters, mapping = aes(xintercept = parameter_value)) +
+        facet_wrap(~parameter_name, scales = "free_x") +
+        labs(x = "Parameter value",
+             y = "Log-likelihood",
+             linetype = "Parameter kind") +
         theme_classic()
 }
 
@@ -83,33 +120,47 @@ tree_ltt_df <- function(inf_config, all_events) {
 
 
 
+
 ## Read the parameters of the neative binomial distribution as used by BDSCOD
 ## NOTE: The parameterisation is different between BDSCOD and R.
 read_nb_params <- function(nb_csv) {
     if (file.exists(nb_csv)) {
-        set_names(flatten(map(strsplit(readLines(nb_csv), split = ","), as.numeric)), c("size", "inv_prob"))
+        x <- read.table(nb_csv, header = FALSE, sep = ",") %>% set_names(c("parameter_kind", "negative_binomial"))
+        tmp <- x$negative_binomial %>% str_split(" ") %>% lapply(function(v) set_names(as.list(as.double(tail(v,2))), c("size", "inv_prob")))
+        map2(x$parameter_kind, tmp, function(a, b) {b$parameter_kind <- a; return(b)})
     } else {
         stop("Could not find CSV: ", nb_csv)
     }
 }
 
 instantaneous_prevalence <- function(inf_config) {
-    nb_params <- read_nb_params(pluck(inf_config, "negBinomCsv"))
-    result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+    nb_params_list <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
+
+    quantile_data <- function(nb_params) {
+        x <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+        x$parameter_kind <- nb_params$parameter_kind
+        as.data.frame(x)
+    }
+    ## result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+
+    result <- map(.x = nb_params_list, .f = quantile_data) %>% bind_rows
     result$time <- pluck(inf_config, "inferenceTime")
-    as.data.frame(result)
+    result
 }
 
 prev_estimates <- config$inferenceConfigurations %>% map(instantaneous_prevalence) %>% bind_rows
 
+print(prev_estimates)
 
-prev_fig <- ggplot(mapping = aes(x = time)) +
-    geom_ribbon(data = prev_estimates, mapping = aes(ymin = lower, ymax = upper), alpha = 0.1) +
-    geom_line(data = prev_estimates, mapping = aes(y = mid), colour = "grey") +
+prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time)) +
+    geom_ribbon(mapping = aes(ymin = lower, ymax = upper), alpha = 0.1) +
+    geom_line(mapping = aes(y = mid), colour = "grey") +
     geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
     labs(x = "Time", y = "Infection prevalence") +
+    facet_wrap(~ parameter_kind) +
     theme_classic()
 
 ## print(prev_fig)
-ggsave("out/prevalence-profiles.pdf", prev_fig, height = 5, width = 1.618 * 5, units = "cm")
+fig_height <- 10
+ggsave("out/prevalence-profiles.pdf", prev_fig, height = fig_height, width = 1.618 * fig_height, units = "cm")
 
