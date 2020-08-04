@@ -36,6 +36,10 @@ putMu :: Parameters -> Rate -> Parameters
 putMu (Parameters (pLambda, _, pPsi, Timed pRhos, pOmega, Timed pNus)) pMu =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
+putPsi :: Parameters -> Rate -> Parameters
+putPsi (Parameters (pLambda, pMu, _, Timed pRhos, pOmega, Timed pNus)) pPsi =
+  Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
 putRhos :: Parameters -> Timed Probability -> Parameters
 putRhos (Parameters (pLambda, pMu, pPsi, _, pOmega, Timed pNus)) (Timed pRhos) =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
