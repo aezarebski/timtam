@@ -190,10 +190,12 @@ logit p = log (p / (1 - p))
 -- | Recenter the evaluation parametes about the parameters given.
 adjustedEvaluationParameters :: Parameters -> Simulation [Parameters]
 adjustedEvaluationParameters ps =
-  let lambdaMesh = toList $ linspace 100 (1,4)
-      muMesh = toList $ linspace 100 (0.1,2.0)
-  in return $ [putLambda ps l | l <- lambdaMesh] ++ [putMu ps m | m <- muMesh]
-
+  let lambdaMesh = toList $ linspace 100 (1,2.5)
+      muMesh = toList $ linspace 100 (0.05,1.5)
+      psiMesh = toList $ linspace 100 (0.05,1.5)
+      omegaMesh = toList $ linspace 100 (0.05,1.5)
+      apply f = map (f ps)
+  in return . concat $ zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
 
 -- | Record the partial results of the LLHD and NB to a CSV at the parameters
 -- used in the simulation.

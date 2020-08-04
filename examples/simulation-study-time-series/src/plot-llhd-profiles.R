@@ -28,11 +28,15 @@ llhd_profile_figure <- function(infConfig) {
             stop("Bad parameter kind: ", param_kind)
         }
 
-        lambda_mesh <- seq(from = 1, to = 4, length = 100)
-        mu_mesh <- seq(from = 0.1, to = 2.0, length = 100)
+        mesh_size <- 100
 
-        data.frame(parameter_name = rep(c("lambda", "mu"), each = 100),
-                   parameter_value = c(lambda_mesh, mu_mesh),
+        lambda_mesh <- seq(from = 1, to = 2.5, length = mesh_size)
+        mu_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        psi_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+        omega_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
+
+        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "omega"), each = mesh_size),
+                   parameter_value = c(lambda_mesh, mu_mesh, psi_mesh, omega_mesh),
                    parameter_kind = param_kind,
                    llhd = llhds)
     }
