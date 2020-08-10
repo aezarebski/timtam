@@ -2,6 +2,7 @@
 
 ## 0.1.2.9
 
+- Tweak visualisation of the prevalence estimates for clarity.
 - The commits for both `epi-sim` and `epi-types` have been updated.
 - There is now a `Parameters` type rather than just an alias and there are some
   setter functions to help manipulate these.

@@ -141,7 +141,6 @@ instantaneous_prevalence <- function(inf_config) {
         x$parameter_kind <- nb_params$parameter_kind
         as.data.frame(x)
     }
-    ## result <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
 
     result <- map(.x = nb_params_list, .f = quantile_data) %>% bind_rows
     result$time <- pluck(inf_config, "inferenceTime")
@@ -152,15 +151,28 @@ prev_estimates <- config$inferenceConfigurations %>% map(instantaneous_prevalenc
 
 print(prev_estimates)
 
-prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time)) +
-    geom_ribbon(mapping = aes(ymin = lower, ymax = upper), alpha = 0.1) +
-    geom_line(mapping = aes(y = mid), colour = "grey") +
+
+## Create the visualisation of the prevalence estimates using both the true
+## simulation parameters and the estimated parameters.
+prev_estimates$parameter_kind <- gsub(pattern = "Parameters",
+                                      replacement = "",
+                                      x = prev_estimates$parameter_kind)
+dodge_obj <- position_dodge(width = 0.5)
+
+prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time, colour = parameter_kind)) +
     geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
-    labs(x = "Time", y = "Infection prevalence") +
-    facet_wrap(~ parameter_kind) +
-    theme_classic()
+    geom_errorbar(mapping = aes(ymin = lower, ymax = upper), width = 0.7, size = 0.7, position = dodge_obj) +
+    geom_line(mapping = aes(y = mid), size = 0.7, position = dodge_obj) +
+    geom_point(mapping = aes(y = mid), size = 1.5, position = dodge_obj) +
+    labs(x = "Time", y = "Infection prevalence", colour = "Parameter Kind") +
+    scale_color_manual(values = c("#7fc97f", "#beaed4")) +
+    theme_classic() +
+    theme(legend.position = "bottom")
 
 ## print(prev_fig)
 fig_height <- 10
-ggsave("out/prevalence-profiles.pdf", prev_fig, height = fig_height, width = 1.618 * fig_height, units = "cm")
-
+ggsave(".out/prevalence-profiles.png",
+       prev_fig,
+       height = fig_height,
+       width = 1.618 * fig_height,
+       units = "cm")
