@@ -137,7 +137,7 @@ instantaneous_prevalence <- function(inf_config) {
     nb_params_list <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
 
     quantile_data <- function(nb_params) {
-        x <- set_names(as.list(qnbinom(p = c(0.005,0.5,0.995), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
+        x <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975), size = nb_params$size, prob = 1-nb_params$inv_prob)), c("lower","mid","upper"))
         x$parameter_kind <- nb_params$parameter_kind
         as.data.frame(x)
     }
@@ -160,17 +160,18 @@ prev_estimates$parameter_kind <- gsub(pattern = "Parameters",
 dodge_obj <- position_dodge(width = 0.5)
 
 prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time, colour = parameter_kind)) +
-    geom_errorbar(mapping = aes(ymin = lower, ymax = upper), width = 0.5, size = 0.5, position = dodge_obj) +
-    geom_line(mapping = aes(y = mid), size = 0.5, position = dodge_obj) +
-    geom_point(mapping = aes(y = mid), size = 1, position = dodge_obj) +
     geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
+    geom_errorbar(mapping = aes(ymin = lower, ymax = upper), width = 0.7, size = 0.7, position = dodge_obj) +
+    geom_line(mapping = aes(y = mid), size = 0.7, position = dodge_obj) +
+    geom_point(mapping = aes(y = mid), size = 1.5, position = dodge_obj) +
     labs(x = "Time", y = "Infection prevalence", colour = "Parameter Kind") +
+    scale_color_manual(values = c("#7fc97f", "#beaed4")) +
     theme_classic() +
     theme(legend.position = "bottom")
 
-print(prev_fig)
+## print(prev_fig)
 fig_height <- 10
-ggsave("out/prevalence-profiles.pdf",
+ggsave(".out/prevalence-profiles.png",
        prev_fig,
        height = fig_height,
        width = 1.618 * fig_height,
