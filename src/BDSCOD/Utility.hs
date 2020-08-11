@@ -25,14 +25,6 @@ processEvent' (_, currTime) epiSimEvent =
     (Disaster absTime (People persons)) -> ((absTime - currTime, ODisaster . fromIntegral $ V.length persons), absTime)
     (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
 
--- | Predicate for the observation referring to a birth.
-isBirth :: Observation -> Bool
-isBirth (_,e) = e == OBirth
-
--- | Predicate for the observation referring to a sampling.
-isSample :: Observation -> Bool
-isSample (_,e) = e == OSample
-
 nbFromMAndV :: (Double, Double) -> NegativeBinomial
 nbFromMAndV (0, 0) = Zero
 nbFromMAndV (m, v) =

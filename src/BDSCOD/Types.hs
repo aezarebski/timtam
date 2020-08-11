@@ -108,6 +108,14 @@ instance Csv.ToField ObservedEvent where
 
 type Observation = (Time, ObservedEvent)
 
+-- | Predicate for the observation referring to a birth.
+isBirth :: Observation -> Bool
+isBirth (_,e) = e == OBirth
+
+-- | Predicate for the observation referring to a sampling.
+isSample :: Observation -> Bool
+isSample (_,e) = e == OSample
+
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
 -- parameter /r/, the size, and a probability /p/, the mean of the distribution
