@@ -154,3 +154,22 @@ type LlhdCalcState = (LlhdAndNB
                      ,Time
                      ,NumLineages)
 
+
+-- | The times at which unscheduled event times are adjusted up to under the
+-- aggregation process.
+newtype AggregationTimes = AggregationTimes_ [Time]
+
+-- | A smart constructor which only creates an `AggregationTimes` if the
+-- provided `Time`s are sorted and non-negative since these represent absolute
+-- times.
+maybeAggregationTimes :: [Time] -> Maybe AggregationTimes
+maybeAggregationTimes ts
+  | sort ts == ts && minimum ts >= 0 = Just (AggregationTimes_ ts)
+  | otherwise = Nothing
+
+pattern AggregationTimes ts <- AggregationTimes_ ts
+
+-- | Aggregated observations which contains aggregation times and the
+-- observations which fall on those times. This is the result of adjusting the
+-- delays in the times of unscheduled events up to the `AggregationTimes`
+data AggregatedObservations = AggregatedObservations AggregationTimes [Observation]
