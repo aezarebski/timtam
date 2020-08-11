@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.1.3.0
+
+- Include a new executable `simulation-study-aggregated-observations` which
+  looks at the error after approximating unscheduled observations by scheduled
+  ones.
+
 ## 0.1.2.9
 
 - Tweak visualisation of the prevalence estimates for clarity.
