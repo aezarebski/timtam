@@ -105,7 +105,11 @@ instance Csv.ToField ObservedEvent where
     strictByteString . BBuilder.toLazyByteString $
     BBuilder.stringUtf8 "odisaster:" <> BBuilder.doubleDec nl
 
-
+-- | An observation contains the time since the last observation and the actual
+-- event that was observed. This should not be confused with an epidemic event
+-- which has holds the absolute time of the event. This is used because the
+-- likelihood is defined in terms of intervals of time between events rather
+-- than their abolute times.
 type Observation = (Time, ObservedEvent)
 
 -- | Predicate for the observation referring to a birth.
