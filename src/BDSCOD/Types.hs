@@ -1,17 +1,44 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 
-module BDSCOD.Types where
+module BDSCOD.Types
+  ( Parameters(..)
+  , putLambda
+  , putMu
+  , putPsi
+  , putRhos
+  , putOmega
+  , putNus
+  , UnpackedParameters
+  , unpackParameters
+  , packParameters
+  , scheduledTimes
+  , NumLineages
+  , ObservedEvent(..)
+  , strictByteString
+  , Observation
+  , isBirth
+  , isSample
+  , NegativeBinomial(..)
+  , PDESolution(..)
+  , LogLikelihood
+  , LlhdAndNB
+  , LlhdCalcState
+  , AggregationTimes
+  , pattern AggregationTimes
+  , maybeAggregationTimes
+  , AggregatedObservations(..)) where
 
 import Control.DeepSeq
-import Foreign.Storable
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Builder as BBuilder
-import qualified Data.Csv as Csv
 import Data.Aeson
-import Data.List (intersperse)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Builder as BBuilder
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Csv as Csv
+import Data.List (intersperse,sort)
 import Epidemic.Types.Parameter
+import Foreign.Storable
 import GHC.Generics (Generic)
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
