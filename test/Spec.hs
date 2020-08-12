@@ -9,6 +9,7 @@ import Control.Monad (replicateM)
 import Data.Maybe (fromJust, isJust)
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
+import qualified Epidemic.BDSCOD as EpiBDSCOD
 import Epidemic.Types.Events
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population
@@ -325,7 +326,7 @@ testAggregationSequenced =
       p2 = Person 2
       p3 = Person 3
       p4 = Person 4
-      epiEvents = -- the events of the full epidemic
+      allEpiEvents = -- the events of the full epidemic
         [ Infection 1 p1 p2
         , Sampling 2 p1
         , Infection 3 p2 p3
@@ -334,15 +335,15 @@ testAggregationSequenced =
         , Sampling 6 p3
         , Sampling 7 p2
         ]
+      filteredEpiEvents = fromJust $ EpiBDSCOD.observedEvents allEpiEvents -- filter for just the observed epidemic events.
       obs = -- the observations without aggregation
         [ (1.0, OBirth)
         , (1.0, OSample)
         , (1.0, OBirth)
-        , (1.0, OBirth)
-        , (2.0, OSample)
+        , (3.0, OSample)
         , (1.0, OSample)
         ]
-      obs' = eventsAsObservations epiEvents
+      obs' = eventsAsObservations filteredEpiEvents
       aggTimes = fromJust $ maybeAggregationTimes [3.5,7.5]
       aggObsObs =
         [ (1.0, OBirth)
@@ -355,9 +356,11 @@ testAggregationSequenced =
       maybeAggObs' = aggregateUnscheduledObservations aggTimes obs
     in
     describe "Test aggregation definitions (only sequenced observations)" $ do
-      it "Observations are generated correctly" $
+      it "Observations are generated correctly" $ do
           obs == obs' `shouldBe` True
+          allEpiEvents /= filteredEpiEvents `shouldBe` True
       it "Aggregation works correctly" $ do
+        print maybeAggObs'
         isJust maybeAggObs' `shouldBe` True
         aggObs == fromJust maybeAggObs' `shouldBe` True
 

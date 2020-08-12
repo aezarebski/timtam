@@ -8,7 +8,10 @@ import Epidemic.Types.Population
 import BDSCOD.Types
 -- import BDSCOD.Llhd --
 
--- | Convert simulation events to observation events
+-- | Convert simulation events to observation events, this assumes that the
+-- epidemic events have already been filtered by to only include the observable
+-- events. Since this is model specific functions such as `observedEvents` are
+-- provided to do this.
 eventsAsObservations :: [EpidemicEvent] -> [Observation]
 eventsAsObservations epiSimEvents =
   drop 1 . map fst $ scanl processEvent' ((0, OBirth), 0) epiSimEvents
