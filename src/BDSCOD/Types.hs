@@ -18,6 +18,7 @@ module BDSCOD.Types
   , ObservedEvent(..)
   , strictByteString
   , Observation
+  , updateDelay
   , isBirth
   , isSample
   , NegativeBinomial(..)
@@ -138,6 +139,10 @@ instance Csv.ToField ObservedEvent where
 -- likelihood is defined in terms of intervals of time between events rather
 -- than their abolute times.
 type Observation = (Time, ObservedEvent)
+
+-- | A setter function to return a new observation with a different delay.
+updateDelay :: Observation -> Time -> Observation
+updateDelay (_, oEvent) delay = (delay, oEvent)
 
 -- | Predicate for the observation referring to a birth.
 isBirth :: Observation -> Bool
