@@ -1,5 +1,6 @@
 
 import BDSCOD.Conditioning
+import BDSCOD.Aggregation
 import qualified BDSCOD.InhomogeneousBDSLlhd as InhomBDSLlhd
 import BDSCOD.Llhd
 import BDSCOD.Types
@@ -316,6 +317,52 @@ testConversion = do
             ]
        in eventsAsObservations simObsEvents `shouldSatisfy` (== llhdObsEvents)
 
+
+
+
+testAggregationSequenced =
+  let p1 = Person 1
+      p2 = Person 2
+      p3 = Person 3
+      p4 = Person 4
+      epiEvents = -- the events of the full epidemic
+        [ Infection 1 p1 p2
+        , Sampling 2 p1
+        , Infection 3 p2 p3
+        , Infection 4 p2 p4
+        , Removal 5 p4
+        , Sampling 6 p3
+        , Sampling 7 p2
+        ]
+      obs = -- the observations without aggregation
+        [ (1.0, OBirth)
+        , (1.0, OSample)
+        , (1.0, OBirth)
+        , (1.0, OBirth)
+        , (2.0, OSample)
+        , (1.0, OSample)
+        ]
+      obs' = eventsAsObservations epiEvents
+      aggTimes = fromJust $ maybeAggregationTimes [3.5,7.5]
+      aggObsObs =
+        [ (1.0, OBirth)
+        , (2.0, OBirth)
+        , (0.5, OCatastrophe 1)
+        , (0.5, OBirth)
+        , (3.5, OCatastrophe 2)
+        ]
+      aggObs = AggregatedObservations aggTimes aggObsObs
+      maybeAggObs' = aggregateUnscheduledObservations aggTimes obs
+    in
+    describe "Test aggregation definitions (only sequenced observations)" $ do
+      it "Observations are generated correctly" $
+          obs == obs' `shouldBe` True
+      it "Aggregation works correctly" $ do
+        isJust maybeAggObs' `shouldBe` True
+        aggObs == fromJust maybeAggObs' `shouldBe` True
+
+
+
 testImpossibleParameters = do
   describe "Test correct handling of impossible parameters" $ do
     it "Test negative birth rate is impossible" $
@@ -429,15 +476,16 @@ testParameterUpdate =
 
 main :: IO ()
 main = hspec $ do
-  testNbPGF
-  testPdeStatistics
-  testp0
-  testRr
-  testPdeGF
-  testLlhd
-  testConversion
-  testImpossibleParameters
-  testInhomBDSLlhd
-  testConditioningProbability
-  testHmatrixUsage
-  testParameterUpdate
+  -- testNbPGF
+  -- testPdeStatistics
+  -- testp0
+  -- testRr
+  -- testPdeGF
+  -- testLlhd
+  -- testConversion
+  -- testImpossibleParameters
+  -- testInhomBDSLlhd
+  -- testConditioningProbability
+  -- testHmatrixUsage
+  -- testParameterUpdate
+  testAggregationSequenced

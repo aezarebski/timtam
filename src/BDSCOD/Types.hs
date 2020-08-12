@@ -184,7 +184,9 @@ type LlhdCalcState = (LlhdAndNB
 
 -- | The times at which unscheduled event times are adjusted up to under the
 -- aggregation process.
-newtype AggregationTimes = AggregationTimes_ [Time]
+newtype AggregationTimes =
+  AggregationTimes_ [Time]
+  deriving (Show, Eq)
 
 -- | A smart constructor which only creates an `AggregationTimes` if the
 -- provided `Time`s are sorted and non-negative since these represent absolute
@@ -199,4 +201,6 @@ pattern AggregationTimes ts <- AggregationTimes_ ts
 -- | Aggregated observations which contains aggregation times and the
 -- observations which fall on those times. This is the result of adjusting the
 -- delays in the times of unscheduled events up to the `AggregationTimes`
-data AggregatedObservations = AggregatedObservations AggregationTimes [Observation]
+data AggregatedObservations =
+  AggregatedObservations AggregationTimes [Observation]
+  deriving (Show, Eq)
