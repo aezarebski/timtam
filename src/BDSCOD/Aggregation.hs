@@ -6,7 +6,9 @@ module BDSCOD.Aggregation
 import BDSCOD.Types
 import Epidemic.Types.Parameter
 
--- | The absolute time and the observation at that time.
+-- | The absolute time and the observation at that time. Recall that
+-- `Observation` pairs only contain the time delay since the previous observable
+-- event, not their absolute time.
 type AnnotatedObservation = (Time, Observation)
 
 -- | The observations where unscheduled observations have been rounded up to the
@@ -49,8 +51,11 @@ aggregatedObs aggTimes annObs
     aggregatedObs remAggTimes partiallyAggAnnObs
 
 -- | Join all unscheduled observations before a given time into a single
--- scheduled observation.
-_aggregatedObs :: [AnnotatedObservation] -> Time -> Maybe [AnnotatedObservation]
+-- scheduled observation. This is in the maybe monad because aggregation is a
+-- partial function.
+_aggregatedObs :: [AnnotatedObservation]
+               -> Time
+               -> Maybe [AnnotatedObservation]
 _aggregatedObs annObs aggTime =
   let beforeObs = filter (\(absTime, obs) -> absTime <= aggTime && (not . isSample) obs) annObs
       needAggObs = filter (\(absTime, obs) -> absTime <= aggTime && isSample obs) annObs
@@ -59,12 +64,16 @@ _aggregatedObs annObs aggTime =
             return $ mconcat [beforeObs,[aggObs],afterObs]
 
 -- | Join a list of observed samples into a single catastrophe at the given
--- time.
+-- time. The delay on the returned catastrophe is undefined to make it clear
+-- that this is not a real value since the true value depends on the preceeding
+-- observation. If there are events that are not samples then this will return
+-- nothing.
 _aggregateSamples :: [AnnotatedObservation] -> Time -> Maybe AnnotatedObservation
 _aggregateSamples annSamples aggTime =
   if all (isSample . snd) annSamples
-  then Just (aggTime,(undefined,OCatastrophe (fromIntegral $ length annSamples)))
-  else Nothing
+    then Just
+           (aggTime, (undefined, OCatastrophe (fromIntegral $ length annSamples)))
+    else Nothing
 
 -- | Add the absolute time of each observation as an annotation to the
 -- observation.
