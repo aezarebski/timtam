@@ -21,14 +21,17 @@ module BDSCOD.Types
   , updateDelay
   , isBirth
   , isSample
+  , isOccurrence
   , NegativeBinomial(..)
   , PDESolution(..)
   , LogLikelihood
   , LlhdAndNB
   , LlhdCalcState
-  , AggregationTimes
-  , pattern AggregationTimes
+  , AggregationTimes()
+  , pattern AggTimes
   , maybeAggregationTimes
+  ,extractFirstAggregationTime
+  ,nullAggregationTimes
   , AggregatedObservations(..)) where
 
 import Control.DeepSeq
@@ -146,11 +149,15 @@ updateDelay (_, oEvent) delay = (delay, oEvent)
 
 -- | Predicate for the observation referring to a birth.
 isBirth :: Observation -> Bool
-isBirth (_,e) = e == OBirth
+isBirth = (==OBirth) . snd
 
 -- | Predicate for the observation referring to a sampling.
 isSample :: Observation -> Bool
-isSample (_,e) = e == OSample
+isSample = (==OSample) . snd
+
+-- | Predicate for the observation referring to an occurrence.
+isOccurrence :: Observation -> Bool
+isOccurrence = (==OOccurrence) . snd
 
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
@@ -201,7 +208,7 @@ maybeAggregationTimes ts
   | sort ts == ts && minimum ts >= 0 = Just (AggregationTimes_ ts)
   | otherwise = Nothing
 
-pattern AggregationTimes ts <- AggregationTimes_ ts
+pattern AggTimes ts <- AggregationTimes_ ts
 
 -- | Aggregated observations which contains aggregation times and the
 -- observations which fall on those times. This is the result of adjusting the
@@ -209,3 +216,16 @@ pattern AggregationTimes ts <- AggregationTimes_ ts
 data AggregatedObservations =
   AggregatedObservations AggregationTimes [Observation]
   deriving (Show, Eq)
+
+-- | Return the first time aggregation time and a new set of aggregation times
+-- with the first one removed. Since there is a smart constructor, we assume
+-- that the initial object has sorted times.
+extractFirstAggregationTime :: AggregationTimes -> Maybe (Time,AggregationTimes)
+extractFirstAggregationTime (AggregationTimes_ ts) = case ts of
+  [] -> Nothing
+  [t] -> Just (t, AggregationTimes_ [])
+  (t:ts') -> Just (t, AggregationTimes_ ts')
+
+-- | Predicate for there being no aggregation times.
+nullAggregationTimes :: AggregationTimes -> Bool
+nullAggregationTimes (AggregationTimes_ ts) = null ts
