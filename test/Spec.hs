@@ -349,8 +349,7 @@ testAggregationSequenced =
         [ (1.0, OBirth)
         , (2.0, OBirth)
         , (0.5, OCatastrophe 1)
-        , (0.5, OBirth)
-        , (3.5, OCatastrophe 2)
+        , (4.0, OCatastrophe 2)
         ]
       aggObs = AggregatedObservations aggTimes aggObsObs
       maybeAggObs' = aggregateUnscheduledObservations aggTimes obs
@@ -360,7 +359,6 @@ testAggregationSequenced =
           obs == obs' `shouldBe` True
           allEpiEvents /= filteredEpiEvents `shouldBe` True
       it "Aggregation works correctly" $ do
-        print maybeAggObs'
         isJust maybeAggObs' `shouldBe` True
         aggObs == fromJust maybeAggObs' `shouldBe` True
 
