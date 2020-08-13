@@ -2,6 +2,9 @@
 
 ## 0.1.3.0
 
+- Include a module, `BDSCOD.Aggregation` which handles aggregation of
+  unscheduled events into corresponding scheduled events. So far only the
+  functions for sequenced observations are defined.
 - Include a new executable `simulation-study-aggregated-observations` which
   looks at the error after approximating unscheduled observations by scheduled
   ones.
