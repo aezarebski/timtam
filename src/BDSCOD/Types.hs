@@ -212,7 +212,9 @@ pattern AggTimes ts <- AggregationTimes_ ts
 
 -- | Aggregated observations which contains aggregation times and the
 -- observations which fall on those times. This is the result of adjusting the
--- delays in the times of unscheduled events up to the `AggregationTimes`
+-- delays in the times of unscheduled events up to the `AggregationTimes`. Note
+-- that this includes the observations that are not aggregated, such as the
+-- birth events.
 data AggregatedObservations =
   AggregatedObservations AggregationTimes [Observation]
   deriving (Show, Eq)
@@ -226,6 +228,7 @@ extractFirstAggregationTime (AggregationTimes_ ts) = case ts of
   [t] -> Just (t, AggregationTimes_ [])
   (t:ts') -> Just (t, AggregationTimes_ ts')
 
--- | Predicate for there being no aggregation times.
+-- | Predicate for there being no aggregation times in the `AggregationTimes`
+-- object.
 nullAggregationTimes :: AggregationTimes -> Bool
 nullAggregationTimes (AggregationTimes_ ts) = null ts
