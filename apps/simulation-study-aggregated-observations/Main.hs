@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 
@@ -13,10 +14,10 @@ import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
 -- import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
--- import qualified Data.Csv as Csv
+import qualified Data.Csv as Csv
 -- import Data.List (intercalate, intersperse)
 -- import Data.Maybe (fromJust)
--- import qualified Epidemic.BDSCOD as SimBDSCOD
+import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events ()
 --   ( EpidemicEvent(..)
 --   , asNewickString
@@ -26,7 +27,7 @@ import Epidemic.Types.Events ()
 --   )
 import Epidemic.Types.Parameter (Time)
 -- import Epidemic.Types.Population (Person(..))
--- import qualified Epidemic.Utility as SimUtil
+import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 -- import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 -- import Numeric.LinearAlgebra.Data (linspace, toList)
@@ -76,15 +77,33 @@ data AnnotatedParameter
   | EstimatedParameters Parameters
   deriving (Show, Eq)
 
+-- | A BDSCOD simulation configuration based on the parameters in the
+-- environment.
+bdscodConfiguration = do
+  simParams <- asks simulationParameters
+  simDur <- asks simulationDuration
+  let bdscodConfig = SimBDSCOD.configuration simDur (unpackParameters simParams)
+  case bdscodConfig of
+    Nothing -> throwError "Could not construct BDSCOD configuration"
+    (Just config) -> return config
+
+-- | Simulate the actual epidemic making sure that the results are acceptable
+-- before returning the results.
+simulateEpidemic bdscodConfig = 
+  do
+    simEvents <- liftIO $ SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
+    (sizeLowerBound,sizeUpperBound) <- asks simulationSizeBounds
+    if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
+      then do simEventsCsv <- asks simulatedEventsOutputCsv
+              liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
+              return simEvents
+      else do liftIO $ putStrLn "Repeating epidemic simulation..."
+              simulateEpidemic bdscodConfig
 
 
 
 
-bdscodConfiguration :: Simulation a
-bdscodConfiguration = undefined -- copy from previous application
 
-simulateEpidemic :: a -> Simulation b
-simulateEpidemic = undefined -- copy from previous application
 
 observeEpidemicTwice :: b
                      -> (InferenceConfiguration,InferenceConfiguration)
