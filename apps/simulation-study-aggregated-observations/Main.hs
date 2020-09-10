@@ -59,8 +59,9 @@ data Configuration =
     { simulatedEventsOutputCsv :: FilePath
     , simulationParameters :: Parameters
     , simulationDuration :: Time
-    , simulationSizeBounds :: (Int,Int)
-    , inferenceConfigurations :: [InferenceConfiguration]
+    , simulationSizeBounds :: (Int, Int)
+    , inferenceConfigurations :: ( InferenceConfiguration
+                                 , InferenceConfiguration)
     }
   deriving (Show, Generic)
 
@@ -75,11 +76,45 @@ data AnnotatedParameter
   | EstimatedParameters Parameters
   deriving (Show, Eq)
 
+
+
+
+
+bdscodConfiguration :: Simulation a
+bdscodConfiguration = undefined -- copy from previous application
+
+simulateEpidemic :: a -> Simulation b
+simulateEpidemic = undefined -- copy from previous application
+
+observeEpidemicTwice :: b
+                     -> (InferenceConfiguration,InferenceConfiguration)
+                     -> Simulation ([Observation],AggregatedObservations)
+observeEpidemicTwice = undefined
+
+evaluateLLHD = undefined -- copy from previous application
+
+estimateLLHD = undefined -- copy from previous application
+
+estimateLLHD' = undefined -- copy from previous application
+
 -- | This is the main entry point to the actual simulation study. Since this is
 -- within the simulation monad it has access to all the configuration data and
 -- can perform IO.
-simulationStudy :: Simulation x
-simulationStudy = undefined
+simulationStudy :: Simulation ()
+simulationStudy = do
+  bdscodConfig <- bdscodConfiguration -- get a simulation configuration
+  epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
+  infConfigs <- asks inferenceConfigurations -- get the inference configurations
+  (regObs,aggObs) <- observeEpidemicTwice epiSim infConfigs -- get the observed data out of the simulations
+  evaluateLLHD regObs                                       -- evaluate profiles about true parameters
+  estimateLLHD regObs                                       -- evaluate profiles about estimated parameters
+  estimateLLHD' aggObs                                      -- evaluate profiles about estimated parameters from aggregated data.
+
+
+
+
+
+
 
 main :: IO ()
 main = do
