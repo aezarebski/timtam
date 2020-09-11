@@ -150,3 +150,36 @@ main = do
 
 getConfiguration :: FilePath -> IO (Maybe Configuration)
 getConfiguration fp = Json.decode <$> L.readFile fp
+
+
+-- | Use GSL to estimate the MLE based on the observations given. This uses a
+-- simplex method because it seems to be faster and more accurate than the
+-- simulated annealing.
+--
+-- __NOTE__ we fix the death rate to the true value because
+-- this is assumed to be known a priori.
+estimateRegularParameters :: Rate -> ([Time],[Time]) -> [Observation] -> Parameters
+estimateRegularParameters deathRate sched obs =
+  let maxIters = 500
+      desiredPrec = 1e-3
+      initBox = fromList [2,2,2,2,2]
+      energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters deathRate sched x) initLlhdState
+      randInit = fromList [0,0,0,0,0]
+      (est,_) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
+  in vectorAsParameters deathRate sched est
+
+-- | Helper function for @estimateRegularParameters@
+vectorAsParameters :: Rate -> ([Time],[Time]) -> Vector Double -> Parameters
+vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
+  let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec
+      p1 = invLogit lnP1
+      p2 = invLogit lnP2
+  in packParameters (exp lnR1, deathRate, exp lnR2, [(t,p1)|t<-rhoTimes], exp lnR3, [(t,p2)|t<-nuTimes])
+
+
+invLogit :: Double -> Probability
+invLogit a = 1 / (1 + exp (- a))
+
+logit :: Probability -> Double
+logit p = log (p / (1 - p))
+
