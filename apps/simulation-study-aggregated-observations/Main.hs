@@ -74,7 +74,8 @@ type Simulation x = ReaderT Configuration (ExceptT String IO) x
 -- simulation or estimates parameters.
 data AnnotatedParameter
   = TrueParameters Parameters
-  | EstimatedParameters Parameters
+  | EstimatedParametersRegularData Parameters
+  | EstimatedParametersAggregatedData Parameters
   deriving (Show, Eq)
 
 -- | A BDSCOD simulation configuration based on the parameters in the
