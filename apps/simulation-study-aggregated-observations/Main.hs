@@ -1,36 +1,38 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
 -- import BDSCOD.Conditioning
--- import BDSCOD.Llhd
+import BDSCOD.Llhd (initLlhdState,llhdAndNB)
 import BDSCOD.Types
--- import BDSCOD.Utility
+import BDSCOD.Utility (eventsAsObservations)
 -- import Control.Monad (liftM, zipWithM)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
--- import qualified Data.ByteString.Builder as BBuilder
+import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
--- import Data.List (intercalate, intersperse)
--- import Data.Maybe (fromJust)
+import Data.List (intersperse)
+import Data.Maybe (isJust,fromJust)
 import qualified Epidemic.BDSCOD as SimBDSCOD
-import Epidemic.Types.Events ()
+import Epidemic.Types.Events (EpidemicEvent(..))
 --   ( EpidemicEvent(..)
 --   , asNewickString
 --   , eventTime
 --   , maybeEpidemicTree
 --   , maybeReconstructedTree
 --   )
-import Epidemic.Types.Parameter (Time)
+import Epidemic.Types.Parameter (Time,Probability,Timed(..),Rate)
 -- import Epidemic.Types.Population (Person(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
--- import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
--- import Numeric.LinearAlgebra.Data (linspace, toList)
+import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
+import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
 -- import Numeric.LinearAlgebra.HMatrix
 import System.Environment (getArgs)
 
@@ -105,15 +107,93 @@ simulateEpidemic bdscodConfig =
 
 
 
+-- | Take a simulated epidemic and generate the observations, first with full
+-- resolution of the event times and second with the sampling times aggregated
+-- as defined in the inference configuration.
+observeEpidemicTwice ::
+     [EpidemicEvent]
+  -> (InferenceConfiguration, InferenceConfiguration)
+  -> Simulation ( (InferenceConfiguration, [Observation])
+                , (InferenceConfiguration, AggregatedObservations))
+observeEpidemicTwice simEvents (regInfConfig,aggInfConfig) =
+  do
+    let
+      maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+      maybeAggObs = undefined
+    if isJust maybeRegObs && isJust maybeAggObs
+      then return ((regInfConfig,fromJust maybeRegObs),(aggInfConfig,fromJust maybeAggObs))
+      else throwError "Could not evaluate observations"
 
-observeEpidemicTwice :: b
-                     -> (InferenceConfiguration,InferenceConfiguration)
-                     -> Simulation ([Observation],AggregatedObservations)
-observeEpidemicTwice = undefined
+-- | Recenter the evaluation parametes about the parameters given so that we can
+-- get a sensible range of values for visualisation. Since there are several
+-- types of parameters in use, the `AnnotatedParameter` type is used to convey
+-- what to do. __NOTE__ that for the true parameters and the estimates under the
+-- regular data this function is the same, the only time it needs to be
+-- different is when using the parameters estimated from the aggregated data
+-- since the parameter space is different.
+adjustedEvaluationParameters :: AnnotatedParameter -> Simulation [Parameters]
+adjustedEvaluationParameters (TrueParameters ps) =
+  let meshSize = 100
+      lambdaMesh = toList $ linspace meshSize (1,2.5)
+      muMesh = toList $ linspace meshSize (0.05,1.5)
+      psiMesh = toList $ linspace meshSize (0.05,1.5)
+      probMesh = toList $ linspace meshSize (0.05,0.6) :: [Probability]
+      (rhoTimes,nuTimes) = scheduledTimes ps
+      rhoMesh = [Timed [(t,r) | t <- rhoTimes] | r <- probMesh]
+      omegaMesh = toList $ linspace meshSize (0.05,1.5)
+      nuMesh = [Timed [(t,n) | t <- nuTimes] | n <- probMesh]
+      apply f = map (f ps)
+      [lPs,mPs,pPs,oPs] = zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
+      [rPs,nPs] = zipWith apply [putRhos,putNus] [rhoMesh,nuMesh]
+  in return $ concat [lPs,mPs,pPs,rPs,oPs,nPs]
+adjustedEvaluationParameters (EstimatedParametersRegularData ps) =
+  adjustedEvaluationParameters (TrueParameters ps)
+adjustedEvaluationParameters (EstimatedParametersAggregatedData _) = undefined
 
-evaluateLLHD = undefined -- copy from previous application
 
-estimateLLHD = undefined -- copy from previous application
+-- | Evaluate the NB posterior approximation of the prevalence for a single
+-- point in parameter space and the LLHD over a list of points and write all of
+-- the results to CSV.
+generateLlhdProfileCurves :: InferenceConfiguration
+                          -> [Observation]
+                          -> (AnnotatedParameter,[Parameters])
+                          -> Simulation ()
+generateLlhdProfileCurves InferenceConfiguration{..} obs (TrueParameters singleParams,evalParams) =
+  let comma = BBuilder.charUtf8 ','
+      parametersUsed = "true_parameters_used_in_the_simulation"
+      parametersUsed' = BBuilder.stringUtf8 parametersUsed
+      llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
+      nBVal = pure (parametersUsed,snd $ llhdAndNB obs singleParams initLlhdState)
+      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . (parametersUsed':) . map BBuilder.doubleDec
+  in do
+    liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+    liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
+
+
+-- | Run the evaluation of the log-likelihood profiles on a given set of regular
+-- (i.e., disaggregated) observations at the parameters used to simulate the
+-- data set and write the result to file. This will also evaluate the density of
+-- the prevalence at the present and write that to file.
+evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
+evaluateLLHD infConfig obs = do
+  simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
+  evalParams <- adjustedEvaluationParameters (TrueParameters simParams)
+  generateLlhdProfileCurves infConfig obs (TrueParameters simParams,evalParams)
+
+-- | Using regular (i.e., disaggregated) observation, estimate the parameters
+-- and evaluate the log-likelihood profiles and write the result to file. This
+-- will also evaluate the density of the prevalence at the present and write
+-- that to file. __NOTE__ This uses the actual simulation parameters as a way to
+-- get the scheduled observation times, they are not used in the inference, that
+-- starts at a fixed initial condition.
+estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
+estimateLLHD infConfig obs = do
+  simParams@(Parameters (_,deathRate,_,_,_,_)) <- asks simulationParameters
+  let schedTimes = scheduledTimes simParams
+      mleParams = estimateRegularParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
+      annotatedMLE = EstimatedParametersRegularData mleParams
+  evalParams <- adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
+  generateLlhdProfileCurves infConfig obs (annotatedMLE,evalParams)
 
 estimateLLHD' = undefined -- copy from previous application
 
@@ -126,9 +206,9 @@ simulationStudy = do
   epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
   infConfigs <- asks inferenceConfigurations -- get the inference configurations
   (regObs,aggObs) <- observeEpidemicTwice epiSim infConfigs -- get the observed data out of the simulations
-  evaluateLLHD regObs                                       -- evaluate profiles about true parameters
-  estimateLLHD regObs                                       -- evaluate profiles about estimated parameters
-  estimateLLHD' aggObs                                      -- evaluate profiles about estimated parameters from aggregated data.
+  (uncurry evaluateLLHD) regObs                             -- evaluate profiles about true parameters
+  (uncurry estimateLLHD) regObs                             -- evaluate profiles about estimated parameters
+  (uncurry estimateLLHD') aggObs                            -- evaluate profiles about estimated parameters from aggregated data.
 
 
 
