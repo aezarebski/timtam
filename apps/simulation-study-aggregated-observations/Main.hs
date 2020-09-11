@@ -7,9 +7,10 @@
 module Main where
 
 -- import BDSCOD.Conditioning
-import BDSCOD.Llhd (initLlhdState,llhdAndNB)
+import BDSCOD.Llhd (initLlhdState, llhdAndNB)
 import BDSCOD.Types
 import BDSCOD.Utility (eventsAsObservations)
+
 -- import Control.Monad (liftM, zipWithM)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
@@ -18,21 +19,24 @@ import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
 import Data.List (intersperse)
-import Data.Maybe (isJust,fromJust)
+import Data.Maybe (fromJust, isJust)
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events (EpidemicEvent(..))
+
 --   ( EpidemicEvent(..)
 --   , asNewickString
 --   , eventTime
 --   , maybeEpidemicTree
 --   , maybeReconstructedTree
 --   )
-import Epidemic.Types.Parameter (Time,Probability,Timed(..),Rate)
+import Epidemic.Types.Parameter (Probability, Rate, Time, Timed(..))
+
 -- import Epidemic.Types.Population (Person(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
+
 -- import Numeric.LinearAlgebra.HMatrix
 import System.Environment (getArgs)
 
@@ -92,20 +96,19 @@ bdscodConfiguration = do
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
 -- before returning the results.
-simulateEpidemic bdscodConfig = 
-  do
-    simEvents <- liftIO $ SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
-    (sizeLowerBound,sizeUpperBound) <- asks simulationSizeBounds
-    if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
-      then do simEventsCsv <- asks simulatedEventsOutputCsv
-              liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
-              return simEvents
-      else do liftIO $ putStrLn "Repeating epidemic simulation..."
-              simulateEpidemic bdscodConfig
-
-
-
-
+simulateEpidemic bdscodConfig = do
+  simEvents <-
+    liftIO $
+    SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
+  (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
+  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
+    then do
+      simEventsCsv <- asks simulatedEventsOutputCsv
+      liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
+      return simEvents
+    else do
+      liftIO $ putStrLn "Repeating epidemic simulation..."
+      simulateEpidemic bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
 -- resolution of the event times and second with the sampling times aggregated
@@ -115,14 +118,14 @@ observeEpidemicTwice ::
   -> (InferenceConfiguration, InferenceConfiguration)
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
-observeEpidemicTwice simEvents (regInfConfig,aggInfConfig) =
-  do
-    let
-      maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+observeEpidemicTwice simEvents (regInfConfig, aggInfConfig) = do
+  let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       maybeAggObs = undefined
-    if isJust maybeRegObs && isJust maybeAggObs
-      then return ((regInfConfig,fromJust maybeRegObs),(aggInfConfig,fromJust maybeAggObs))
-      else throwError "Could not evaluate observations"
+  if isJust maybeRegObs && isJust maybeAggObs
+    then return
+           ( (regInfConfig, fromJust maybeRegObs)
+           , (aggInfConfig, fromJust maybeAggObs))
+    else throwError "Could not evaluate observations"
 
 -- | Recenter the evaluation parametes about the parameters given so that we can
 -- get a sensible range of values for visualisation. Since there are several
@@ -134,41 +137,47 @@ observeEpidemicTwice simEvents (regInfConfig,aggInfConfig) =
 adjustedEvaluationParameters :: AnnotatedParameter -> Simulation [Parameters]
 adjustedEvaluationParameters (TrueParameters ps) =
   let meshSize = 100
-      lambdaMesh = toList $ linspace meshSize (1,2.5)
-      muMesh = toList $ linspace meshSize (0.05,1.5)
-      psiMesh = toList $ linspace meshSize (0.05,1.5)
-      probMesh = toList $ linspace meshSize (0.05,0.6) :: [Probability]
-      (rhoTimes,nuTimes) = scheduledTimes ps
-      rhoMesh = [Timed [(t,r) | t <- rhoTimes] | r <- probMesh]
-      omegaMesh = toList $ linspace meshSize (0.05,1.5)
-      nuMesh = [Timed [(t,n) | t <- nuTimes] | n <- probMesh]
+      lambdaMesh = toList $ linspace meshSize (1, 2.5)
+      muMesh = toList $ linspace meshSize (0.05, 1.5)
+      psiMesh = toList $ linspace meshSize (0.05, 1.5)
+      probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
+      (rhoTimes, nuTimes) = scheduledTimes ps
+      rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
+      omegaMesh = toList $ linspace meshSize (0.05, 1.5)
+      nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
       apply f = map (f ps)
-      [lPs,mPs,pPs,oPs] = zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
-      [rPs,nPs] = zipWith apply [putRhos,putNus] [rhoMesh,nuMesh]
-  in return $ concat [lPs,mPs,pPs,rPs,oPs,nPs]
+      [lPs, mPs, pPs, oPs] =
+        zipWith
+          apply
+          [putLambda, putMu, putPsi, putOmega]
+          [lambdaMesh, muMesh, psiMesh, omegaMesh]
+      [rPs, nPs] = zipWith apply [putRhos, putNus] [rhoMesh, nuMesh]
+   in return $ concat [lPs, mPs, pPs, rPs, oPs, nPs]
 adjustedEvaluationParameters (EstimatedParametersRegularData ps) =
   adjustedEvaluationParameters (TrueParameters ps)
 adjustedEvaluationParameters (EstimatedParametersAggregatedData _) = undefined
 
-
 -- | Evaluate the NB posterior approximation of the prevalence for a single
 -- point in parameter space and the LLHD over a list of points and write all of
 -- the results to CSV.
-generateLlhdProfileCurves :: InferenceConfiguration
-                          -> [Observation]
-                          -> (AnnotatedParameter,[Parameters])
-                          -> Simulation ()
-generateLlhdProfileCurves InferenceConfiguration{..} obs (TrueParameters singleParams,evalParams) =
+generateLlhdProfileCurves ::
+     InferenceConfiguration
+  -> [Observation]
+  -> (AnnotatedParameter, [Parameters])
+  -> Simulation ()
+generateLlhdProfileCurves InferenceConfiguration {..} obs (TrueParameters singleParams, evalParams) =
   let comma = BBuilder.charUtf8 ','
       parametersUsed = "true_parameters_used_in_the_simulation"
       parametersUsed' = BBuilder.stringUtf8 parametersUsed
       llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
-      nBVal = pure (parametersUsed,snd $ llhdAndNB obs singleParams initLlhdState)
-      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . (parametersUsed':) . map BBuilder.doubleDec
-  in do
-    liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
-    liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
-
+      nBVal =
+        pure (parametersUsed, snd $ llhdAndNB obs singleParams initLlhdState)
+      doublesAsString =
+        BBuilder.toLazyByteString .
+        mconcat .
+        intersperse comma . (parametersUsed' :) . map BBuilder.doubleDec
+   in do liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+         liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
 
 -- | Run the evaluation of the log-likelihood profiles on a given set of regular
 -- (i.e., disaggregated) observations at the parameters used to simulate the
@@ -178,9 +187,9 @@ evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
   evalParams <- adjustedEvaluationParameters (TrueParameters simParams)
-  generateLlhdProfileCurves infConfig obs (TrueParameters simParams,evalParams)
+  generateLlhdProfileCurves infConfig obs (TrueParameters simParams, evalParams)
 
--- | Using regular (i.e., disaggregated) observation, estimate the parameters
+-- | Using regular (i.e., disaggregated) observations, estimate the parameters
 -- and evaluate the log-likelihood profiles and write the result to file. This
 -- will also evaluate the density of the prevalence at the present and write
 -- that to file. __NOTE__ This uses the actual simulation parameters as a way to
