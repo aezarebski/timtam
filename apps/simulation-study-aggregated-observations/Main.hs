@@ -197,14 +197,26 @@ evaluateLLHD infConfig obs = do
 -- starts at a fixed initial condition.
 estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 estimateLLHD infConfig obs = do
-  simParams@(Parameters (_,deathRate,_,_,_,_)) <- asks simulationParameters
+  simParams@(Parameters (_, deathRate, _, _, _, _)) <- asks simulationParameters
   let schedTimes = scheduledTimes simParams
       mleParams = estimateRegularParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersRegularData mleParams
   evalParams <- adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
-  generateLlhdProfileCurves infConfig obs (annotatedMLE,evalParams)
+  generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
 
-estimateLLHD' = undefined -- copy from previous application
+-- | Using __aggregated__ observations, estimate the parameters
+-- and evaluate the log-likelihood profiles and write the result to file. This
+-- will also evaluate the density of the prevalence at the present and write
+-- that to file.
+estimateLLHDAggregated ::
+     InferenceConfiguration -> AggregatedObservations -> Simulation ()
+estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs) = do
+  Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
+  let schedTimes = (aggTimes,undefined)
+      mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
+      annotatedMLE = EstimatedParametersAggregatedData mleParams
+  evalParams <- adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
+  generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
 
 -- | This is the main entry point to the actual simulation study. Since this is
 -- within the simulation monad it has access to all the configuration data and
@@ -214,16 +226,10 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration -- get a simulation configuration
   epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
   infConfigs <- asks inferenceConfigurations -- get the inference configurations
-  (regObs,aggObs) <- observeEpidemicTwice epiSim infConfigs -- get the observed data out of the simulations
-  (uncurry evaluateLLHD) regObs                             -- evaluate profiles about true parameters
-  (uncurry estimateLLHD) regObs                             -- evaluate profiles about estimated parameters
-  (uncurry estimateLLHD') aggObs                            -- evaluate profiles about estimated parameters from aggregated data.
-
-
-
-
-
-
+  (regObs, aggObs) <- observeEpidemicTwice epiSim infConfigs -- get the observed data out of the simulations
+  (uncurry evaluateLLHD) regObs -- evaluate profiles about true parameters
+  (uncurry estimateLLHD) regObs -- evaluate profiles about estimated parameters
+  (uncurry estimateLLHDAggregated) aggObs -- evaluate profiles about estimated parameters from aggregated data.
 
 main :: IO ()
 main = do
@@ -241,35 +247,58 @@ main = do
 getConfiguration :: FilePath -> IO (Maybe Configuration)
 getConfiguration fp = Json.decode <$> L.readFile fp
 
+-- | Use GSL to estimate the MLE based on the observations given. This uses a
+-- simplex method because it seems to be faster and more accurate than the
+-- simulated annealing.
+--
+-- __NOTE__ This will fit the model assuming that we have __aggregated__
+-- observations.
+--
+-- __NOTE__ we fix the death rate to the true value because
+-- this is assumed to be known a priori.
+estimateAggregatedParameters ::
+     Rate -> ([Time], [Time]) -> [Observation] -> Parameters
+estimateAggregatedParameters = undefined
 
 -- | Use GSL to estimate the MLE based on the observations given. This uses a
 -- simplex method because it seems to be faster and more accurate than the
 -- simulated annealing.
 --
+-- __NOTE__ This will fit the model assuming that we have __disaggregated__
+-- observations.
+--
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
-estimateRegularParameters :: Rate -> ([Time],[Time]) -> [Observation] -> Parameters
+estimateRegularParameters ::
+     Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateRegularParameters deathRate sched obs =
   let maxIters = 500
       desiredPrec = 1e-3
-      initBox = fromList [2,2,2,2,2]
-      energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters deathRate sched x) initLlhdState
-      randInit = fromList [0,0,0,0,0]
-      (est,_) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-  in vectorAsParameters deathRate sched est
+      initBox = fromList [2, 2, 2, 2, 2]
+      energyFunc x =
+        negate . fst $
+        llhdAndNB obs (vectorAsParameters deathRate sched x) initLlhdState
+      randInit = fromList [0, 0, 0, 0, 0]
+      (est, _) =
+        minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
+   in vectorAsParameters deathRate sched est
 
 -- | Helper function for @estimateRegularParameters@
-vectorAsParameters :: Rate -> ([Time],[Time]) -> Vector Double -> Parameters
+vectorAsParameters :: Rate -> ([Time], [Time]) -> Vector Double -> Parameters
 vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
   let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec
       p1 = invLogit lnP1
       p2 = invLogit lnP2
-  in packParameters (exp lnR1, deathRate, exp lnR2, [(t,p1)|t<-rhoTimes], exp lnR3, [(t,p2)|t<-nuTimes])
-
+   in packParameters
+        ( exp lnR1
+        , deathRate
+        , exp lnR2
+        , [(t, p1) | t <- rhoTimes]
+        , exp lnR3
+        , [(t, p2) | t <- nuTimes])
 
 invLogit :: Double -> Probability
-invLogit a = 1 / (1 + exp (- a))
+invLogit a = 1 / (1 + exp (-a))
 
 logit :: Probability -> Double
 logit p = log (p / (1 - p))
-
