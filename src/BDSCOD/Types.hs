@@ -195,16 +195,19 @@ type LlhdCalcState = (LlhdAndNB
 
 
 -- | The times at which unscheduled event times are adjusted up to under the
--- aggregation process.
+-- aggregation process. This does allow for a case in which there are no such
+-- times.
 newtype AggregationTimes =
   AggregationTimes_ [Time]
   deriving (Show, Eq)
 
 -- | A smart constructor which only creates an `AggregationTimes` if the
 -- provided `Time`s are sorted and non-negative since these represent absolute
--- times.
+-- times. If the given list of times is empty, then this returns an empty list
+-- of `AggregationTimes`.
 maybeAggregationTimes :: [Time] -> Maybe AggregationTimes
 maybeAggregationTimes ts
+  | null ts = Just (AggregationTimes_ ts)
   | sort ts == ts && minimum ts >= 0 = Just (AggregationTimes_ ts)
   | otherwise = Nothing
 
