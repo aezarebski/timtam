@@ -87,6 +87,7 @@ instance Json.FromJSON InferenceConfiguration
 --     * The bounds on the size of an acceptable simulation
 --     * One inference configuration for the regular data (with and without
 --     estimated parameters) and another for the aggregated data
+--     * We can toggle printing progress on and off
 data Configuration =
   Configuration
     { simulatedEventsOutputCsv :: FilePath
@@ -205,7 +206,8 @@ adjustedEvaluationParameters (EstimatedParametersAggregatedData _) = undefined
 
 -- | Evaluate the NB posterior approximation of the prevalence for a single
 -- point in parameter space and the LLHD over a list of points and write all of
--- the results to CSV.
+-- the results to CSV including a description of the type of parameters and data
+-- used.
 generateLlhdProfileCurves ::
      InferenceConfiguration
   -> [Observation]
