@@ -181,28 +181,56 @@ observeEpidemicTwice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
 -- regular data this function is the same, the only time it needs to be
 -- different is when using the parameters estimated from the aggregated data
 -- since the parameter space is different.
+--
+-- TODO It is uncertain that this is definitely generating the correct output :(
+--
+
+-- <interactive>: pdeStatistics had a c: NaN
+-- CallStack (from HasCallStack):
+--   error, called at /home/aez/projects/bdscod/src/BDSCOD/Llhd.hs:179:10 in main:BDSCOD.Llhd
+-- <interactive>: interrupted
+-- <interactive>: warning: too many hs_exit()s
+
 adjustedEvaluationParameters :: AnnotatedParameter -> Simulation [Parameters]
 adjustedEvaluationParameters (TrueParameters ps) =
   let meshSize = 100
       lambdaMesh = toList $ linspace meshSize (1, 2.5)
       muMesh = toList $ linspace meshSize (0.05, 1.5)
       psiMesh = toList $ linspace meshSize (0.05, 1.5)
-      probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
-      (rhoTimes, nuTimes) = scheduledTimes ps
-      rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
-      omegaMesh = toList $ linspace meshSize (0.05, 1.5)
-      nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
+      -- probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
+      -- (rhoTimes, nuTimes) = scheduledTimes ps
+      -- rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
+      -- omegaMesh = toList $ linspace meshSize (0.05, 1.5)
+      -- nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
       apply f = map (f ps)
-      [lPs, mPs, pPs, oPs] =
+      [lPs, mPs, pPs] =
         zipWith
           apply
-          [putLambda, putMu, putPsi, putOmega]
-          [lambdaMesh, muMesh, psiMesh, omegaMesh]
-      [rPs, nPs] = zipWith apply [putRhos, putNus] [rhoMesh, nuMesh]
-   in return $ concat [lPs, mPs, pPs, rPs, oPs, nPs]
+          [putLambda, putMu, putPsi]
+          [lambdaMesh, muMesh, psiMesh]
+      -- [rPs, nPs] = zipWith apply [putRhos, putNus] [rhoMesh, nuMesh]
+   in return $ concat [lPs, mPs, pPs]
 adjustedEvaluationParameters (EstimatedParametersRegularData ps) =
   adjustedEvaluationParameters (TrueParameters ps)
-adjustedEvaluationParameters (EstimatedParametersAggregatedData _) = undefined
+adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
+  let meshSize = 100
+      lambdaMesh = toList $ linspace meshSize (1, 2.5)
+      muMesh = toList $ linspace meshSize (0.05, 1.5)
+      -- psiMesh = toList $ linspace meshSize (0.05, 1.5)
+      probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
+      (rhoTimes, _) = scheduledTimes ps
+      rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
+      -- omegaMesh = toList $ linspace meshSize (0.05, 1.5)
+      -- nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
+      apply f = map (f ps)
+      [lPs, mPs] =
+        zipWith
+          apply
+          [putLambda, putMu]
+          [lambdaMesh, muMesh]
+      [rPs] = zipWith apply [putRhos] [rhoMesh]
+   in return $ concat [lPs, mPs, rPs]
+
 
 -- | Evaluate the NB posterior approximation of the prevalence for a single
 -- point in parameter space and the LLHD over a list of points and write all of
@@ -280,11 +308,17 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration -- get a simulation configuration
   epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
   infConfigs <- asks inferenceConfigurations -- get the inference configurations
-  simParams <- asks simulationParameters -- get the parameters of the simulation
   (regObs, regObs', aggObs) <- observeEpidemicTwice epiSim infConfigs
   uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
   uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
   uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
+
+--------------------------------------------------------------------------------
+-- The following can be used in the REPL to test things out.
+--
+-- (Just config) <- getConfiguration "examples/simulation-study-aggregated-observations/agg-app-config.json"
+-- result <- runExceptT (runReaderT simulationStudy config)
+--------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
