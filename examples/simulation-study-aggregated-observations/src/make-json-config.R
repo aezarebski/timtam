@@ -11,7 +11,6 @@ output_file <- "agg-app-config.json"
 
 simulation_duration <- 17
 
-inference_times <- seq(from = 7, to = 17, by = 4) # times to evaluate the llhd and prevalence distribution
 
 
 birth_rate <- 1.5
@@ -39,7 +38,9 @@ inference_configuration <- function(inf_time) {
          llhdOutputCsv = sprintf("out/llhd-evaluations-%.2f.csv",
                                  inf_time),
          pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
-                                     inf_time))
+                                     inf_time),
+         aggregateObservations = FALSE # TODO Fix this so there is one true and once false.
+         )
 }
 
 
@@ -51,8 +52,8 @@ result <- list(
     simulationParameters = sim_params,
     simulationDuration = simulation_duration + 1e-5,
     simulationSizeBounds = c(100,100000),
-    inferenceConfigurations = map(inference_times, inference_configuration),
-    partialEvaluationOutputCsv = "out/partial-evaluations.csv"
+    inferenceConfigurations = list(inference_configuration(5),
+                                   inference_configuration(5))
 )
 
 jsonlite::write_json(result,
