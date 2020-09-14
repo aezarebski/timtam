@@ -93,6 +93,7 @@ data Configuration =
     , simulationDuration :: Time
     , simulationSizeBounds :: (Int, Int)
     , inferenceConfigurations :: ( InferenceConfiguration
+                                 , InferenceConfiguration
                                  , InferenceConfiguration)
     }
   deriving (Show, Generic)
@@ -137,21 +138,30 @@ simulateEpidemic bdscodConfig = do
       simulateEpidemic bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
--- resolution of the event times and second with the sampling times aggregated
--- as defined in the inference configuration.
+-- resolution of the event times and the true epidemic parameters, second with
+-- the event times and the estimated parameters and third with the sampling
+-- times aggregated as defined in the inference configuration.
+--
+-- __TODO__ This is where we need to include the code to write the trees out for
+-- visualisation purposes.
 observeEpidemicTwice ::
-     [EpidemicEvent]
-  -> (InferenceConfiguration, InferenceConfiguration)
+  AggregationTimes
+  -> [EpidemicEvent]
+  -> ( InferenceConfiguration
+     , InferenceConfiguration
+     , InferenceConfiguration)
   -> Simulation ( (InferenceConfiguration, [Observation])
+                , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
-observeEpidemicTwice simEvents (regInfConfig, aggInfConfig) = do
+observeEpidemicTwice aggTimes simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
-      maybeAggObs = undefined
+      maybeAggObs = aggregateUnscheduledObservations aggTimes =<< maybeRegObs
   if isJust maybeRegObs && isJust maybeAggObs
     then return
            ( (regInfConfig, fromJust maybeRegObs)
+           , (regInfConfig', fromJust maybeRegObs)
            , (aggInfConfig, fromJust maybeAggObs))
-    else throwError "Could not evaluate observations"
+    else throwError "Could not evaluate observations..."
 
 -- | Recenter the evaluation parametes about the parameters given so that we can
 -- get a sensible range of values for visualisation. Since there are several
@@ -252,10 +262,16 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration -- get a simulation configuration
   epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
   infConfigs <- asks inferenceConfigurations -- get the inference configurations
-  (regObs, aggObs) <- observeEpidemicTwice epiSim infConfigs -- get the observed data out of the simulations
-  (uncurry evaluateLLHD) regObs -- evaluate profiles about true parameters
-  (uncurry estimateLLHD) regObs -- evaluate profiles about estimated parameters
-  (uncurry estimateLLHDAggregated) aggObs -- evaluate profiles about estimated parameters from aggregated data.
+  simParams <- asks simulationParameters -- get the parameters of the simulation
+  let maybeAggTimes = maybeAggregationTimes (fst (scheduledTimes simParams))
+  case maybeAggTimes of
+    Nothing ->
+      liftIO $ putStrLn "Failed to construct AggregationTimes..."
+    Just aggTimes -> do
+      (regObs, regObs', aggObs) <- observeEpidemicTwice aggTimes epiSim infConfigs
+      uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
+      uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
+      uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
 
 main :: IO ()
 main = do
