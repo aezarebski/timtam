@@ -9,27 +9,22 @@ if (not(dir.exists("out"))) {
 output_file <- "agg-app-config.json"
 
 
-simulation_duration <- 17
+simulation_duration <- 3.5 - 1e-6
 
 
 
-birth_rate <- 1.5
+birth_rate <- 1.0
 death_rate <- 0.50
 sampling_rate <- 0.2
-occurrence_rate <- 0.2
+occurrence_rate <- 0.0
 
-disaster_times <- seq(from = 2, to = simulation_duration, by = 1.5)
-num_disasters <- length(disaster_times)
-disaster_probs <- rep(0.15, num_disasters)
-disaster_params <- map2(disaster_times, disaster_probs, list)
+disaster_params <- list()
 
-catastrophe_times <- disaster_times + 0.5
-num_catastrophes <- length(catastrophe_times)
-catastrophe_probs <- seq(from = 0.15, to = 0.25, length = num_catastrophes)
-catastrophe_params <- map2(catastrophe_times, catastrophe_probs, list)
+catastrophe_params <- list()
 
-inference_configuration <- function(inf_time, agg_obs_bool) {
-    list(inferenceTime = inf_time,
+
+inference_configuration <- function(inf_time, agg_times_vec) {
+    result <- list(inferenceTime = inf_time,
          reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%.2f.txt",
                                                   "out/reconstructed-newick-metadata-%.2f.csv"),
                                                 inf_time),
@@ -38,9 +33,12 @@ inference_configuration <- function(inf_time, agg_obs_bool) {
          llhdOutputCsv = sprintf("out/llhd-evaluations-%.2f.csv",
                                  inf_time),
          pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
-                                     inf_time),
-         aggregateObservations = agg_obs_bool
+                                     inf_time)
          )
+    if (not(is.null(agg_times_vec))) {
+      result$icMaybeTimesForAgg <- agg_times_vec
+    }
+    return(result)
 }
 
 
@@ -52,9 +50,10 @@ result <- list(
     simulationParameters = sim_params,
     simulationDuration = simulation_duration + 1e-5,
     simulationSizeBounds = c(100,100000),
-  inferenceConfigurations = list(inference_configuration(5, FALSE),
-                                 inference_configuration(5, FALSE),
-                                 inference_configuration(5, TRUE))
+    inferenceConfigurations = list(inference_configuration(5, NULL),
+                                   inference_configuration(5, NULL),
+                                   inference_configuration(5, c(2.5,3.5))),
+    isVerbose = TRUE
 )
 
 jsonlite::write_json(result,

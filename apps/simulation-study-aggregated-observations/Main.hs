@@ -30,6 +30,7 @@ import BDSCOD.Types
 import BDSCOD.Utility (eventsAsObservations)
 
 -- import Control.Monad (liftM, zipWithM)
+import Control.Monad (when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
@@ -71,7 +72,7 @@ data InferenceConfiguration =
     , llhdOutputCsv :: FilePath
     , pointEstimatesCsv :: FilePath
     , maybePointEstimate :: Maybe Parameters
-    , aggregateObservations :: Bool
+    , icMaybeTimesForAgg :: Maybe [Time]
     }
   deriving (Show, Generic)
 
@@ -95,6 +96,7 @@ data Configuration =
     , inferenceConfigurations :: ( InferenceConfiguration
                                  , InferenceConfiguration
                                  , InferenceConfiguration)
+    , isVerbose :: Bool
     }
   deriving (Show, Generic)
 
@@ -114,27 +116,32 @@ data AnnotatedParameter
 -- | A BDSCOD simulation configuration based on the parameters in the
 -- environment.
 bdscodConfiguration = do
-  simParams <- asks simulationParameters
-  simDur <- asks simulationDuration
-  let bdscodConfig = SimBDSCOD.configuration simDur (unpackParameters simParams)
-  case bdscodConfig of
-    Nothing -> throwError "Could not construct BDSCOD configuration"
-    (Just config) -> return config
+  simParams@(Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) <- asks simulationParameters
+  if pLambda > 0 && pMu > 0 && pPsi > 0 && null pRhos && null pNus
+    then do simDur <- asks simulationDuration
+            let bdscodConfig = SimBDSCOD.configuration simDur (unpackParameters simParams)
+            case bdscodConfig of
+              Nothing -> throwError "Could not construct BDSCOD configuration"
+              (Just config) -> return config
+    else throwError "Simulation parameters not acceptable for this program..."
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
 -- before returning the results.
 simulateEpidemic bdscodConfig = do
+  beLoud <- asks isVerbose
+  when beLoud $ liftIO (putStrLn "Running simulateEpidemic...")
   simEvents <-
     liftIO $
     SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
   if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
     then do
+      when beLoud $ liftIO (putStrLn "simulated an acceptable epidemic...")
       simEventsCsv <- asks simulatedEventsOutputCsv
       liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
       return simEvents
     else do
-      liftIO $ putStrLn "Repeating epidemic simulation..."
+      when beLoud $ liftIO (putStrLn "Repeating epidemic simulation...")
       simulateEpidemic bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
@@ -145,23 +152,26 @@ simulateEpidemic bdscodConfig = do
 -- __TODO__ This is where we need to include the code to write the trees out for
 -- visualisation purposes.
 observeEpidemicTwice ::
-  AggregationTimes
-  -> [EpidemicEvent]
+  [EpidemicEvent]
   -> ( InferenceConfiguration
      , InferenceConfiguration
      , InferenceConfiguration)
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
-observeEpidemicTwice aggTimes simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
+observeEpidemicTwice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
-      maybeAggObs = aggregateUnscheduledObservations aggTimes =<< maybeRegObs
-  if isJust maybeRegObs && isJust maybeAggObs
-    then return
-           ( (regInfConfig, fromJust maybeRegObs)
-           , (regInfConfig', fromJust maybeRegObs)
-           , (aggInfConfig, fromJust maybeAggObs))
-    else throwError "Could not evaluate observations..."
+      maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= maybeAggregationTimes
+  case maybeAggTimes of
+    (Just aggTimes) -> let maybeAggObs = aggregateUnscheduledObservations aggTimes =<< maybeRegObs
+                           in case (maybeRegObs,maybeAggObs) of
+                                (Just regObs,Just aggObs) -> return ( (regInfConfig, regObs)
+                                                                    , (regInfConfig', regObs)
+                                                                    , (aggInfConfig, aggObs))
+                                (Just _, Nothing) -> throwError "Could not evaluate aggregated observations..."
+                                (Nothing, Just _) -> throwError "Could not evaluate regular observations..."
+                                (Nothing, Nothing) -> throwError "Could not evaluate either set of observations..."
+    Nothing -> throwError "Could not evaluate aggregation times..."
 
 -- | Recenter the evaluation parametes about the parameters given so that we can
 -- get a sensible range of values for visualisation. Since there are several
@@ -221,6 +231,7 @@ generateLlhdProfileCurves InferenceConfiguration {..} obs (TrueParameters single
 -- the prevalence at the present and write that to file.
 evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
+  liftIO (putStrLn "Running evaluateLLHD...")
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
   evalParams <- adjustedEvaluationParameters (TrueParameters simParams)
   generateLlhdProfileCurves infConfig obs (TrueParameters simParams, evalParams)
@@ -233,6 +244,7 @@ evaluateLLHD infConfig obs = do
 -- starts at a fixed initial condition.
 estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 estimateLLHD infConfig obs = do
+  liftIO (putStrLn "Running estimateLLHD...")
   simParams@(Parameters (_, deathRate, _, _, _, _)) <- asks simulationParameters
   let schedTimes = scheduledTimes simParams
       mleParams = estimateRegularParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
@@ -247,6 +259,7 @@ estimateLLHD infConfig obs = do
 estimateLLHDAggregated ::
      InferenceConfiguration -> AggregatedObservations -> Simulation ()
 estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs) = do
+  liftIO (putStrLn "Running estimateLLHDAggregated...")
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
   let schedTimes = (aggTimes,undefined)
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
@@ -263,15 +276,10 @@ simulationStudy = do
   epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
   infConfigs <- asks inferenceConfigurations -- get the inference configurations
   simParams <- asks simulationParameters -- get the parameters of the simulation
-  let maybeAggTimes = maybeAggregationTimes (fst (scheduledTimes simParams))
-  case maybeAggTimes of
-    Nothing ->
-      liftIO $ putStrLn "Failed to construct AggregationTimes..."
-    Just aggTimes -> do
-      (regObs, regObs', aggObs) <- observeEpidemicTwice aggTimes epiSim infConfigs
-      uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
-      uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
-      uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
+  (regObs, regObs', aggObs) <- observeEpidemicTwice epiSim infConfigs
+  uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
+  uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
+  uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
 
 main :: IO ()
 main = do
