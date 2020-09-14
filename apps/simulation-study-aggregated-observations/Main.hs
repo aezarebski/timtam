@@ -211,9 +211,12 @@ generateLlhdProfileCurves ::
   -> [Observation]
   -> (AnnotatedParameter, [Parameters])
   -> Simulation ()
-generateLlhdProfileCurves InferenceConfiguration {..} obs (TrueParameters singleParams, evalParams) =
+generateLlhdProfileCurves InferenceConfiguration {..} obs (centerParam, evalParams) =
   let comma = BBuilder.charUtf8 ','
-      parametersUsed = "true_parameters_used_in_the_simulation"
+      (parametersUsed,singleParams) = case centerParam of
+                                        (TrueParameters x) -> ("true_parameters_regular_data",x)
+                                        (EstimatedParametersRegularData x) -> ("estimated_parameters_regular_data",x)
+                                        (EstimatedParametersAggregatedData x) -> ("estimated_parameters_aggregated_data",x)
       parametersUsed' = BBuilder.stringUtf8 parametersUsed
       llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
       nBVal =
