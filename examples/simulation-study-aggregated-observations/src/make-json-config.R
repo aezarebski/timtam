@@ -28,7 +28,7 @@ num_catastrophes <- length(catastrophe_times)
 catastrophe_probs <- seq(from = 0.15, to = 0.25, length = num_catastrophes)
 catastrophe_params <- map2(catastrophe_times, catastrophe_probs, list)
 
-inference_configuration <- function(inf_time) {
+inference_configuration <- function(inf_time, agg_obs_bool) {
     list(inferenceTime = inf_time,
          reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%.2f.txt",
                                                   "out/reconstructed-newick-metadata-%.2f.csv"),
@@ -39,7 +39,7 @@ inference_configuration <- function(inf_time) {
                                  inf_time),
          pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
                                      inf_time),
-         aggregateObservations = FALSE # TODO Fix this so there is one true and once false.
+         aggregateObservations = agg_obs_bool
          )
 }
 
@@ -52,8 +52,9 @@ result <- list(
     simulationParameters = sim_params,
     simulationDuration = simulation_duration + 1e-5,
     simulationSizeBounds = c(100,100000),
-    inferenceConfigurations = list(inference_configuration(5),
-                                   inference_configuration(5))
+  inferenceConfigurations = list(inference_configuration(5, FALSE),
+                                 inference_configuration(5, FALSE),
+                                 inference_configuration(5, TRUE))
 )
 
 jsonlite::write_json(result,
