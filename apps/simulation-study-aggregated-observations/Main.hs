@@ -3,12 +3,30 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Main where
 
 -- import BDSCOD.Conditioning
+import BDSCOD.Aggregation (aggregateUnscheduledObservations)
 import BDSCOD.Llhd (initLlhdState, llhdAndNB)
 import BDSCOD.Types
+  ( AggregatedObservations(..)
+  , AggregationTimes
+  , Observation(..)
+  , Parameters(..)
+  , pattern AggTimes
+  , maybeAggregationTimes
+  , packParameters
+  , putLambda
+  , putMu
+  , putNus
+  , putOmega
+  , putPsi
+  , putRhos
+  , scheduledTimes
+  , unpackParameters
+  )
 import BDSCOD.Utility (eventsAsObservations)
 
 -- import Control.Monad (liftM, zipWithM)
@@ -61,6 +79,13 @@ instance Json.FromJSON InferenceConfiguration
 
 -- | This object configures the whole evaluation of this program and is to be
 -- read in from a suitable JSON file.
+--
+--     * A CSV to write the whole simulation to
+--     * The parameters to use for the simulation
+--     * The duration of the simulation
+--     * The bounds on the size of an acceptable simulation
+--     * One inference configuration for the regular data (with and without
+--     estimated parameters) and another for the aggregated data
 data Configuration =
   Configuration
     { simulatedEventsOutputCsv :: FilePath
@@ -77,7 +102,8 @@ instance Json.FromJSON Configuration
 type Simulation x = ReaderT Configuration (ExceptT String IO) x
 
 -- | This type is used to indicate if parameters are the true ones used in the
--- simulation or estimates parameters.
+-- simulation or estimates parameters and in the case of estimated parameters,
+-- what sort of data was used to inform the estimate.
 data AnnotatedParameter
   = TrueParameters Parameters
   | EstimatedParametersRegularData Parameters
