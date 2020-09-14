@@ -6,6 +6,7 @@ module BDSCOD.Aggregation
 import BDSCOD.Types
 import Epidemic.Types.Parameter
 
+
 -- | The absolute time and the observation at that time. Recall that
 -- `Observation` pairs only contain the time delay since the previous observable
 -- event, not their absolute time.
@@ -14,6 +15,10 @@ type AnnotatedObservation = (Time, Observation)
 -- | The observations where unscheduled observations have been rounded up to the
 -- first aggregation time after they occurred. If there are unscheduled
 -- observations after the final aggregation time the resut is nothing.
+--
+-- __NOTE__ that if there are any unscheduled observations remaining after the
+-- last aggregation time then this will fail and return `Nothing`.
+--
 aggregateUnscheduledObservations :: AggregationTimes
                                  -> [Observation]
                                  -> Maybe AggregatedObservations
@@ -37,6 +42,10 @@ withCorrectedDelays annObs =
 -- | Aggregated all unscheduled observations into scheduled observations at the
 -- given aggregation times and return those and any unscheduled observations
 -- that occurred after the last aggregation time.
+--
+-- __NOTE__ that if there are any unscheduled observations remaining after the
+-- last aggregation time then this will fail and return `Nothing`.
+--
 aggregatedObs :: AggregationTimes
               -> [AnnotatedObservation]
               -> Maybe [AnnotatedObservation]
@@ -64,15 +73,16 @@ _aggregatedObs annObs aggTime =
             return $ mconcat [beforeObs,[aggObs],afterObs]
 
 -- | Join a list of observed samples into a single catastrophe at the given
--- time. The delay on the returned catastrophe is undefined to make it clear
+-- time. The delay on the returned catastrophe is `-Infinity`to make it clear
 -- that this is not a real value since the true value depends on the preceeding
 -- observation. If there are events that are not samples then this will return
 -- nothing.
+--
 _aggregateSamples :: [AnnotatedObservation] -> Time -> Maybe AnnotatedObservation
 _aggregateSamples annSamples aggTime =
   if all (isSample . snd) annSamples
     then Just
-           (aggTime, (undefined, OCatastrophe (fromIntegral $ length annSamples)))
+           (aggTime, (-1/0, OCatastrophe (fromIntegral $ length annSamples)))
     else Nothing
 
 -- | Add the absolute time of each observation as an annotation to the
