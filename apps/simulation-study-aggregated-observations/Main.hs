@@ -103,7 +103,16 @@ data Configuration =
 
 instance Json.FromJSON Configuration
 
+-- | Monad for running a simulation, it uses the ExceptT for error messages and
+-- the ReaderT for holding program configuration.
 type Simulation x = ReaderT Configuration (ExceptT String IO) x
+
+-- | A convenience function for printing output if in verbose mode.
+ifVerbosePutStrLn :: String -> Simulation ()
+ifVerbosePutStrLn msg =
+  do
+    beLoud <- asks isVerbose
+    when beLoud $ liftIO (putStrLn msg)
 
 -- | This type is used to indicate if parameters are the true ones used in the
 -- simulation or estimates parameters and in the case of estimated parameters,
@@ -129,20 +138,19 @@ bdscodConfiguration = do
 -- | Simulate the actual epidemic making sure that the results are acceptable
 -- before returning the results.
 simulateEpidemic bdscodConfig = do
-  beLoud <- asks isVerbose
-  when beLoud $ liftIO (putStrLn "Running simulateEpidemic...")
+  ifVerbosePutStrLn "Running simulateEpidemic..."
   simEvents <-
     liftIO $
     SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
   if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
     then do
-      when beLoud $ liftIO (putStrLn "simulated an acceptable epidemic...")
+      ifVerbosePutStrLn "simulated an acceptable epidemic..."
       simEventsCsv <- asks simulatedEventsOutputCsv
       liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
       return simEvents
     else do
-      when beLoud $ liftIO (putStrLn "Repeating epidemic simulation...")
+      ifVerbosePutStrLn "Repeating epidemic simulation..."
       simulateEpidemic bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
