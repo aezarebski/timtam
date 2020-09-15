@@ -311,6 +311,9 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
 -- | This is the main entry point to the actual simulation study. Since this is
 -- within the simulation monad it has access to all the configuration data and
 -- can perform IO.
+--
+-- TODO Uncomment the `estimateLLHDAggregated` command!!!
+--
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration -- get a simulation configuration
@@ -319,14 +322,23 @@ simulationStudy = do
   (regObs, regObs', aggObs) <- observeEpidemicTwice epiSim infConfigs
   uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
   uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
-  uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
+  -- uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
 
---------------------------------------------------------------------------------
+-- =============================================================================
 -- The following can be used in the REPL to test things out.
 --
 -- (Just config) <- getConfiguration "examples/simulation-study-aggregated-observations/agg-app-config.json"
 -- result <- runExceptT (runReaderT simulationStudy config)
---------------------------------------------------------------------------------
+--
+replMain :: IO ()
+replMain = do
+  (Just config) <- getConfiguration "examples/simulation-study-aggregated-observations/agg-app-config.json"
+  result <- runExceptT (runReaderT simulationStudy config)
+  case result of
+    Right () -> return ()
+    Left errMsg -> do putStrLn errMsg; return ()
+--
+-- =============================================================================
 
 main :: IO ()
 main = do
