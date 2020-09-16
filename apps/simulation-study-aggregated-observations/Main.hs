@@ -28,8 +28,7 @@ import BDSCOD.Types
   , unpackParameters
   )
 import BDSCOD.Utility (eventsAsObservations)
-
-import Control.Monad (when,liftM2)
+import Control.Monad (liftM2, when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
@@ -39,17 +38,14 @@ import qualified Data.Csv as Csv
 import Data.List (intersperse)
 import Data.Maybe (fromJust, isJust)
 import qualified Epidemic.BDSCOD as SimBDSCOD
-import Epidemic.Types.Events (EpidemicEvent(..))
-
---   ( EpidemicEvent(..)
---   , asNewickString
---   , eventTime
---   , maybeEpidemicTree
---   , maybeReconstructedTree
---   )
+import Epidemic.Types.Events
+  ( EpidemicEvent(..)
+  , asNewickString
+  , maybeEpidemicTree
+  , maybeReconstructedTree
+  )
 import Epidemic.Types.Parameter (Probability, Rate, Time, Timed(..))
-
--- import Epidemic.Types.Population (Person(..))
+import Epidemic.Types.Population (Person(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
@@ -157,9 +153,6 @@ simulateEpidemic bdscodConfig = do
 -- resolution of the event times and the true epidemic parameters, second with
 -- the event times and the estimated parameters and third with the sampling
 -- times aggregated as defined in the inference configuration.
---
--- __TODO__ This is where we need to include the code to write the trees out for
--- visualisation purposes.
 observeEpidemicThrice ::
   [EpidemicEvent]
   -> ( InferenceConfiguration
@@ -172,10 +165,19 @@ observeEpidemicThrice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= maybeAggregationTimes
       maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
+      (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
+      maybeNewickData = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
+  case maybeNewickData of
+    Just (newickBuilder,newickMetaData) -> do liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
+                                              liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
+    Nothing -> throwError "Could not reconstruct tree..."
   case (maybeRegObs,maybeAggObs) of
-    (Just regObs,Just (Just aggObs)) -> return ( (regInfConfig, regObs)
-                                               , (regInfConfig', regObs)
-                                               , (aggInfConfig, aggObs))
+    (Just regObs,Just (Just aggObs@(AggregatedObservations _ unboxedAggObs))) ->
+      do liftIO $ L.writeFile (observationsOutputCsv regInfConfig) (Csv.encode regObs)
+         liftIO $ L.writeFile (observationsOutputCsv aggInfConfig) (Csv.encode unboxedAggObs)
+         return ( (regInfConfig, regObs)
+                , (regInfConfig', regObs)
+                , (aggInfConfig, aggObs))
     (Just _,  Nothing) -> throwError "Could not evaluate aggregated observations..."
     (Just _,  Just Nothing) -> throwError "Could not evaluate aggregated observations..."
     (Nothing, Just _) -> throwError "Could not evaluate regular observations..."
