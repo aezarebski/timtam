@@ -29,7 +29,7 @@ import BDSCOD.Types
   )
 import BDSCOD.Utility (eventsAsObservations)
 
-import Control.Monad (when)
+import Control.Monad (when,liftM2)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
@@ -160,7 +160,7 @@ simulateEpidemic bdscodConfig = do
 --
 -- __TODO__ This is where we need to include the code to write the trees out for
 -- visualisation purposes.
-observeEpidemicTwice ::
+observeEpidemicThrice ::
   [EpidemicEvent]
   -> ( InferenceConfiguration
      , InferenceConfiguration
@@ -168,19 +168,18 @@ observeEpidemicTwice ::
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
-observeEpidemicTwice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
+observeEpidemicThrice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= maybeAggregationTimes
-  case maybeAggTimes of
-    (Just aggTimes) -> let maybeAggObs = aggregateUnscheduledObservations aggTimes =<< maybeRegObs
-                           in case (maybeRegObs,maybeAggObs) of
-                                (Just regObs,Just aggObs) -> return ( (regInfConfig, regObs)
-                                                                    , (regInfConfig', regObs)
-                                                                    , (aggInfConfig, aggObs))
-                                (Just _, Nothing) -> throwError "Could not evaluate aggregated observations..."
-                                (Nothing, Just _) -> throwError "Could not evaluate regular observations..."
-                                (Nothing, Nothing) -> throwError "Could not evaluate either set of observations..."
-    Nothing -> throwError "Could not evaluate aggregation times..."
+      maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
+  case (maybeRegObs,maybeAggObs) of
+    (Just regObs,Just (Just aggObs)) -> return ( (regInfConfig, regObs)
+                                               , (regInfConfig', regObs)
+                                               , (aggInfConfig, aggObs))
+    (Just _,  Nothing) -> throwError "Could not evaluate aggregated observations..."
+    (Just _,  Just Nothing) -> throwError "Could not evaluate aggregated observations..."
+    (Nothing, Just _) -> throwError "Could not evaluate regular observations..."
+    (Nothing, Nothing) -> throwError "Could not evaluate either set of observations..."
 
 -- | Recenter the evaluation parametes about the parameters given so that we can
 -- get a sensible range of values for visualisation. Since there are several
@@ -314,7 +313,7 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration -- get a simulation configuration
   epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
   infConfigs <- asks inferenceConfigurations -- get the inference configurations
-  (regObs, regObs', aggObs) <- observeEpidemicTwice epiSim infConfigs
+  (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim infConfigs
   uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
   uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
   uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
