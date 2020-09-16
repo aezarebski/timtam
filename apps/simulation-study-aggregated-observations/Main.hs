@@ -29,7 +29,6 @@ import BDSCOD.Types
   )
 import BDSCOD.Utility (eventsAsObservations)
 
--- import Control.Monad (liftM, zipWithM)
 import Control.Monad (when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
@@ -147,10 +146,11 @@ simulateEpidemic bdscodConfig = do
     then do
       ifVerbosePutStrLn "simulated an acceptable epidemic..."
       simEventsCsv <- asks simulatedEventsOutputCsv
+      ifVerbosePutStrLn $ "\twriting events to: " ++ simEventsCsv
       liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
       return simEvents
     else do
-      ifVerbosePutStrLn "Repeating epidemic simulation..."
+      ifVerbosePutStrLn "\trepeating the simulation..."
       simulateEpidemic bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
@@ -262,8 +262,12 @@ generateLlhdProfileCurves InferenceConfiguration {..} obs (centerParam, evalPara
       doublesAsString =
         BBuilder.toLazyByteString .
         mconcat .
-        intersperse comma . (parametersUsed' :) . map BBuilder.doubleDec
-   in do liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+        intersperse comma .
+        (parametersUsed' :) .
+        map BBuilder.doubleDec
+   in do ifVerbosePutStrLn $ "\twriting LLHD values to: " ++ llhdOutputCsv
+         liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+         ifVerbosePutStrLn $ "\twriting NB values to: " ++ pointEstimatesCsv
          liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
 
 -- | Run the evaluation of the log-likelihood profiles on a given set of regular
@@ -332,7 +336,7 @@ simulationStudy = do
 --
 replMain :: IO ()
 replMain = do
-  (Just config) <- getConfiguration "examples/simulation-study-aggregated-observations/agg-app-config.json"
+  (Just config) <- getConfiguration "agg-app-config.json"
   result <- runExceptT (runReaderT simulationStudy config)
   case result of
     Right () -> return ()
@@ -365,9 +369,22 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 --
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
+--
+-- TODO Fix this so that there are only scheduled events (and births) being
+-- considered.
 estimateAggregatedParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
-estimateAggregatedParameters = undefined
+estimateAggregatedParameters deathRate sched obs =
+  let maxIters = 500
+      desiredPrec = 1e-3
+      initBox = fromList [2, 2, 2, 2, 2]
+      energyFunc x =
+        negate . fst $
+        llhdAndNB obs (vectorAsParameters deathRate sched x) initLlhdState
+      randInit = fromList [0, 0, 0, 0, 0]
+      (est, _) =
+        minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
+   in vectorAsParameters deathRate sched est
 
 -- | Use GSL to estimate the MLE based on the observations given. This uses a
 -- simplex method because it seems to be faster and more accurate than the
@@ -378,6 +395,8 @@ estimateAggregatedParameters = undefined
 --
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
+--
+-- TODO Fix this so that there are only unscheduled events considered.
 estimateRegularParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateRegularParameters deathRate sched obs =
@@ -392,7 +411,10 @@ estimateRegularParameters deathRate sched obs =
         minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vectorAsParameters deathRate sched est
 
--- | Helper function for @estimateRegularParameters@
+-- | Helper function for the @estimateXParameter@ functions which converts a
+-- vector into parameters so they can be passed into 'llhdAndNB'. This function
+-- takes a death rate as a parameter because this is assumed known during the
+-- inference.
 vectorAsParameters :: Rate -> ([Time], [Time]) -> Vector Double -> Parameters
 vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
   let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec

@@ -13,7 +13,7 @@ simulation_duration <- 3.5 - 1e-6
 
 
 
-birth_rate <- 1.0
+birth_rate <- 1.3
 death_rate <- 0.50
 sampling_rate <- 0.2
 occurrence_rate <- 0.0
@@ -23,18 +23,18 @@ disaster_params <- list()
 catastrophe_params <- list()
 
 
-inference_configuration <- function(inf_time, agg_times_vec) {
-    result <- list(inferenceTime = inf_time,
-         reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%.2f.txt",
-                                                  "out/reconstructed-newick-metadata-%.2f.csv"),
-                                                inf_time),
-         observationsOutputCsv = sprintf("out/simulated-observations-%.2f.csv",
-                                         inf_time),
-         llhdOutputCsv = sprintf("out/llhd-evaluations-%.2f.csv",
-                                 inf_time),
-         pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
-                                     inf_time)
-         )
+inference_configuration <- function(inf_config_name, agg_times_vec) {
+    result <- list(
+      reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%s.txt",
+                                               "out/reconstructed-newick-metadata-%s.csv"),
+                                             inf_config_name),
+      observationsOutputCsv = sprintf("out/simulated-observations-%s.csv",
+                                      inf_config_name),
+      llhdOutputCsv = sprintf("out/llhd-evaluations-%s.csv",
+                              inf_config_name),
+      pointEstimatesCsv = sprintf("out/final-negative-binomial-%s.csv",
+                                  inf_config_name)
+    )
     if (not(is.null(agg_times_vec))) {
       result$icMaybeTimesForAgg <- agg_times_vec
     }
@@ -42,7 +42,12 @@ inference_configuration <- function(inf_time, agg_times_vec) {
 }
 
 
-sim_params <- list(birth_rate, death_rate, sampling_rate, catastrophe_params, occurrence_rate, disaster_params)
+sim_params <- list(birth_rate,
+                   death_rate,
+                   sampling_rate,
+                   catastrophe_params,
+                   occurrence_rate,
+                   disaster_params)
 
 
 result <- list(
@@ -50,9 +55,9 @@ result <- list(
     simulationParameters = sim_params,
     simulationDuration = simulation_duration + 1e-5,
     simulationSizeBounds = c(100,100000),
-    inferenceConfigurations = list(inference_configuration(5, NULL),
-                                   inference_configuration(5, NULL),
-                                   inference_configuration(5, c(2.5,3.5))),
+    inferenceConfigurations = list(inference_configuration("true-params-regular-data", NULL),
+                                   inference_configuration("est-params-regular-data", NULL),
+                                   inference_configuration("est-params-agg-data", c(2.5,3.5))),
     isVerbose = TRUE
 )
 
