@@ -81,8 +81,10 @@ instance Json.FromJSON InferenceConfiguration
 --     * The duration of the simulation
 --     * The bounds on the size of an acceptable simulation
 --     * One inference configuration for the regular data (with and without
---     estimated parameters) and another for the aggregated data
---     * We can toggle printing progress on and off
+--     estimated parameters) and another for the aggregated data with estimated
+--     parameters.
+--     * A Boolean to toggle printing progress on and off with the
+--     @isVerbosePutStrLn@ function.
 data Configuration =
   Configuration
     { simulatedEventsOutputCsv :: FilePath
@@ -102,7 +104,8 @@ instance Json.FromJSON Configuration
 -- the ReaderT for holding program configuration.
 type Simulation x = ReaderT Configuration (ExceptT String IO) x
 
--- | A convenience function for printing output if in verbose mode.
+-- | A convenience function for printing output if in verbose mode when in the
+-- 'Simulation' monad.
 ifVerbosePutStrLn :: String -> Simulation ()
 ifVerbosePutStrLn msg =
   do
@@ -120,14 +123,23 @@ data AnnotatedParameter
 
 -- | A BDSCOD simulation configuration based on the parameters in the
 -- environment.
+--
+-- TODO We should be able to pattern match for empty scheduled event parameters
+-- and throw an error otherwise.
+--
+-- TODO We need to resolve whether Omega is going to be included or set to zero
+--
 bdscodConfiguration = do
-  simParams@(Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) <- asks simulationParameters
+  simParams@(Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) <-
+    asks simulationParameters
   if pLambda > 0 && pMu > 0 && pPsi > 0 && null pRhos && null pNus
-    then do simDur <- asks simulationDuration
-            let bdscodConfig = SimBDSCOD.configuration simDur (unpackParameters simParams)
-            case bdscodConfig of
-              Nothing -> throwError "Could not construct BDSCOD configuration"
-              (Just config) -> return config
+    then do
+      simDur <- asks simulationDuration
+      let bdscodConfig =
+            SimBDSCOD.configuration simDur (unpackParameters simParams)
+      case bdscodConfig of
+        Nothing -> throwError "Could not construct BDSCOD configuration"
+        (Just config) -> return config
     else throwError "Simulation parameters not acceptable for this program..."
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
@@ -168,8 +180,9 @@ observeEpidemicThrice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
       maybeNewickData = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
   case maybeNewickData of
-    Just (newickBuilder,newickMetaData) -> do liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
-                                              liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
+    Just (newickBuilder,newickMetaData) ->
+      do liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
+         liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
     Nothing -> throwError "Could not reconstruct tree..."
   case (maybeRegObs,maybeAggObs) of
     (Just regObs,Just (Just aggObs@(AggregatedObservations _ unboxedAggObs))) ->
@@ -238,6 +251,9 @@ adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
 -- point in parameter space and the LLHD over a list of points and write all of
 -- the results to CSV including a description of the type of parameters and data
 -- used.
+--
+-- TODO We should use either CSV or JSON to get proper output
+--
 generateLlhdProfileCurves ::
      InferenceConfiguration
   -> [Observation]
@@ -309,22 +325,21 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
 -- | This is the main entry point to the actual simulation study. Since this is
 -- within the simulation monad it has access to all the configuration data and
 -- can perform IO.
---
 simulationStudy :: Simulation ()
 simulationStudy = do
-  bdscodConfig <- bdscodConfiguration -- get a simulation configuration
-  epiSim <- simulateEpidemic bdscodConfig -- simulate the transmission process
-  infConfigs <- asks inferenceConfigurations -- get the inference configurations
+  bdscodConfig <- bdscodConfiguration
+  epiSim <- simulateEpidemic bdscodConfig
+  infConfigs <- asks inferenceConfigurations
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim infConfigs
-  uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
-  uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
-  uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
+  uncurry evaluateLLHD regObs
+  uncurry estimateLLHD regObs'
+  uncurry estimateLLHDAggregated aggObs
 
 -- =============================================================================
 -- The following can be used in the REPL to test things out.
 --
--- (Just config) <- getConfiguration "examples/simulation-study-aggregated-observations/agg-app-config.json"
--- result <- runExceptT (runReaderT simulationStudy config)
+-- TODO This comment section needs to be deleted once the application has been
+-- finished and tested.
 --
 replMain :: IO ()
 replMain = do
@@ -364,6 +379,8 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 --
 -- TODO Fix this so that there are only scheduled events (and births) being
 -- considered.
+--
+-- TODO Fix this so that only a subset of the parameters are estimated.
 estimateAggregatedParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateAggregatedParameters deathRate sched obs =
@@ -389,6 +406,8 @@ estimateAggregatedParameters deathRate sched obs =
 -- this is assumed to be known a priori.
 --
 -- TODO Fix this so that there are only unscheduled events considered.
+--
+-- TODO Fix this so that only a subset of the parameters are estimated.
 estimateRegularParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateRegularParameters deathRate sched obs =
@@ -407,6 +426,10 @@ estimateRegularParameters deathRate sched obs =
 -- vector into parameters so they can be passed into 'llhdAndNB'. This function
 -- takes a death rate as a parameter because this is assumed known during the
 -- inference.
+--
+-- TODO This needs to be split into two functions to handle the different
+-- parameter types.
+--
 vectorAsParameters :: Rate -> ([Time], [Time]) -> Vector Double -> Parameters
 vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
   let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec
@@ -419,6 +442,10 @@ vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
         , [(t, p1) | t <- rhoTimes]
         , exp lnR3
         , [(t, p2) | t <- nuTimes])
+
+
+-- TODO These functions are used in a few places so they should be put into one
+-- of the library modules to keep them DRY.
 
 invLogit :: Double -> Probability
 invLogit a = 1 / (1 + exp (-a))
