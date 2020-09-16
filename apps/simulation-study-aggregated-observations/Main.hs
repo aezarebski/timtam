@@ -190,15 +190,8 @@ observeEpidemicTwice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
 -- different is when using the parameters estimated from the aggregated data
 -- since the parameter space is different.
 --
--- TODO It is uncertain that this is definitely generating the correct output :(
+-- TODO __This should be pure!!!__
 --
-
--- <interactive>: pdeStatistics had a c: NaN
--- CallStack (from HasCallStack):
---   error, called at /home/aez/projects/bdscod/src/BDSCOD/Llhd.hs:179:10 in main:BDSCOD.Llhd
--- <interactive>: interrupted
--- <interactive>: warning: too many hs_exit()s
-
 adjustedEvaluationParameters :: AnnotatedParameter -> Simulation [Parameters]
 adjustedEvaluationParameters (TrueParameters ps) =
   let meshSize = 100
@@ -316,8 +309,6 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
 -- within the simulation monad it has access to all the configuration data and
 -- can perform IO.
 --
--- TODO Uncomment the `estimateLLHDAggregated` command!!!
---
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration -- get a simulation configuration
@@ -326,7 +317,7 @@ simulationStudy = do
   (regObs, regObs', aggObs) <- observeEpidemicTwice epiSim infConfigs
   uncurry evaluateLLHD regObs -- evaluate profiles about true parameters
   uncurry estimateLLHD regObs' -- evaluate profiles about estimated parameters
-  -- uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
+  uncurry estimateLLHDAggregated aggObs -- evaluate profiles about estimated parameters from aggregated data.
 
 -- =============================================================================
 -- The following can be used in the REPL to test things out.
