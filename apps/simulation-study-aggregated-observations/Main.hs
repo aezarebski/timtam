@@ -203,10 +203,7 @@ observeEpidemicThrice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
 -- regular data this function is the same, the only time it needs to be
 -- different is when using the parameters estimated from the aggregated data
 -- since the parameter space is different.
---
--- TODO __This should be pure!!!__
---
-adjustedEvaluationParameters :: AnnotatedParameter -> Simulation [Parameters]
+adjustedEvaluationParameters :: AnnotatedParameter -> [Parameters]
 adjustedEvaluationParameters (TrueParameters ps) =
   let meshSize = 100
       lambdaMesh = toList $ linspace meshSize (1, 2.5)
@@ -224,7 +221,7 @@ adjustedEvaluationParameters (TrueParameters ps) =
           [putLambda, putMu, putPsi]
           [lambdaMesh, muMesh, psiMesh]
       -- [rPs, nPs] = zipWith apply [putRhos, putNus] [rhoMesh, nuMesh]
-   in return $ concat [lPs, mPs, pPs]
+   in concat [lPs, mPs, pPs]
 adjustedEvaluationParameters (EstimatedParametersRegularData ps) =
   adjustedEvaluationParameters (TrueParameters ps)
 adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
@@ -244,7 +241,7 @@ adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
           [putLambda, putMu]
           [lambdaMesh, muMesh]
       [rPs] = zipWith apply [putRhos] [rhoMesh]
-   in return $ concat [lPs, mPs, rPs]
+   in concat [lPs, mPs, rPs]
 
 
 -- | Evaluate the NB posterior approximation of the prevalence for a single
@@ -288,7 +285,7 @@ evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
   liftIO (putStrLn "Running evaluateLLHD...")
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
-  evalParams <- adjustedEvaluationParameters (TrueParameters simParams)
+  let evalParams = adjustedEvaluationParameters (TrueParameters simParams)
   generateLlhdProfileCurves infConfig obs (TrueParameters simParams, evalParams)
 
 -- | Using regular (i.e., disaggregated) observations, estimate the parameters
@@ -304,7 +301,7 @@ estimateLLHD infConfig obs = do
   let schedTimes = scheduledTimes simParams
       mleParams = estimateRegularParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersRegularData mleParams
-  evalParams <- adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
+      evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
   generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
 
 -- | Using __aggregated__ observations, estimate the parameters
@@ -319,7 +316,7 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
   let schedTimes = (aggTimes,undefined)
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersAggregatedData mleParams
-  evalParams <- adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
+      evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
   generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
 
 -- | This is the main entry point to the actual simulation study. Since this is
