@@ -47,6 +47,9 @@ across several files.
 
 **REMEMBER TO SOURCE THE VIRTUAL ENVIRONMENT FIRST!**
 
+The profiling of the haskell code is done with `criterion` which provides a CLI
+which is why there is long `stack exec` command.
+
 ```
 stack clean 
 stack build 

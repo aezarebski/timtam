@@ -20,20 +20,6 @@ import qualified Epidemic.BDSCOD as BDSCOD
 import Epidemic.Types.Parameter hiding (Parameters(..))
 import Epidemic.Utility (simulationWithSystemRandom)
 
-appMessage :: String
-appMessage =
-  intercalate
-    "\n"
-    [""
-    , "Time Complexity Application"
-    , "---------------------------"
-    , ""
-    , "This application simulates several data sets of varying size and then evaluates"
-    , "the LLHD function on them while measuring how long it takes. There is then an R"
-    , "script to generate a visualisation and estimate the time complexity of the LLHD"
-    , "function."
-    , ""
-    ]
 
 -- | This is the parameters of the likelihood function and the duration of the
 -- simulation.
@@ -59,6 +45,9 @@ type Simulation = ([Observation], Int)
 simulationSize :: Simulation -> Int
 simulationSize = length . fst
 
+-- TODO Clean up the `recordSimulationOutput` and `getObservations` actions to
+-- ensure a predictable number of resulting simulations for analysis.
+
 -- | Record the simulations and return a record of the details.
 recordSimulationOutput :: ModelParameters
                        -> Simulation
@@ -68,8 +57,6 @@ recordSimulationOutput (ModelParameters params _) sim@(obs,simNum) =
       obsLlhd = fst $ llhdAndNB obs params initLlhdState
       in do B.writeFile obsJson $ JSON.encode obs
             return $ LlhdAndData (simulationSize sim) obsLlhd obsJson
-
-
 
 -- | Generate a random simulation of the observations and return it along with
 -- an identification integer.
@@ -83,9 +70,6 @@ getObservations (ModelParameters params simDuration) simId =
        else return ([],simId)
 
 
-
-
-
 -- | Return a benchmark based on the given set of observations. The name of the
 -- benchmark is the same as the JSON file into which the observations have been
 -- written.
@@ -96,6 +80,7 @@ benchmarkableLlhdEvaluations (ModelParameters params _) (obs,simId) =
   let simName = observationsJsonFilePath simId
   in bench simName $ nf (\o -> fst (llhdAndNB o params initLlhdState)) obs
 
+-- TODO If we use printf this can be removed.
 
 -- | Simple left padd function.
 leftPad :: Char -> Int -> String -> Maybe String
@@ -113,6 +98,9 @@ multipleFinds predicates values =
   catMaybes $ map (\p -> find p values) predicates
 
 
+-- TODO The filename is much easier to generate with `printf` from `Text.Printf`
+-- which is part of base anyway.
+
 -- | The name of the file to write the simulation observations to.
 observationsJsonFilePath :: Int -> FilePath
 observationsJsonFilePath n =
@@ -120,6 +108,9 @@ observationsJsonFilePath n =
       idString = fromMaybe (show n) (leftPad '0' paddedLength (show n))
    in "out/simulated-observations-" ++ idString ++ ".json"
 
+
+-- TODO This should read in a JSON file to configure the program, it will
+-- suffice to take in a fixed configuration file.
 
 main :: IO ()
 main =
@@ -129,8 +120,7 @@ main =
       binWidth = 10
       simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]
       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
-    in do putStrLn appMessage
-          randomSimulations <- mapM (getObservations modelParams) simIds
+    in do randomSimulations <- mapM (getObservations modelParams) simIds
           let selectedSimulations = multipleFinds simulationPredicates randomSimulations
           putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."
           records <- mapM (recordSimulationOutput modelParams) selectedSimulations
