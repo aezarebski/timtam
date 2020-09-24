@@ -1,21 +1,23 @@
 # Timing Evaluation
 
-This examples simulates trees of varying sizes using `epi-sim` and then times
-how long it takes to evaluate the likelihood function on them. The results are
-then plotted along with the corresponding times using an alternative likelihood
-function.
+This examples simulates trees of varying sizes and then times how long it takes
+to evaluate the likelihood function on the resulting data set using our
+approximattion. There are instructions for timing the evaluation times using the
+algorithm described by Manceau /et al/ (2020) as well. We refer to that as the
+`popsize-distribution` since that is the name of the repository in which it is
+implemented.
 
-```
-make figures
-```
+## Manceau's LLHD function
 
-Note that to generate the timing for the `popsize-distribuion` function, you
-need to clone this repository into the current directory and then set up the
-necessary python environment. Then after running the BDSCOD timing, you need to
-adjust the simulation files and run `run-python-timing.sh` from withing
-`popsize-distribution` to generate the timing results. 
+To compute the evalaution times for the `popsize-distribuion` function, you need
+to clone the correct repository into the current directory and then set up the
+necessary python environment (there is a `requirements.txt` provided). Then
+after running the BDSCOD timing, you need to adjust the simulation files and run
+`run-python-timing.sh` from withing `popsize-distribution` to generate the
+timing results.
 
-The output of `pip freeze` for the virtual environment being used is here.
+The output of `pip freeze` for the virtual environment being used is here, i.e.,
+the `requirements.txt` is given below.
 
 ```
 cycler==0.10.0
@@ -33,7 +35,7 @@ six==1.15.0
 
 ## Parameters
 
-The parameters used in this computation are (unfortunately) repeated in a few
+The parameters used in this computation are (unfortunately) hard coded in a few
 places, so if you want to change them you need to check they are consistent
 across several files.
 
@@ -43,7 +45,7 @@ across several files.
 
 ## Running
 
-REMEMBER TO SOURCE THE VIRTUAL ENVIRONMENT FIRST!
+**REMEMBER TO SOURCE THE VIRTUAL ENVIRONMENT FIRST!**
 
 ```
 stack clean 
