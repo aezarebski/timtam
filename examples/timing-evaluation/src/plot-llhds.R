@@ -64,8 +64,9 @@ llhd_comparison <- ggplot(data = plot_df,
   geom_abline(intercept = 0, slope = 1, linetype = "solid", size = 0.3) +
   geom_point(size = 1) +
   annotate(geom = "text",
-           x = -50, y = -100,
-           label = lm_annotation) +
+           x = -50, y = -110,
+           label = lm_annotation,
+           size = 2) +
   labs(x = "BDSCOD log-likelihood",
        y = "Manceau et al (2020)\nlog-likelihood") +
   coord_fixed() +
