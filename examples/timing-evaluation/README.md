@@ -65,12 +65,31 @@ the analogous timing in python.
 
 ```
 Rscript src/prepare-simulations-for-popsize.R 
+source venv/bin/activate
 cd popsize-distribution 
 ./run-python-timing.sh
 cd ../ 
+```
+
+The `run-python-timing.sh` script just loops over the reformatted files and runs
+the `timing.py` script on them. This outputs
+`popsize-distribution-timing-<xxx>.json` files which describe the files that
+where used, the estimated minimal truncation parameter and the timem associated
+with the final evaluation.
+
+The final step is to generate figures to display the results, the first looks at
+the comparison of the timing between the two models and evaluates the degree of
+a polynomial explaining the complexity, i.e., the order of the complexity. The
+second creates a comparison of the LLHDs between the two models and reports the
+proportion of the variance in the Manceau LLHD explained by our model. There is
+also a figure looking at how the truncation parameter scales with the size of
+the dataset.
+
+```
 Rscript src/plot-profiles.R
 Rscript src/plot-llhds.R
 ```
+
 
 ## Results
 

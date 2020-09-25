@@ -45,6 +45,18 @@ llhd_comparison <- ggplot(data = plot_df,
           axis.line = element_line(size = 0.2))
 
 
+## We save a copy of a summary of the linear model between the LLHDs of the two
+## methods so that we can quote the R^2 value, the amount of the variation
+## explained.
+sink(file = "out/llhd-fit-summary.txt")
+print("================================================================================\n")
+cat("Linear model comparing LLHD values\n")
+cat("================================================================================\n")
+summary(lm(formula = popSimLlhd ~ bdscodLlhd,
+           data = plot_df))
+sink()
+
+
 ggsave("out/llhd-comparison.png", llhd_comparison, height = 5.25, width = 7.4, units = "cm")
 ggsave("out/llhd-comparison.pdf", llhd_comparison, height = 5.25, width = 7.4, units = "cm")
 
