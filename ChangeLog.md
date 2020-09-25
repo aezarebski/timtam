@@ -1,5 +1,13 @@
 # ChangeLog
 
+## 0.1.2.10 
+
+- The `timing-evaluation` application now takes a JSON file for configuration
+  rather than relying on hard coded values. The same configuration file is used
+  by the population size python code too. The documentation in the example has
+  been improved to make it easier to tweak the simulation settings in the
+  future.
+
 ## 0.1.2.9
 
 - Tweak visualisation of the prevalence estimates for clarity.
