@@ -7,19 +7,21 @@ module Main where
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
+
 -- import Control.Monad (zipWithM)
 import Criterion.Main
--- import Criterion.Types
-import GHC.Generics (Generic)
+
 import Data.Aeson as JSON
 import qualified Data.ByteString.Lazy as B
-import Data.List (intercalate,find)
-import Data.Maybe (fromJust,isJust,fromMaybe,catMaybes)
 import qualified Data.Csv as CSV
+import Data.List (find, intercalate)
+import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust)
 import qualified Epidemic.BDSCOD as BDSCOD
 import Epidemic.Types.Parameter hiding (Parameters(..))
 import Epidemic.Utility (simulationWithSystemRandom)
-
+-- import Criterion.Types
+import GHC.Generics (Generic)
+import Text.Printf (printf)
 
 -- | This is the parameters of the likelihood function and the duration of the
 -- simulation.
@@ -80,15 +82,6 @@ benchmarkableLlhdEvaluations (ModelParameters params _) (obs,simId) =
   let simName = observationsJsonFilePath simId
   in bench simName $ nf (\o -> fst (llhdAndNB o params initLlhdState)) obs
 
--- TODO If we use printf this can be removed.
-
--- | Simple left padd function.
-leftPad :: Char -> Int -> String -> Maybe String
-leftPad c l x
-  | length x == l = Just x
-  | length x < l = leftPad c l . (c:) $ x
-  | otherwise = Nothing
-
 -- | Return a list of the first element of a list satisfying each predicate
 -- allowing duplicates.
 multipleFinds :: [(a -> Bool)] -- ^ predicates
@@ -98,15 +91,9 @@ multipleFinds predicates values =
   catMaybes $ map (\p -> find p values) predicates
 
 
--- TODO The filename is much easier to generate with `printf` from `Text.Printf`
--- which is part of base anyway.
-
 -- | The name of the file to write the simulation observations to.
 observationsJsonFilePath :: Int -> FilePath
-observationsJsonFilePath n =
-  let paddedLength = 5 :: Int
-      idString = fromMaybe (show n) (leftPad '0' paddedLength (show n))
-   in "out/simulated-observations-" ++ idString ++ ".json"
+observationsJsonFilePath = printf "out/simulated-observations-%05d.json"
 
 
 -- TODO This should read in a JSON file to configure the program, it will
