@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Main where
 
@@ -12,7 +13,8 @@ import BDSCOD.Utility
 import Criterion.Main
 
 import Data.Aeson as JSON
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Builder as BBuilder
+import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as CSV
 import Data.List (find, intercalate)
 import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust)
@@ -26,7 +28,7 @@ import Text.Printf (printf)
 -- | This is the parameters of the likelihood function and the duration of the
 -- simulation.
 data ModelParameters = ModelParameters Parameters Time
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 -- | The record of a computation including the size of the data set processed,
 -- the computed value, the time taken and the path to the file where the input
@@ -57,7 +59,7 @@ recordSimulationOutput :: ModelParameters
 recordSimulationOutput (ModelParameters params _) sim@(obs,simNum) =
   let obsJson = observationsJsonFilePath simNum
       obsLlhd = fst $ llhdAndNB obs params initLlhdState
-      in do B.writeFile obsJson $ JSON.encode obs
+      in do L.writeFile obsJson $ JSON.encode obs
             return $ LlhdAndData (simulationSize sim) obsLlhd obsJson
 
 -- | Generate a random simulation of the observations and return it along with
@@ -96,21 +98,65 @@ observationsJsonFilePath :: Int -> FilePath
 observationsJsonFilePath = printf "out/simulated-observations-%05d.json"
 
 
+
+
+-- getMaybeAppConfig :: FilePath -> IO (Maybe AppConfig)
+-- getMaybeAppConfig fp = JSON.decode <$> L.readFile fp
+
 -- TODO This should read in a JSON file to configure the program, it will
 -- suffice to take in a fixed configuration file.
 
+-- main :: IO ()
+-- main =
+--   let duration = 6.0
+--       modelParams = ModelParameters (Parameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed [])) duration -- lambda, mu, psi, rho, omega, nu
+--       simIds = [1..1000] :: [Int] -- the indicies of the simulations
+--       binWidth = 10
+--       simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]
+--       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
+--     in do randomSimulations <- mapM (getObservations modelParams) simIds
+--           let selectedSimulations = multipleFinds simulationPredicates randomSimulations
+--           putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."
+--           records <- mapM (recordSimulationOutput modelParams) selectedSimulations
+--           L.writeFile outputCsvFilePath $ CSV.encode records
+--           defaultMain $ map (benchmarkableLlhdEvaluations modelParams) selectedSimulations
+
+-- | This type respresents a configuration of the running of this application.
+-- The application will look for a file it can read this from.
+data AppConfig =
+  AppConfig
+    { acDuration :: Time
+    , acSimParams :: ModelParameters
+    , acNumSims :: Int
+    , acBinWidth :: Int
+    , acOutputCsv :: FilePath
+    }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
 main :: IO ()
 main =
+  let configJson = "app-config.json"
+   in do
+    maybeAppConfig <- JSON.decode <$> L.readFile configJson
+    case maybeAppConfig of
+      (Just appConfig) -> runSimulationAndProfiling appConfig
+      Nothing -> putStrLn $ "Could not parse application configuration from " ++ configJson
+
+runSimulationAndProfiling :: AppConfig -> IO ()
+runSimulationAndProfiling AppConfig {..} =
+  let simulationPredicates = [\s -> let n = simulationSize s in n > acBinWidth * i && n <= acBinWidth * (i + 1) | i <- [1..20]]
+    in do randomSimulations <- mapM (getObservations acSimParams) [1..acNumSims]
+          let selectedSimulations = multipleFinds simulationPredicates randomSimulations
+          putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."
+          records <- mapM (recordSimulationOutput acSimParams) selectedSimulations
+          L.writeFile acOutputCsv $ CSV.encode records
+          defaultMain $ map (benchmarkableLlhdEvaluations acSimParams) selectedSimulations
+
+foobar :: AppConfig
+foobar =
   let duration = 6.0
       modelParams = ModelParameters (Parameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed [])) duration -- lambda, mu, psi, rho, omega, nu
       simIds = [1..1000] :: [Int] -- the indicies of the simulations
       binWidth = 10
-      simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]
       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
-    in do randomSimulations <- mapM (getObservations modelParams) simIds
-          let selectedSimulations = multipleFinds simulationPredicates randomSimulations
-          putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."
-          records <- mapM (recordSimulationOutput modelParams) selectedSimulations
-          B.writeFile outputCsvFilePath $ CSV.encode records
-          defaultMain $ map (benchmarkableLlhdEvaluations modelParams) selectedSimulations
-
+    in AppConfig duration modelParams (length simIds) binWidth outputCsvFilePath
