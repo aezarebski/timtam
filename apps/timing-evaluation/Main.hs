@@ -98,29 +98,6 @@ observationsJsonFilePath :: Int -> FilePath
 observationsJsonFilePath = printf "out/simulated-observations-%05d.json"
 
 
-
-
--- getMaybeAppConfig :: FilePath -> IO (Maybe AppConfig)
--- getMaybeAppConfig fp = JSON.decode <$> L.readFile fp
-
--- TODO This should read in a JSON file to configure the program, it will
--- suffice to take in a fixed configuration file.
-
--- main :: IO ()
--- main =
---   let duration = 6.0
---       modelParams = ModelParameters (Parameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed [])) duration -- lambda, mu, psi, rho, omega, nu
---       simIds = [1..1000] :: [Int] -- the indicies of the simulations
---       binWidth = 10
---       simulationPredicates = [\s -> let n = simulationSize s in n > binWidth * i && n <= binWidth * (i + 1) | i <- [1..20]]
---       outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
---     in do randomSimulations <- mapM (getObservations modelParams) simIds
---           let selectedSimulations = multipleFinds simulationPredicates randomSimulations
---           putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."
---           records <- mapM (recordSimulationOutput modelParams) selectedSimulations
---           L.writeFile outputCsvFilePath $ CSV.encode records
---           defaultMain $ map (benchmarkableLlhdEvaluations modelParams) selectedSimulations
-
 -- | This type respresents a configuration of the running of this application.
 -- The application will look for a file it can read this from.
 data AppConfig =
@@ -151,12 +128,3 @@ runSimulationAndProfiling AppConfig {..} =
           records <- mapM (recordSimulationOutput acSimParams) selectedSimulations
           L.writeFile acOutputCsv $ CSV.encode records
           defaultMain $ map (benchmarkableLlhdEvaluations acSimParams) selectedSimulations
-
-foobar :: AppConfig
-foobar =
-  let duration = 6.0
-      modelParams = ModelParameters (Parameters (1.5,0.3,0.3,Timed [(duration - 1e-6,0.5)],0.3, Timed [])) duration -- lambda, mu, psi, rho, omega, nu
-      simIds = [1..1000] :: [Int] -- the indicies of the simulations
-      binWidth = 10
-      outputCsvFilePath = "out/simulation-sizes-and-llhds.csv" :: FilePath
-    in AppConfig duration modelParams (length simIds) binWidth outputCsvFilePath
