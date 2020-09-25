@@ -106,6 +106,7 @@ data AppConfig =
     , acSimParams :: ModelParameters
     , acNumSims :: Int
     , acBinWidth :: Int
+    , acNumBins :: Int
     , acOutputCsv :: FilePath
     }
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -121,7 +122,7 @@ main =
 
 runSimulationAndProfiling :: AppConfig -> IO ()
 runSimulationAndProfiling AppConfig {..} =
-  let simulationPredicates = [\s -> let n = simulationSize s in n > acBinWidth * i && n <= acBinWidth * (i + 1) | i <- [1..20]]
+  let simulationPredicates = [\s -> let n = simulationSize s in n > acBinWidth * i && n <= acBinWidth * (i + 1) | i <- [1..acNumBins]]
     in do randomSimulations <- mapM (getObservations acSimParams) [1..acNumSims]
           let selectedSimulations = multipleFinds simulationPredicates randomSimulations
           putStrLn $ "There are " ++ show (length selectedSimulations) ++ " simulations that will be used."

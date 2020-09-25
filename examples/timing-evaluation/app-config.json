@@ -2,6 +2,7 @@
     "acDuration": 6,
     "acNumSims": 1000,
     "acBinWidth": 10,
+    "acNumBins": 20,
     "acSimParams": [
         [1.5, 0.3, 0.3, [
             [5.999999, 0.5]
