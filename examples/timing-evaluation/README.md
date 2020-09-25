@@ -35,13 +35,31 @@ six==1.15.0
 
 ## Parameters
 
-The parameters used in this computation are (unfortunately) hard coded in a few
-places, so if you want to change them you need to check they are consistent
-across several files.
+The parameters used in this computation are defined in a JSON file:
+`app-config.json`, this includes the parameters used in the simulation along
+with some additional variables about the simulation.
 
-- `src/prepare-simulations-for-popsize.R`
-- `../../apps/timing-evaluation/Main.hs`
-- `popsize-distribution/timing.py`
+```
+{
+    "acDuration": 6,
+    "acNumSims": 1000,
+    "acBinWidth": 10,
+    "acNumBins": 20,
+    "acSimParams": [
+        [1.5, 0.3, 0.3, [
+            [5.999999, 0.5]
+        ], 0.3, []], 6
+    ],
+    "acOutputCsv": "out/simulation-sizes-and-llhds.csv"
+}
+```
+
+- `acDuration` is the duration of the simulated data set 
+- `acNumSims` is the number of simulations to attempt
+- `acBinWidth` is the desired spacing between the sizes of the simulations
+- `acNumBins` is the number of different sizes to simulate
+- `acSimParams` is the actual simulation parameters 
+- `acOutputCsv` is where the application should store the results
 
 ## Running
 
@@ -103,7 +121,7 @@ But of course, the benefits of a faster algorithm are only meaningful if it
 gives the correct results so lets look at a comparison of the LLHD across the
 two methods. There appears to be an additive constant that differs between the
 two methods, but this wsa also present in Marc's code so I suspect there is
-something about nnumerical stability in his code that accounts for this.
+something about numerical stability in his code that accounts for this.
 
 ![](out/llhd-comparison.png)
 
