@@ -17,7 +17,7 @@ inference_times <- seq(from = 7, to = 17, by = 4)
 birth_rate <- 1.5
 death_rate <- 0.50
 sampling_rate <- 0.2
-catastrophe_prob <- NULL
+catastrophe_prob <- 0.2
 occurrence_rate <- 0.2
 disaster_prob <- 0.15
 
@@ -29,9 +29,11 @@ disaster_params <- map2(disaster_times, disaster_probs, list)
 
 catastrophe_times <- disaster_times + 0.5
 num_catastrophes <- length(catastrophe_times)
-catastrophe_probs <- seq(from = 0.15, to = 0.25, length = num_catastrophes)
+catastrophe_probs <- rep(catastrophe_prob, num_catastrophes)
 catastrophe_params <- map2(catastrophe_times, catastrophe_probs, list)
 
+#' Return a list describing the inference based on a the data available at the
+#' \code{inf_time}. This is applied to the inference times defined above.
 inference_configuration <- function(inf_time) {
     list(inferenceTime = inf_time,
          reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%.2f.txt",
@@ -44,7 +46,8 @@ inference_configuration <- function(inf_time) {
          pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
                                      inf_time))
 }
-
+inference_configurations <- map(inference_times,
+                                inference_configuration)
 
 sim_params <- list(birth_rate,
                    death_rate,
@@ -61,9 +64,9 @@ result <- list(
                                    mu = death_rate,
                                    psi = sampling_rate,
                                    omega = occurrence_rate),
-  simulationDuration = simulation_duration + 1e-5,
+  simulationDuration = simulation_duration + 1e-6,
   simulationSizeBounds = c(100,100000),
-  inferenceConfigurations = map(inference_times, inference_configuration),
+  inferenceConfigurations = inference_configurations,
   partialEvaluationOutputCsv = "out/partial-evaluations.csv"
 )
 
