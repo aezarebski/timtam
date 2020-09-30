@@ -1,5 +1,13 @@
 # ChangeLog
 
+## 0.1.2.11 
+
+- Refactor a lot of the plotting code so that it is easier to understand and
+  include the true simulation parameters in the output for
+  `simulation-study-time-series`.
+- Improved documentation for `examples/simulation-study-time-series`, swapping
+  to an org-mode README in the process which generates a runner file, `run.sh`.
+
 ## 0.1.2.10 
 
 - The `timing-evaluation` application now takes a JSON file for configuration
