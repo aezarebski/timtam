@@ -16,7 +16,7 @@ construction is managed by =src/make-json-config.R=.
 
 ** Example
 
-[[./.out/prevalence-profiles.png]]
+[[./out/prevalence-profiles.png]]
 
 ** Running this simulation study
 
