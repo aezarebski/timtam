@@ -1,0 +1,23 @@
+[1] "================================================================================\n"
+Linear model comparing LLHD values
+================================================================================
+
+Call:
+lm(formula = popSimLlhd ~ bdscodLlhd, data = plot_df)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-5.4607 -1.3688 -0.2595  0.8649  6.9981 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  7.49342    1.28857   5.815  1.5e-06 ***
+bdscodLlhd   1.01068    0.01528  66.137  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 2.571 on 34 degrees of freedom
+  (4 observations deleted due to missingness)
+Multiple R-squared:  0.9923,	Adjusted R-squared:  0.9921 
+F-statistic:  4374 on 1 and 34 DF,  p-value: < 2.2e-16
+

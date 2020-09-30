@@ -391,16 +391,18 @@ bdsSimulations simRates simDuration =
          (a, b) <- pure . probCI $ map numObservations sims
          return $ a < (1 - probUnobserved) && (1 - probUnobserved) < b
 
+-- | The tests is non-deterministic so on occasion it may fail. Unless it fails
+-- multiple times this does not need further investigation.
 testConditioningProbability :: SpecWith ()
 testConditioningProbability =
-  describe "Test probability of going unobserved is correct" $ do
+  describe "Test probability of going unobserved is correct" $
     it "Test empirical estimate has CI containing value" $ do
-      x <- bdsSimulations (2.0,0.4,0.1) 0.7
-      x `shouldBe` True
-      x' <- bdsSimulations (2.0,0.1,0.4) 0.7
-      x' `shouldBe` True
-      x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
-      x'' `shouldBe` True
+  x <- bdsSimulations (2.0,0.4,0.1) 0.7
+  x `shouldBe` True
+  x' <- bdsSimulations (2.0,0.1,0.4) 0.7
+  x' `shouldBe` True
+  x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
+  x'' `shouldBe` True
 
 testHmatrixUsage :: SpecWith ()
 testHmatrixUsage =

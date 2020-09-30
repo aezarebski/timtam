@@ -1,0 +1,46 @@
+[1] "================================================================================\n"
+BDSCOD model fit
+================================================================================
+
+Call:
+lm(formula = ln_time ~ ln_size, data = .)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.112015 -0.019219 -0.003177  0.019865  0.056294 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -13.696765   0.031489  -435.0   <2e-16 ***
+ln_size       1.082963   0.007004   154.6   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.035 on 38 degrees of freedom
+Multiple R-squared:  0.9984,	Adjusted R-squared:  0.9984 
+F-statistic: 2.391e+04 on 1 and 38 DF,  p-value: < 2.2e-16
+
+
+================================================================================
+Manceau et al (2020) model fit
+================================================================================
+
+Call:
+lm(formula = ln_time ~ ln_size, data = .)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.79251 -0.27233  0.09292  0.27698  1.03558 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  -8.5705     0.6608  -12.97 1.02e-14 ***
+ln_size       2.0967     0.1427   14.70 2.72e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.5203 on 34 degrees of freedom
+  (4 observations deleted due to missingness)
+Multiple R-squared:  0.864,	Adjusted R-squared:   0.86 
+F-statistic: 215.9 on 1 and 34 DF,  p-value: 2.72e-16
+

@@ -1,17 +1,48 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 
-module BDSCOD.Types where
+module BDSCOD.Types
+  ( Parameters(..)
+  , putLambda
+  , putMu
+  , putPsi
+  , putRhos
+  , putOmega
+  , putNus
+  , UnpackedParameters
+  , unpackParameters
+  , packParameters
+  , scheduledTimes
+  , NumLineages
+  , ObservedEvent(..)
+  , strictByteString
+  , Observation
+  , updateDelay
+  , isBirth
+  , isSample
+  , isOccurrence
+  , NegativeBinomial(..)
+  , PDESolution(..)
+  , LogLikelihood
+  , LlhdAndNB
+  , LlhdCalcState
+  , AggregationTimes()
+  , pattern AggTimes
+  , maybeAggregationTimes
+  ,extractFirstAggregationTime
+  ,nullAggregationTimes
+  , AggregatedObservations(..)) where
 
 import Control.DeepSeq
-import Foreign.Storable
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Builder as BBuilder
-import qualified Data.Csv as Csv
 import Data.Aeson
-import Data.List (intersperse)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Builder as BBuilder
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Csv as Csv
+import Data.List (intersperse,sort)
 import Epidemic.Types.Parameter
+import Foreign.Storable
 import GHC.Generics (Generic)
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
@@ -105,8 +136,28 @@ instance Csv.ToField ObservedEvent where
     strictByteString . BBuilder.toLazyByteString $
     BBuilder.stringUtf8 "odisaster:" <> BBuilder.doubleDec nl
 
-
+-- | An observation contains the time since the last observation and the actual
+-- event that was observed. This should not be confused with an epidemic event
+-- which has holds the absolute time of the event. This is used because the
+-- likelihood is defined in terms of intervals of time between events rather
+-- than their abolute times.
 type Observation = (Time, ObservedEvent)
+
+-- | A setter function to return a new observation with a different delay.
+updateDelay :: Observation -> Time -> Observation
+updateDelay (_, oEvent) delay = (delay, oEvent)
+
+-- | Predicate for the observation referring to a birth.
+isBirth :: Observation -> Bool
+isBirth = (==OBirth) . snd
+
+-- | Predicate for the observation referring to a sampling.
+isSample :: Observation -> Bool
+isSample = (==OSample) . snd
+
+-- | Predicate for the observation referring to an occurrence.
+isOccurrence :: Observation -> Bool
+isOccurrence = (==OOccurrence) . snd
 
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
@@ -142,3 +193,45 @@ type LlhdCalcState = (LlhdAndNB
                      ,Time
                      ,NumLineages)
 
+
+-- | The times at which unscheduled event times are adjusted up to under the
+-- aggregation process. This does allow for a case in which there are no such
+-- times.
+newtype AggregationTimes =
+  AggregationTimes_ [Time]
+  deriving (Show, Eq)
+
+-- | A smart constructor which only creates an `AggregationTimes` if the
+-- provided `Time`s are sorted and non-negative since these represent absolute
+-- times. If the given list of times is empty, then this returns an empty list
+-- of `AggregationTimes`.
+maybeAggregationTimes :: [Time] -> Maybe AggregationTimes
+maybeAggregationTimes ts
+  | null ts = Just (AggregationTimes_ ts)
+  | sort ts == ts && minimum ts >= 0 = Just (AggregationTimes_ ts)
+  | otherwise = Nothing
+
+pattern AggTimes ts <- AggregationTimes_ ts
+
+-- | Aggregated observations which contains aggregation times and the
+-- observations which fall on those times. This is the result of adjusting the
+-- delays in the times of unscheduled events up to the `AggregationTimes`. Note
+-- that this includes the observations that are not aggregated, such as the
+-- birth events.
+data AggregatedObservations =
+  AggregatedObservations AggregationTimes [Observation]
+  deriving (Show, Eq)
+
+-- | Return the first time aggregation time and a new set of aggregation times
+-- with the first one removed. Since there is a smart constructor, we assume
+-- that the initial object has sorted times.
+extractFirstAggregationTime :: AggregationTimes -> Maybe (Time,AggregationTimes)
+extractFirstAggregationTime (AggregationTimes_ ts) = case ts of
+  [] -> Nothing
+  [t] -> Just (t, AggregationTimes_ [])
+  (t:ts') -> Just (t, AggregationTimes_ ts')
+
+-- | Predicate for there being no aggregation times in the `AggregationTimes`
+-- object.
+nullAggregationTimes :: AggregationTimes -> Bool
+nullAggregationTimes (AggregationTimes_ ts) = null ts

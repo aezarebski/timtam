@@ -8,7 +8,10 @@ import Epidemic.Types.Population
 import BDSCOD.Types
 -- import BDSCOD.Llhd --
 
--- | Convert simulation events to observation events
+-- | Convert simulation events to observation events, this assumes that the
+-- epidemic events have already been filtered by to only include the observable
+-- events. Since this is model specific functions such as `observedEvents` are
+-- provided to do this.
 eventsAsObservations :: [EpidemicEvent] -> [Observation]
 eventsAsObservations epiSimEvents =
   drop 1 . map fst $ scanl processEvent' ((0, OBirth), 0) epiSimEvents
@@ -24,14 +27,6 @@ processEvent' (_, currTime) epiSimEvent =
       ((absTime - currTime, OOccurrence), absTime)
     (Disaster absTime (People persons)) -> ((absTime - currTime, ODisaster . fromIntegral $ V.length persons), absTime)
     (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
-
--- | Predicate for the observation referring to a birth.
-isBirth :: Observation -> Bool
-isBirth (_,e) = e == OBirth
-
--- | Predicate for the observation referring to a sampling.
-isSample :: Observation -> Bool
-isSample (_,e) = e == OSample
 
 nbFromMAndV :: (Double, Double) -> NegativeBinomial
 nbFromMAndV (0, 0) = Zero

@@ -67,7 +67,11 @@ cat("===========================================================================
 summary(popsize_model)
 sink()
 
-## Now we actually put together the plot.
+## Now we actually put together the plot so we can see what the times look like
+## side by side.
+
+## TODO Include the complexity estimates as annotations on the figures to make
+## it clear what these are.
 
 facet_label_map <- c(bdscodMeanSeconds = "BDSCOD",
                      popsizeMeanSeconds = "Manceau et al (2020)")
