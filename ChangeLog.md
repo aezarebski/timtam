@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.1.2.11 
+
+- Improved documentation for `examples/simulation-study-time-series`.
+
 ## 0.1.2.10 
 
 - The `timing-evaluation` application now takes a JSON file for configuration
