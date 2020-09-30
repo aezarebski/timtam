@@ -18,6 +18,13 @@ construction is managed by =src/make-json-config.R=.
 
 [[./out/prevalence-profiles.png]]
 
+The estimates of the prevalence through time based on both the true parameters
+used in the simulation and the estimated values.
+
+[[./out/llhd-profiles-11.00.png]]
+
+The LLHD profiles based on the final data set collected.
+
 ** Running this simulation study
 
 #+BEGIN_SRC sh :tangle run.sh
