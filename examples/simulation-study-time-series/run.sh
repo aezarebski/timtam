@@ -1,4 +1,7 @@
-#!/bin/bash
+rm out/*
+rm ts-config.json
+
+stack build
 
 Rscript src/make-json-config.R
 

@@ -20,7 +20,7 @@ construction is managed by =src/make-json-config.R=.
 
 ** Running this simulation study
 
-#+BEGIN_SRC sh run.sh
+#+BEGIN_SRC sh :tangle run.sh
 rm out/*
 rm ts-config.json
 
