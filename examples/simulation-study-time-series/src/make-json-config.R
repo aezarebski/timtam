@@ -42,20 +42,20 @@ sim_params <- list(birth_rate, death_rate, sampling_rate, catastrophe_params, oc
 
 
 result <- list(
-    simulatedEventsOutputCsv = "out/all-simulated-events.csv",
-    simulationParameters = sim_params,
-    simulationDuration = simulation_duration + 1e-5,
-    simulationSizeBounds = c(100,100000),
-    inferenceConfigurations = map(inference_times, inference_configuration),
-    partialEvaluationOutputCsv = "out/partial-evaluations.csv"
+  simulatedEventsOutputCsv = "out/all-simulated-events.csv",
+  simulationParameters = sim_params,
+  simulationParametersClean = list(lambda = birth_rate,
+                                   mu = death_rate,
+                                   psi = sampling_rate,
+                                   omega = occurrence_rate),
+  simulationDuration = simulation_duration + 1e-5,
+  simulationSizeBounds = c(100,100000),
+  inferenceConfigurations = map(inference_times, inference_configuration),
+  partialEvaluationOutputCsv = "out/partial-evaluations.csv"
 )
 
-write_json(result, output_file, pretty = FALSE, auto_unbox = TRUE, digits = 7)
-
-## save a copy of the true parameters so they can be read out later rather than
-## hardcoded.
-true_parameters <- data.frame(parameter = c("lambda", "mu"),
-                              value = c(birth_rate,death_rate))
-write.table(x = true_parameters,
-            file = "out/true-parameters.csv",
-            row.names = FALSE)
+write_json(result,
+           output_file,
+           pretty = TRUE,
+           auto_unbox = TRUE,
+           digits = 7)
