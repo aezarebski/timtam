@@ -9,7 +9,12 @@ library(reshape2)
 
 
 
-## Returns a plot showing the LLHD profiles fro a given inference configuration.
+#' Returns a plot showing the LLHD profiles fro a given inference configuration.
+#'
+#' @param infConfig is a list which points to the CSV with the profile values
+#' @param true_parameters is a list with the true parameters to draw as a
+#'   comparison
+#'
 llhd_profile_figure <- function(infConfig, true_parameters) {
     parse_doubles <- function(string, sep) {
         map(str_split(string = string, pattern = sep), as.double)
@@ -55,10 +60,6 @@ llhd_profile_figure <- function(infConfig, true_parameters) {
         theme_classic()
 }
 
-## Returns a suitable name to save the LLHD profile figure to
-llhd_profile_output_filepath <- function(infConfig) {
-    sprintf("out/llhd-profiles-%.2f.png", infConfig$inferenceTime)
-}
 
 ## We want to know the actual prevalence in the simulation through time which we
 ## obtain by processing a log of all the events in the simulation.
@@ -103,8 +104,10 @@ read_nb_params <- function(nb_csv) {
   }
 }
 
+#' Return a dataframe with the estimate of the prevalence for a particular data
+#' set.
+#'
 instantaneous_prevalence <- function(inf_config) {
-  nb_params_list <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
 
   quantile_data <- function(nb_params) {
     x <- set_names(as.list(qnbinom(p = c(0.025,0.5,0.975),
@@ -115,9 +118,10 @@ instantaneous_prevalence <- function(inf_config) {
     as.data.frame(x)
   }
 
-  result <- map(.x = nb_params_list, .f = quantile_data) %>% bind_rows
+  nb_params_list <- read_nb_params(pluck(inf_config, "pointEstimatesCsv"))
+  result <- bind_rows(map(.x = nb_params_list, .f = quantile_data))
   result$time <- pluck(inf_config, "inferenceTime")
-  result
+  return(result)
 }
 
 
@@ -139,7 +143,7 @@ main <- function() {
   ## so that we can see how they change through time as more data becomes
   ## available.
   for (infConfig in config$inferenceConfigurations) {
-    ggsave(llhd_profile_output_filepath(infConfig),
+    ggsave(sprintf("out/llhd-profiles-%.2f.png", infConfig$inferenceTime),
            llhd_profile_figure(infConfig, true_parameters))
   }
 
