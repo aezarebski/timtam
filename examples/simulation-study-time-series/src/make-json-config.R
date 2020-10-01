@@ -56,6 +56,20 @@ sim_params <- list(birth_rate,
                    occurrence_rate,
                    disaster_params)
 
+## This is the specification of the mesh used in the evaluation of the
+## likelihood profiles. The values indicate the range over which to vary the
+## parameter and the mesh size refers to the number of points to evaluate the
+## likelihood at for each profile.
+llhd_profile_mesh <- list(
+  lpmLambdaBounds = c(1.2, 1.9),
+  lpmMuBounds = c(0.1, 0.9),
+  lpmPsiBounds = c(0.10,0.3),
+  lpmOmegaBounds = c(0.15,0.25),
+  lpmMeshSize = 100,
+  lpmRhoBounds = c(0.10, 0.3),
+  lpmNuBounds = c(0.10, 0.2)
+)
+
 
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
@@ -69,7 +83,8 @@ result <- list(
   simulationDuration = simulation_duration + 1e-6,
   simulationSizeBounds = c(100,100000),
   inferenceConfigurations = inference_configurations,
-  partialEvaluationOutputCsv = "out/partial-evaluations.csv"
+  partialEvaluationOutputCsv = "out/partial-evaluations.csv",
+  acLlhdProfileMesh = llhd_profile_mesh
 )
 
 write_json(result,

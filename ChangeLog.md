@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.1.2.12 
+
+- Make the specification of the LLHD profiles in
+  `examples/simulation-study-time-series` part of the configuration of the
+  application and refactor some of the code for clarity while doing this.
+
 ## 0.1.2.11 
 
 - Refactor a lot of the plotting code so that it is easier to understand and
