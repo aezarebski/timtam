@@ -9,16 +9,14 @@ import BDSCOD.Conditioning
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
-import Control.Monad (liftM, zipWithM)
+import Control.Monad (zipWithM)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
-import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
 import Data.List (intercalate, intersperse)
-import Data.Maybe (fromJust)
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
   ( EpidemicEvent(..)
@@ -50,24 +48,41 @@ data InferenceConfiguration =
     }
   deriving (Show, Generic)
 
+-- | These objects describe the evaluation mesh when looking at the likelihood
+-- profiles. This is useful because it allows us to provide these details at
+-- runtime rather than hardcoding them here.
+data LlhdProfileMesh =
+  LlhdProfileMesh
+  { lpmMeshSize :: Int
+  , lpmLambdaBounds :: (Rate,Rate)
+  , lpmMuBounds :: (Rate,Rate)
+  , lpmPsiBounds :: (Rate,Rate)
+  , lpmRhoBounds :: (Probability,Probability)
+  , lpmOmegaBounds :: (Rate,Rate)
+  , lpmNuBounds :: (Probability,Probability)
+  } deriving (Show, Generic)
+
 -- | This object configures the whole evaluation of this program and is to be
 -- read in from a suitable JSON file.
-data Configuration =
-  Configuration
+data AppConfiguration =
+  AppConfiguration
     { simulatedEventsOutputCsv :: FilePath
     , simulationParameters :: Parameters
     , simulationDuration :: Time
     , simulationSizeBounds :: (Int,Int)
     , inferenceConfigurations :: [InferenceConfiguration]
     , partialEvaluationOutputCsv :: FilePath
+    , acLlhdProfileMesh :: LlhdProfileMesh
     }
   deriving (Show, Generic)
 
-instance Json.FromJSON Configuration
+instance Json.FromJSON AppConfiguration
 
 instance Json.FromJSON InferenceConfiguration
 
-type Simulation x = ReaderT Configuration (ExceptT String IO) x
+instance Json.FromJSON LlhdProfileMesh
+
+type Simulation x = ReaderT AppConfiguration (ExceptT String IO) x
 
 -- | This type is used to indicate if parameters are the true ones used in the
 -- simulation or estimates parameters.
@@ -149,7 +164,8 @@ generateLlhdProfileCurves InferenceConfiguration{..} obs (singleParams,paramKind
 evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
-  evalParams <- adjustedEvaluationParameters simParams
+  llhdProfMesh <- asks acLlhdProfileMesh
+  let evalParams = adjustedEvaluationParameters llhdProfMesh simParams
   generateLlhdProfileCurves infConfig obs (simParams,SimulationParameters,evalParams)
 
 -- | Estimate the parameters of the of the model and then evaluate the LLHD
@@ -159,9 +175,10 @@ evaluateLLHD infConfig obs = do
 estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 estimateLLHD infConfig obs = do
   simParams@(Parameters (_,deathRate,_,_,_,_)) <- asks simulationParameters
+  llhdProfMesh <- asks acLlhdProfileMesh
   let schedTimes = scheduledTimes simParams
       mleParams = estimateParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
-  evalParams <- adjustedEvaluationParameters mleParams -- generate a list of evaluation parameters
+      evalParams = adjustedEvaluationParameters llhdProfMesh mleParams -- generate a list of evaluation parameters
   generateLlhdProfileCurves infConfig obs (mleParams,EstimatedParameters,evalParams)
 
 -- | Use GSL to estimate the MLE based on the observations given. This uses a
@@ -196,21 +213,22 @@ logit :: Probability -> Double
 logit p = log (p / (1 - p))
 
 -- | Recenter the evaluation parametes about the parameters given.
-adjustedEvaluationParameters :: Parameters -> Simulation [Parameters]
-adjustedEvaluationParameters ps =
-  let meshSize = 100
-      lambdaMesh = toList $ linspace meshSize (1,2.5)
-      muMesh = toList $ linspace meshSize (0.05,1.5)
-      psiMesh = toList $ linspace meshSize (0.05,1.5)
-      probMesh = toList $ linspace meshSize (0.05,0.6) :: [Probability]
+adjustedEvaluationParameters :: LlhdProfileMesh -> Parameters -> [Parameters]
+adjustedEvaluationParameters LlhdProfileMesh{..} ps =
+  let mesh bounds = toList $ linspace lpmMeshSize bounds
+      lambdaMesh = mesh lpmLambdaBounds
+      muMesh = mesh lpmMuBounds
+      psiMesh = mesh lpmPsiBounds
+      rhoProbMesh = mesh lpmRhoBounds
+      omegaMesh = mesh lpmOmegaBounds
+      nuProbMesh = mesh lpmNuBounds
       (rhoTimes,nuTimes) = scheduledTimes ps
-      rhoMesh = [Timed [(t,r) | t <- rhoTimes] | r <- probMesh]
-      omegaMesh = toList $ linspace meshSize (0.05,1.5)
-      nuMesh = [Timed [(t,n) | t <- nuTimes] | n <- probMesh]
+      rhoMesh = [Timed [(t,r) | t <- rhoTimes] | r <- rhoProbMesh]
+      nuMesh = [Timed [(t,n) | t <- nuTimes] | n <- nuProbMesh]
       apply f = map (f ps)
       [lPs,mPs,pPs,oPs] = zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
       [rPs,nPs] = zipWith apply [putRhos,putNus] [rhoMesh,nuMesh]
-  in return $ concat [lPs,mPs,pPs,rPs,oPs,nPs]
+  in concat [lPs,mPs,pPs,rPs,oPs,nPs]
 
 -- | Record the partial results of the LLHD and NB to a CSV at the parameters
 -- used in the simulation.
@@ -222,7 +240,7 @@ partialEvaluations obs = do
       records = [show l ++ "," ++ show nb | (l,nb) <- partialResults]
   liftIO $ Prelude.writeFile partialEvalsCsv (intercalate "\n" records)
 
--- Definition of the complete simulation study.
+-- | Definition of the complete simulation study.
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
@@ -233,7 +251,6 @@ simulationStudy = do
   mapM_ (uncurry estimateLLHD) pObs
   let completeObs = snd $ head pObs
   partialEvaluations completeObs
-  return ()
 
 main :: IO ()
 main = do
@@ -248,5 +265,6 @@ main = do
         Left errMsg -> putStrLn errMsg
         Right _ -> return ()
 
-getConfiguration :: FilePath -> IO (Maybe Configuration)
+-- | Attempt to read a configuration object from the given filepath.
+getConfiguration :: FilePath -> IO (Maybe AppConfiguration)
 getConfiguration fp = Json.decode <$> L.readFile fp

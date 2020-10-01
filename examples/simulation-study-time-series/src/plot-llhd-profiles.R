@@ -14,8 +14,10 @@ library(reshape2)
 #' @param infConfig is a list which points to the CSV with the profile values
 #' @param true_parameters is a list with the true parameters to draw as a
 #'   comparison
+#' @param param_mesh a list encoding the parameter values used in the LLHD
+#'   profile.
 #'
-llhd_profile_figure <- function(infConfig, true_parameters) {
+llhd_profile_figure <- function(infConfig, true_parameters, param_mesh) {
     parse_doubles <- function(string, sep) {
         map(str_split(string = string, pattern = sep), as.double)
     }
@@ -31,17 +33,14 @@ llhd_profile_figure <- function(infConfig, true_parameters) {
             stop("Bad parameter kind: ", param_kind)
         }
 
-        mesh_size <- 100
-
-        lambda_mesh <- seq(from = 1, to = 2.5, length = mesh_size)
-        mu_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
-        psi_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
-        rho_mesh <- seq(from = 0.05, to = 0.6, length = mesh_size)
-        omega_mesh <- seq(from = 0.05, to = 1.5, length = mesh_size)
-        nu_mesh <- seq(from = 0.05, to = 0.6, length = mesh_size)
-
-        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "rho", "omega", "nu"), each = mesh_size),
-                   parameter_value = c(lambda_mesh, mu_mesh, psi_mesh, rho_mesh, omega_mesh, nu_mesh),
+        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "rho", "omega", "nu"),
+                                        each = length(param_mesh$lambda_mesh)),
+                   parameter_value = c(param_mesh$lambda_mesh,
+                                       param_mesh$mu_mesh,
+                                       param_mesh$psi_mesh,
+                                       param_mesh$rho_mesh,
+                                       param_mesh$omega_mesh,
+                                       param_mesh$nu_mesh),
                    parameter_kind = param_kind,
                    llhd = llhds)
     }
@@ -138,13 +137,44 @@ main <- function() {
                        variable.name = "parameter_name",
                        value.name = "parameter_value",
                        id.vars = c()))
+  param_mesh <- list(
+    lambda_mesh = seq(from = config$acLlhdProfileMesh$lpmLambdaBounds[[1]],
+                      to = config$acLlhdProfileMesh$lpmLambdaBounds[[2]],
+                      length = config$acLlhdProfileMesh$lpmMeshSize),
+    mu_mesh = seq(from = config$acLlhdProfileMesh$lpmMuBounds[[1]],
+                  to = config$acLlhdProfileMesh$lpmMuBounds[[2]],
+                  length = config$acLlhdProfileMesh$lpmMeshSize),
+    psi_mesh = seq(from = config$acLlhdProfileMesh$lpmPsiBounds[[1]],
+                   to = config$acLlhdProfileMesh$lpmPsiBounds[[2]],
+                   length = config$acLlhdProfileMesh$lpmMeshSize),
+    rho_mesh = seq(from = config$acLlhdProfileMesh$lpmRhoBounds[[1]],
+                   to = config$acLlhdProfileMesh$lpmRhoBounds[[2]],
+                   length = config$acLlhdProfileMesh$lpmMeshSize),
+    omega_mesh = seq(from = config$acLlhdProfileMesh$lpmOmegaBounds[[1]],
+                     to = config$acLlhdProfileMesh$lpmOmegaBounds[[2]],
+                     length = config$acLlhdProfileMesh$lpmMeshSize),
+    nu_mesh = seq(from = config$acLlhdProfileMesh$lpmNuBounds[[1]],
+                  to = config$acLlhdProfileMesh$lpmNuBounds[[2]],
+                  length = config$acLlhdProfileMesh$lpmMeshSize)
+  )
+
 
   ## Loop over all the inference configurations and generate the LLHD profiles
   ## so that we can see how they change through time as more data becomes
-  ## available.
+  ## available. The expression for the output filepath is complicated because we
+  ## want to allow the possibility of decimal values but downstream we cannot
+  ## have multiple periods in the filepath so they are replaced with the
+  ## character 'p'.
   for (infConfig in config$inferenceConfigurations) {
-    ggsave(sprintf("out/llhd-profiles-%.2f.png", infConfig$inferenceTime),
-           llhd_profile_figure(infConfig, true_parameters))
+    output_file <- gsub(pattern = "([0-9]{1})\\.([0-9])",
+                        replacement = "\\1p\\2",
+                        x = sprintf("out/llhd-profiles-%.2f.png",
+                                    infConfig$inferenceTime))
+    output_figure <- llhd_profile_figure(infConfig,
+                                         true_parameters,
+                                         param_mesh)
+    ggsave(output_file,
+           output_figure)
   }
 
   ## The events are parsed into a data frame so that we can draw the LTT plot to
