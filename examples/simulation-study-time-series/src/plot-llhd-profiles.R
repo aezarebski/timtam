@@ -161,10 +161,20 @@ main <- function() {
 
   ## Loop over all the inference configurations and generate the LLHD profiles
   ## so that we can see how they change through time as more data becomes
-  ## available.
+  ## available. The expression for the output filepath is complicated because we
+  ## want to allow the possibility of decimal values but downstream we cannot
+  ## have multiple periods in the filepath so they are replaced with the
+  ## character 'p'.
   for (infConfig in config$inferenceConfigurations) {
-    ggsave(sprintf("out/llhd-profiles-%.2f.png", infConfig$inferenceTime),
-           llhd_profile_figure(infConfig, true_parameters, param_mesh))
+    output_file <- gsub(pattern = "([0-9]{1})\\.([0-9])",
+                        replacement = "\\1p\\2",
+                        x = sprintf("out/llhd-profiles-%.2f.png",
+                                    infConfig$inferenceTime))
+    output_figure <- llhd_profile_figure(infConfig,
+                                         true_parameters,
+                                         param_mesh)
+    ggsave(output_file,
+           output_figure)
   }
 
   ## The events are parsed into a data frame so that we can draw the LTT plot to
