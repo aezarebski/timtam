@@ -21,7 +21,7 @@ construction is managed by =src/make-json-config.R=.
 The estimates of the prevalence through time based on both the true parameters
 used in the simulation and the estimated values.
 
-[[./out/llhd-profiles-11.00.png]]
+[[./out/llhd-profiles-15p00.png]]
 
 The LLHD profiles based on the final data set collected.
 
