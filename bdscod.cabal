@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.2.12
+version:             0.1.2.13
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -27,10 +27,9 @@ library
                , bytestring >= 0.10
                , deepseq >= 1.4.4.0
                , cassava >= 0.5
-               , epi-sim >= 0.2.0.1
+               , epi-sim
                , vector
                , aeson
-               , epi-types >= 0.2.1.2
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs -Wmissing-signatures -threaded -O2 -fwarn-incomplete-patterns
   -- ghc-options:        
@@ -47,8 +46,7 @@ executable manceau-comparison
       base >=4.7 && <5
     , bytestring
     , cassava
-    , epi-types >= 0.2.1.2
-    , epi-sim >= 0.2.0.1
+    , epi-sim
     , bdscod
     , hspec
     , vector
@@ -69,8 +67,7 @@ executable simulation-study
     , cassava
     , containers >= 0.6
     , directory
-    , epi-sim >= 0.2.0.1
-    , epi-types >= 0.2.1.2
+    , epi-sim
     , bdscod
     , hspec
     , vector
@@ -90,8 +87,7 @@ executable simulation-study-time-series
     , bytestring
     , cassava
     , directory
-    , epi-sim >= 0.2.0.1
-    , epi-types >= 0.2.1.2
+    , epi-sim
     , hmatrix >= 0.20.0.0
     , hmatrix-gsl >= 0.19.0.1
     , mtl >= 2.2
@@ -110,8 +106,7 @@ executable simulation-study-time-dependent-rates
     , bytestring
     , aeson
     , cassava
-    , epi-types >= 0.2.1.2
-    , epi-sim >= 0.2.0.1
+    , epi-sim
     , bdscod
   default-language: Haskell2010
 
@@ -129,11 +124,10 @@ executable timing-evaluation
                 , aeson
                 , bdscod
                 , bytestring       >= 0.10
-                , criterion        == 1.5.6.2
+                , criterion
                 , cassava >= 0.5
                 , deepseq          >= 1.4.4.0
-                , epi-types >= 0.2.1.2
-                , epi-sim >= 0.2.0.1
+                , epi-sim
                 , statistics       >= 0.15
   default-language: Haskell2010
 
@@ -149,8 +143,7 @@ test-suite tests
   build-depends:
       base >=4.7 && <5
     , bdscod
-    , epi-sim >= 0.2.0.1
-    , epi-types >= 0.2.1.2
+    , epi-sim
     , hmatrix >= 0.20.0.0
     , hmatrix-gsl >= 0.19.0.1
     , hspec

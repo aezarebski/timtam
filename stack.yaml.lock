@@ -6,29 +6,18 @@
 packages:
 - completed:
     name: epi-sim
-    version: 0.2.0.1
+    version: 0.2.1.0
     git: https://github.com/aezarebski/epi-sim.git
     pantry-tree:
-      size: 1980
-      sha256: c963835b96541e52d40308f2cd8bf67488ad2369730f164bfac6c4214a570107
-    commit: fa7c244c5eb2dba46abf9d67d78b4465954c36a4
+      size: 2282
+      sha256: 33193d6303669a5b4fdd8c42cd2d830f54594b83558f2784c50fa2b02a55c874
+    commit: cd78584d1ba70b4eac29ea710147b11132f7c82c
   original:
     git: https://github.com/aezarebski/epi-sim.git
-    commit: fa7c244c5eb2dba46abf9d67d78b4465954c36a4
-- completed:
-    name: epi-types
-    version: 0.2.1.2
-    git: https://github.com/aezarebski/epi-types.git
-    pantry-tree:
-      size: 812
-      sha256: 9b475bf2e17c17d5923e9ba0a1e549f69571c1955a926cc57cf6bccb33075bae
-    commit: 8f7658f6f42b1d1e5c486d9ae70850cb4d75844b
-  original:
-    git: https://github.com/aezarebski/epi-types.git
-    commit: 8f7658f6f42b1d1e5c486d9ae70850cb4d75844b
+    commit: cd78584d1ba70b4eac29ea710147b11132f7c82c
 snapshots:
 - completed:
-    size: 492015
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/8.yaml
-    sha256: 926bc3d70249dd0ba05277ff00943c0addb35b627cb641752669e7cf771310d0
-  original: lts-15.8
+    size: 532386
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/17.yaml
+    sha256: d3ee1ae797cf63189c95cf27f00700304946c5cb3c1e6a82001cd6584a221e1b
+  original: lts-16.17

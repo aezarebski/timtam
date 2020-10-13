@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.2.13 
+
+- Remove dependency on `epi-types` in favour of the updated `epi-sim` and update
+  the resolver used by stack.
+
 ## 0.1.2.12 
 
 - Make the specification of the LLHD profiles in

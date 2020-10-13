@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-15.8
+resolver: lts-16.17
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,9 +41,7 @@ packages:
 #
 extra-deps:
   - git: https://github.com/aezarebski/epi-sim.git
-    commit: fa7c244c5eb2dba46abf9d67d78b4465954c36a4
-  - git: https://github.com/aezarebski/epi-types.git
-    commit: 8f7658f6f42b1d1e5c486d9ae70850cb4d75844b
+    commit: cd78584d1ba70b4eac29ea710147b11132f7c82c
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
