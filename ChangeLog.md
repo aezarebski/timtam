@@ -2,8 +2,9 @@
 
 ## 0.1.2.13 
 
-- Remove dependency on `epi-types` in favour of the updated `epi-sim` and update
-  the resolver used by stack.
+- Fetch `epi-sim` as a tarball from hackage rather than using the version on
+  github. Remove dependency on `epi-types` and update the resolver used by
+  stack.
 
 ## 0.1.2.12 
 
