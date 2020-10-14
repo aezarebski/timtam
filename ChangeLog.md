@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.1.2.13 
+
+- Fetch `epi-sim` as a tarball from hackage rather than using the version on
+  github. Remove dependency on `epi-types` and update the resolver used by
+  stack.
+
 ## 0.1.2.12 
 
 - Make the specification of the LLHD profiles in
