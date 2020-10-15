@@ -4,6 +4,7 @@ library(reshape2)
 library(magrittr)
 library(purrr)
 library(jsonlite)
+library(scales)
 
 
 x1 <- read.csv("fobber.csv") %>% rename(bdscodMeanSeconds = Mean)
@@ -73,18 +74,31 @@ sink()
 ## TODO Include the complexity estimates as annotations on the figures to make
 ## it clear what these are.
 
-facet_label_map <- c(bdscodMeanSeconds = "BDSCOD",
-                     popsizeMeanSeconds = "Manceau et al (2020)")
+facet_label_map <- c(bdscodMeanSeconds = "TimTam",
+                     popsizeMeanSeconds = "Manceau")
 
-g <- ggplot(data = plot_df, mapping = aes(x = Size, y = value)) +
-    geom_point() +
-    geom_line(data = plot_df_2) +
-    facet_wrap(~variable,
-               scales = "free_y",
-               labeller = labeller(variable = facet_label_map)) +
-    labs(x = "Size of dataset",
-         y = "Mean evaluation time (seconds)") +
-    theme_classic()
+pseudo_points <- plot_df %>%
+  filter(variable == "bdscodMeanSeconds") %>%
+  mutate(variable = "popsizeMeanSeconds")
+
+
+g <- ggplot(data = plot_df,
+            mapping = aes(x = Size, y = value)) +
+  geom_point(shape = 1) +
+  geom_line(data = plot_df_2) +
+  geom_point(data = pseudo_points,
+             shape = 1,
+             colour = "grey") +
+  facet_wrap(~variable,
+             scales = "free_y",
+             labeller = labeller(variable = facet_label_map)) +
+  labs(x = "Number of observed events",
+       y = "Mean evaluation time (seconds)") +
+  scale_y_continuous(labels = number) +
+  theme_classic() +
+  theme(
+    strip.background = element_blank()
+  )
 
 ## print(g)
 ggsave("out/profiles.png", g, height = 10.5, width = 14.8, units = "cm")
