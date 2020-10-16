@@ -45,10 +45,6 @@ summary(lm(formula = popSimLlhd ~ bdscodLlhd,
            data = plot_df))
 sink()
 
-lm_rsquared <- summary(lm(formula = popSimLlhd ~ bdscodLlhd,
-           data = plot_df))$r.squared
-lm_annotation <- TeX(sprintf("Linear model $R^2 = %.3f$", lm_rsquared))
-
 ## We make a scatter plot comparing the LLHDs from the two evaluation strategies
 ## to make sure that the new approximation is accurate. We compute the limits
 ## manually so we can set them to the same values to improve the clarity of the
@@ -60,44 +56,51 @@ plot_upper_lim <- llhd_range[2] %>% divide_by(10) %>% ceiling() %>% multiply_by(
 llhd_comparison <- ggplot(data = plot_df,
                           mapping = aes(x = bdscodLlhd,
                                         y = popSimLlhd)) +
-  geom_smooth(method = "lm", linetype = "dashed", colour = "grey", size = 0.3, alpha = 0.2) +
-  geom_abline(intercept = 0, slope = 1, linetype = "solid", size = 0.3) +
-  geom_point(size = 1) +
-  annotate(geom = "text",
-           x = -50, y = -110,
-           label = lm_annotation,
-           size = 2) +
-  labs(x = "BDSCOD log-likelihood",
-       y = "Manceau et al (2020)\nlog-likelihood") +
+  geom_smooth(method = "lm",
+              linetype = "solid",
+              colour = "black",
+              se = FALSE,
+              size = 0.3) +
+  geom_abline(intercept = 0,
+              slope = 1,
+              linetype = "dashed",
+              colour = "grey",
+              size = 0.3) +
+  geom_point(shape = 1,
+             size = 1) +
+  labs(x = "TimTam log-likelihood",
+       y = "Manceau log-likelihood") +
   coord_fixed() +
   xlim(plot_lower_lim, plot_upper_lim) +
   ylim(plot_lower_lim, plot_upper_lim) +
   theme_classic() +
-  theme(axis.title = element_text(size = 5),
-        axis.text = element_text(size = 5),
-        axis.line = element_line(size = 0.2))
+  theme(axis.title = element_text(face = "bold"))
 
-ggsave("out/llhd-comparison.png", llhd_comparison, height = 5.25, width = 7.4, units = "cm")
-ggsave("out/llhd-comparison.pdf", llhd_comparison, height = 5.25, width = 7.4, units = "cm")
+## Using cowplot to combine the figures did not work very well so we save the
+## figures to every useful format and then we use inkscape to combine them
+## manually.
+ggsave("out/llhd-comparison.png", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
+ggsave("out/llhd-comparison.pdf", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
+ggsave("out/llhd-comparison.svg", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
 
 truncation_parameter_trend <-
-    ggplot(data = plot_df,
-           mapping = aes(x = size,
-                         y = truncationParameter)) +
-    geom_smooth(method = "lm", colour = "grey", size = 0.3, alpha = 0.2) +
-    geom_point(size = 1) +
-    labs(x = "Size of dataset",
-         y = TeX("Truncation parameter, $N$")) +
-    theme_classic() +
-    theme(axis.title = element_text(size = 5),
-          axis.text = element_text(size = 5),
-          axis.line = element_line(size = 0.2))
+  ggplot(data = plot_df,
+         mapping = aes(x = size,
+                       y = truncationParameter)) +
+  geom_smooth(method = "lm",
+              colour = "black",
+              se = FALSE,
+              size = 0.3) +
+  geom_point(shape = 1,
+             size = 1) +
+  labs(x = "Number of observed events",
+       y = "Truncation parameter") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"))
 
-ggsave("out/truncation-comparison.png", truncation_parameter_trend, height = 5.25, width = 7.4, units = "cm")
-ggsave("out/truncation-comparison.pdf", truncation_parameter_trend, height = 5.25, width = 7.4, units = "cm")
-
-comb_plot <- plot_grid(llhd_comparison, truncation_parameter_trend, ncol = 2, labels = c("A", "B"))
-
-
-ggsave("out/bdscod-popsize-comparison.png", comb_plot, height = 10.5, width = 14.8, units = "cm")
-ggsave("out/bdscod-popsize-comparison.pdf", comb_plot, height = 10.5, width = 14.8, units = "cm")
+## Using cowplot to combine the figures did not work very well so we save the
+## figures to every useful format and then we use inkscape to combine them
+## manually.
+ggsave("out/truncation-comparison.png", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
+ggsave("out/truncation-comparison.pdf", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
+ggsave("out/truncation-comparison.svg", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
