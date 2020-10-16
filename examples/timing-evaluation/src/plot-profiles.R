@@ -71,22 +71,19 @@ sink()
 ## Now we actually put together the plot so we can see what the times look like
 ## side by side.
 
-## TODO Include the complexity estimates as annotations on the figures to make
-## it clear what these are.
-
 facet_label_map <- c(bdscodMeanSeconds = "TimTam",
                      popsizeMeanSeconds = "Manceau")
 
-pseudo_points <- plot_df %>%
+pseudo_points_df <- plot_df %>%
   filter(variable == "bdscodMeanSeconds") %>%
   mutate(variable = "popsizeMeanSeconds")
 
-
 g <- ggplot(data = plot_df,
             mapping = aes(x = Size, y = value)) +
-  geom_point(shape = 1) +
+  geom_point(shape = 1,
+             size = 1) +
   geom_line(data = plot_df_2) +
-  geom_point(data = pseudo_points,
+  geom_point(data = pseudo_points_df,
              shape = 1,
              colour = "grey") +
   facet_wrap(~variable,
@@ -97,9 +94,11 @@ g <- ggplot(data = plot_df,
   scale_y_continuous(labels = number) +
   theme_classic() +
   theme(
-    strip.background = element_blank()
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
   )
 
 ## print(g)
-ggsave("out/profiles.png", g, height = 10.5, width = 14.8, units = "cm")
-ggsave("out/profiles.pdf", g, height = 10.5, width = 14.8, units = "cm")
+ggsave("out/profiles.png", g, height = 7.5, width = 14.8, units = "cm")
+ggsave("out/profiles.pdf", g, height = 7.5, width = 14.8, units = "cm")
