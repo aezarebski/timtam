@@ -29,7 +29,7 @@ llhd_profile_figure <- function(infConfig, true_parameters, param_mesh) {
         pluck(1)
 
     make_plot_df <- function(llhds,param_kind) {
-        if (!is.element(el = param_kind, set = c("simulation", "estimated"))) {
+        if (!is.element(el = param_kind, set = c("Simulation", "Estimated"))) {
             stop("Bad parameter kind: ", param_kind)
         }
 
@@ -45,18 +45,30 @@ llhd_profile_figure <- function(infConfig, true_parameters, param_mesh) {
                    llhd = llhds)
     }
 
-    plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "simulation"),
-                     make_plot_df(all_llhd_vals[[2]], "estimated"))
+    plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "Simulation"),
+                     make_plot_df(all_llhd_vals[[2]], "Estimated"))
+
+    my_ylims <- max(plot_df$llhd) + c(-10, 2)
 
     ggplot(plot_df,
-           aes(x = parameter_value, y = llhd, linetype = parameter_kind)) +
-        geom_line() +
-        geom_vline(data = true_parameters, mapping = aes(xintercept = parameter_value)) +
-        facet_wrap(~parameter_name, scales = "free_x") +
-        labs(x = "Parameter value",
-             y = "Log-likelihood",
-             linetype = "Parameter kind") +
-        theme_classic()
+           aes(x = parameter_value, y = llhd, colour = parameter_kind)) +
+      geom_line() +
+      geom_vline(data = true_parameters, mapping = aes(xintercept = parameter_value)) +
+      facet_wrap(~parameter_name, scales = "free_x") +
+      scale_color_manual(values = c("#7fc97f", "#beaed4")) +
+      labs(x = "Parameter value",
+           y = "Log-likelihood",
+           colour = "Parameter Kind") +
+      ylim(my_ylims) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        strip.text = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        panel.spacing = unit(2, "lines"),
+        legend.position = "top",
+        legend.title = element_text(face = "bold")
+      )
 }
 
 
@@ -168,7 +180,7 @@ main <- function() {
   for (infConfig in config$inferenceConfigurations) {
     output_file <- gsub(pattern = "([0-9]{1})\\.([0-9])",
                         replacement = "\\1p\\2",
-                        x = sprintf("out/llhd-profiles-%.2f.png",
+                        x = sprintf("out/llhd-profiles-%.2f.pdf",
                                     infConfig$inferenceTime))
     output_figure <- llhd_profile_figure(infConfig,
                                          true_parameters,
@@ -209,7 +221,11 @@ main <- function() {
     labs(x = "Time", y = "Infection prevalence", colour = "Parameter Kind") +
     scale_color_manual(values = c("#7fc97f", "#beaed4")) +
     theme_classic() +
-    theme(legend.position = "bottom")
+    theme(
+      legend.position = c(0.2,0.9),
+      legend.title = element_text(face = "bold"),
+      axis.title = element_text(face = "bold")
+    )
 
   ## We save the figure twice so that there is both a PNG and a PDF available
   ## incase we need both.
@@ -229,4 +245,3 @@ main <- function() {
 if (!interactive()) {
   main()
 }
-
