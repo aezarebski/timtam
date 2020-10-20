@@ -16,7 +16,8 @@ import qualified Data.Aeson as Json
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
-import Data.List (intercalate, intersperse)
+import Data.List (intercalate, intersperse,nub)
+import Data.Maybe (fromMaybe)
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
   ( EpidemicEvent(..)
@@ -140,6 +141,16 @@ simulatedObservations infConfig@InferenceConfiguration{..} simEvents = do
     Nothing -> throwError "Failed to simulate observations."
 
 
+-- | If there is a unique timed value return that. This is used to make it
+-- easier to extract the values of timed parameters so that you don't need to
+-- store all of them.
+uniqueTimedValue :: Eq x => Timed x -> Maybe x
+uniqueTimedValue (Timed txs) = case txs of
+  [] -> Nothing
+  txs' -> let xs = nub [snd tx | tx <- txs']
+              isUnique = 1 == length xs
+            in if isUnique then Just (head xs) else Nothing
+
 -- | Evaluate the NB posterior approximation of the prevalence for a single
 -- point in parameter space and the LLHD over a list of points and write all of
 -- the results to CSV.
@@ -147,16 +158,27 @@ generateLlhdProfileCurves :: InferenceConfiguration
                           -> [Observation]
                           -> (Parameters,ParameterKind,[Parameters])
                           -> Simulation ()
-generateLlhdProfileCurves InferenceConfiguration{..} obs (singleParams,paramKind,evalParams) =
+generateLlhdProfileCurves InferenceConfiguration {..} obs (singleParams, paramKind, evalParams) =
   let comma = BBuilder.charUtf8 ','
       parametersUsed = show paramKind
       parametersUsed' = BBuilder.stringUtf8 parametersUsed
       llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
-      nBVal = pure (parametersUsed,snd $ llhdAndNB obs singleParams initLlhdState)
-      doublesAsString = BBuilder.toLazyByteString . mconcat . intersperse comma . (parametersUsed':) . map BBuilder.doubleDec
-  in do
-    liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
-    liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
+      nBValAndParams =
+        pure
+          ( parametersUsed
+          , snd $ llhdAndNB obs singleParams initLlhdState
+          , show $ getLambda singleParams
+          , show $ getMu singleParams
+          , show $ getPsi singleParams
+          , show <$> uniqueTimedValue $ getRhos singleParams
+          , show $ getOmega singleParams
+          , show <$> uniqueTimedValue $ getNus singleParams)
+      doublesAsString =
+        BBuilder.toLazyByteString .
+        mconcat .
+        intersperse comma . (parametersUsed' :) . map BBuilder.doubleDec
+   in do liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+         liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBValAndParams)
 
 -- | Run the evaluation of the log-likelihood profiles on a given set of
 -- observations at the parameters used to simulate the data set and write the
