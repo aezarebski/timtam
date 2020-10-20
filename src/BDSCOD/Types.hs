@@ -10,6 +10,12 @@ module BDSCOD.Types
   , putRhos
   , putOmega
   , putNus
+  , getLambda
+  , getMu
+  , getPsi
+  , getRhos
+  , getOmega
+  , getNus
   , UnpackedParameters
   , unpackParameters
   , packParameters
@@ -63,26 +69,44 @@ putLambda :: Parameters -> Rate -> Parameters
 putLambda (Parameters (_, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) pLambda =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
+-- | The getLambda function returns the lambda rate from a parameter vector.
+getLambda :: Parameters -> Rate
+getLambda (Parameters (l, _, _, _, _, _)) = l
+
 putMu :: Parameters -> Rate -> Parameters
 putMu (Parameters (pLambda, _, pPsi, Timed pRhos, pOmega, Timed pNus)) pMu =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+getMu :: Parameters -> Rate
+getMu (Parameters (_, m, _, _, _, _)) = m
 
 putPsi :: Parameters -> Rate -> Parameters
 putPsi (Parameters (pLambda, pMu, _, Timed pRhos, pOmega, Timed pNus)) pPsi =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
+getPsi :: Parameters -> Rate
+getPsi (Parameters (_, _, p, _, _, _)) = p
+
 putRhos :: Parameters -> Timed Probability -> Parameters
 putRhos (Parameters (pLambda, pMu, pPsi, _, pOmega, Timed pNus)) (Timed pRhos) =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
+
+getRhos :: Parameters -> Timed Probability
+getRhos (Parameters (_, _, _, trs, _, _)) = trs
 
 putOmega :: Parameters -> Rate -> Parameters
 putOmega (Parameters (pLambda, pMu, pPsi, Timed pRhos, _, Timed pNus)) pOmega =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
+getOmega :: Parameters -> Rate
+getOmega (Parameters (_, _, _, _, o, _)) = o
+
 putNus :: Parameters -> Timed Probability -> Parameters
 putNus (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, _)) (Timed pNus) =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
+getNus :: Parameters -> Timed Probability
+getNus (Parameters (_, _, _, _, _, tns)) = tns
 
 type UnpackedParameters
    = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
