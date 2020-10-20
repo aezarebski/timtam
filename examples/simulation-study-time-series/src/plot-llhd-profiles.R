@@ -9,15 +9,21 @@ library(reshape2)
 
 
 
-#' Returns a plot showing the LLHD profiles fro a given inference configuration.
+#' Returns a plot showing the log-likelihood cross sections fro a given
+#' inference configuration.
 #'
 #' @param infConfig is a list which points to the CSV with the profile values
-#' @param true_parameters is a list with the true parameters to draw as a
+#' @param true_parameters is a data frame with the true parameters to draw as a
 #'   comparison
+#' @param estimated_parameters is a data frame with the estimated parameters to
+#'   include in the cross sections.
 #' @param param_mesh a list encoding the parameter values used in the LLHD
 #'   profile.
 #'
-llhd_profile_figure <- function(infConfig, true_parameters, param_mesh) {
+llhd_profile_figure <- function(infConfig,
+                                true_parameters,
+                                estimated_parameters,
+                                param_mesh) {
     parse_doubles <- function(string, sep) {
         map(str_split(string = string, pattern = sep), as.double)
     }
@@ -50,12 +56,20 @@ llhd_profile_figure <- function(infConfig, true_parameters, param_mesh) {
 
     my_ylims <- max(plot_df$llhd) + c(-10, 2)
 
+    estimated_hex_colour <- "#7fc97f"
+    true_hex_colour <- "#beaed4"
+
     ggplot(plot_df,
            aes(x = parameter_value, y = llhd, colour = parameter_kind)) +
       geom_line() +
-      geom_vline(data = true_parameters, mapping = aes(xintercept = parameter_value)) +
+      geom_vline(data = true_parameters,
+                 mapping = aes(xintercept = parameter_value),
+                 colour = true_hex_colour) +
+      geom_vline(data = estimated_parameters,
+                 mapping = aes(xintercept = parameter_value),
+                 colour = estimated_hex_colour) +
       facet_wrap(~parameter_name, scales = "free_x") +
-      scale_color_manual(values = c("#7fc97f", "#beaed4")) +
+      scale_color_manual(values = c(estimated_hex_colour, true_hex_colour)) +
       labs(x = "Parameter value",
            y = "Log-likelihood",
            colour = "Parameter Kind") +
@@ -98,11 +112,11 @@ tree_ltt_df <- function(inf_config, all_events) {
   return(tree_ltt)
 }
 
-## Read the parameters of the neative binomial distribution as used by BDSCOD.
-## NOTE: The parameterisation is different between BDSCOD and R.
-read_nb_params <- function(nb_csv) {
-  if (file.exists(nb_csv)) {
-    x <- read.table(nb_csv,
+## Read the NB of the posterior distribution and the point estimate of the
+## parameters from a CSV file.
+read_nb_and_params <- function(nb_and_params_csv) {
+  if (file.exists(nb_and_params_csv)) {
+    x <- read.table(nb_and_params_csv,
                     header = FALSE,
                     sep = ",") %>%
       set_names(c("parameter_kind",
@@ -113,13 +127,23 @@ read_nb_params <- function(nb_csv) {
                   "maybe_rho_prob",
                   "omega_rate",
                   "maybe_nu_prob"))
-    tmp <- x$negative_binomial %>%
-      str_split(" ") %>%
-      lapply(function(v) set_names(as.list(as.double(tail(v,2))), c("size", "inv_prob")))
-    map2(x$parameter_kind, tmp, function(a, b) {b$parameter_kind <- a; return(b)})
+    return(x)
   } else {
-    stop("Could not find CSV: ", nb_csv)
+    stop("Could not find CSV: ", nb_and_params_csv)
   }
+}
+
+## Read the parameters of the neative binomial distribution as used by BDSCOD.
+## NOTE: The parameterisation is different between BDSCOD and R.
+read_nb_params <- function(nb_csv) {
+  x <- read_nb_and_params(nb_csv)
+  tmp <- x$negative_binomial %>%
+    str_split(" ") %>%
+    lapply(function(v) set_names(as.list(as.double(tail(v,2))),
+                                 c("size", "inv_prob")))
+  map2(x$parameter_kind,
+       tmp,
+       function(a, b) {b$parameter_kind <- a; return(b)})
 }
 
 #' Return a dataframe with the estimate of the prevalence for a particular data
@@ -156,6 +180,7 @@ main <- function() {
                        variable.name = "parameter_name",
                        value.name = "parameter_value",
                        id.vars = c()))
+
   param_mesh <- list(
     lambda_mesh = seq(from = config$acLlhdProfileMesh$lpmLambdaBounds[[1]],
                       to = config$acLlhdProfileMesh$lpmLambdaBounds[[2]],
@@ -189,8 +214,31 @@ main <- function() {
                         replacement = "\\1p\\2",
                         x = sprintf("out/llhd-profiles-%.2f.pdf",
                                     infConfig$inferenceTime))
+
+
+    ## Because we want to include the estimated parameters in the log-likelihood
+    ## cross sections we need to parse them and store them in a suitable data
+    ## frame.
+    boxed_estimated_values <- read_nb_and_params(infConfig$pointEstimatesCsv) %>%
+      filter(parameter_kind == "EstimatedParameters") %>%
+      select(matches("(prob|rate)$"))
+    unboxer_helper <- function(x) {
+      as.numeric(strsplit(x = x, split = " ")[[1]][2])
+    }
+    estimated_values <- c(
+      boxed_estimated_values$lambda_rate,
+      boxed_estimated_values$mu_rate,
+      boxed_estimated_values$psi_rate,
+      unboxer_helper(boxed_estimated_values$maybe_rho_prob),
+      boxed_estimated_values$omega_rate,
+      unboxer_helper(boxed_estimated_values$maybe_nu_prob)
+    )
+    estimated_parameters <- data.frame(parameter_name = true_parameters$parameter_name,
+                                       parameter_value = estimated_values)
+
     output_figure <- llhd_profile_figure(infConfig,
                                          true_parameters,
+                                         estimated_parameters,
                                          param_mesh)
     ggsave(output_file,
            output_figure)
