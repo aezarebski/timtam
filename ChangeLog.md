@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.2.14
+
+- Include the estimated parameter values in the log-likelihood cross-section
+  figures.
+
 ## 0.1.2.13 
 
 - Fetch `epi-sim` as a tarball from hackage rather than using the version on
