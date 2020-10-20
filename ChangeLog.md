@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.2.15
+
+- Include the size of the simulation that is generated at each observation time
+  in the time series simulation.
+
 ## 0.1.2.14
 
 - Include the estimated parameter values in the log-likelihood cross-section
