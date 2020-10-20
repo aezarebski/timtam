@@ -98,14 +98,21 @@ tree_ltt_df <- function(inf_config, all_events) {
   return(tree_ltt)
 }
 
-## Read the parameters of the neative binomial distribution as used by BDSCOD
+## Read the parameters of the neative binomial distribution as used by BDSCOD.
 ## NOTE: The parameterisation is different between BDSCOD and R.
 read_nb_params <- function(nb_csv) {
   if (file.exists(nb_csv)) {
     x <- read.table(nb_csv,
                     header = FALSE,
                     sep = ",") %>%
-      set_names(c("parameter_kind", "negative_binomial"))
+      set_names(c("parameter_kind",
+                  "negative_binomial",
+                  "lambda_rate",
+                  "mu_rate",
+                  "psi_rate",
+                  "maybe_rho_prob",
+                  "omega_rate",
+                  "maybe_nu_prob"))
     tmp <- x$negative_binomial %>%
       str_split(" ") %>%
       lapply(function(v) set_names(as.list(as.double(tail(v,2))), c("size", "inv_prob")))
