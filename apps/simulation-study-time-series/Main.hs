@@ -165,8 +165,9 @@ generateLlhdProfileCurves InferenceConfiguration {..} obs (singleParams, paramKi
       llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
       nBValAndParams =
         pure
-          ( parametersUsed
-          , snd $ llhdAndNB obs singleParams initLlhdState
+          ( parametersUsed    -- the kind of parameter considered
+          , show $ length obs -- the number of observations
+          , snd $ llhdAndNB obs singleParams initLlhdState -- the posterior NB at present
           , show $ getLambda singleParams
           , show $ getMu singleParams
           , show $ getPsi singleParams

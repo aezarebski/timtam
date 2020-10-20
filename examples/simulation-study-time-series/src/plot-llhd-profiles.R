@@ -120,6 +120,7 @@ read_nb_and_params <- function(nb_and_params_csv) {
                     header = FALSE,
                     sep = ",") %>%
       set_names(c("parameter_kind",
+                  "dataset_size",
                   "negative_binomial",
                   "lambda_rate",
                   "mu_rate",
