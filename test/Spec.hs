@@ -6,6 +6,7 @@ import BDSCOD.Types
 import BDSCOD.Utility
 import Control.Monad (replicateM)
 import Data.Maybe (fromJust, isJust)
+import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
 import Epidemic.Types.Events
@@ -14,6 +15,7 @@ import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
 import Numeric.GSL.SimulatedAnnealing
 import Numeric.LinearAlgebra.HMatrix
+import System.Random.MWC
 import Test.Hspec
 
 -- | Check if @y@ is withing @delta@ of @x@
@@ -428,18 +430,40 @@ testParameterUpdate =
               (params1 /= params3) `shouldBe` True
               (params1 == putRhos params3 (Timed [(1000, 0.5)])) `shouldBe` True
 
+testMWCSeeding :: SpecWith ()
+testMWCSeeding = do
+  describe "Testing MWC seeding" $
+    it "test" $ do
+      True `shouldBe` True
+  
+-- import System.Random.MWC
+-- import Data.Vector.Unboxed as Unboxed
+ 
+-- example :: IO (Double,Double)
+-- example = do
+--   gen <- create
+--   x1 <- uniform gen
+--   x2 <- uniform gen
+--   gen' <- initialise (Unboxed.fromList [1,2,3])
+--   y1 <- uniform gen'
+--   y2 <- uniform gen'
+--   gen'' <- initialise (Unboxed.fromList [1,2,3])
+--   z <- uniform gen''
+--   return (x1,x2,y1,y2,z) 
+
 
 main :: IO ()
 main = hspec $ do
-  testNbPGF
-  testPdeStatistics
-  testp0
-  testRr
-  testPdeGF
-  testLlhd
-  testConversion
-  testImpossibleParameters
-  testInhomBDSLlhd
-  testConditioningProbability
-  testHmatrixUsage
-  testParameterUpdate
+  -- testNbPGF
+  -- testPdeStatistics
+  -- testp0
+  -- testRr
+  -- testPdeGF
+  -- testLlhd
+  -- testConversion
+  -- testImpossibleParameters
+  -- testInhomBDSLlhd
+  -- testConditioningProbability
+  -- testHmatrixUsage
+  -- testParameterUpdate
+  testMWCSeeding
