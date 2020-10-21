@@ -2,6 +2,8 @@
 
 ## 0.1.2.15
 
+- Fix the seed used when simulating the data to ensure that the results are
+  reproducible and reduce to only two inference times.
 - Include the size of the simulation that is generated at each observation time
   in the time series simulation.
 
