@@ -430,6 +430,10 @@ testParameterUpdate =
               (params1 /= params3) `shouldBe` True
               (params1 == putRhos params3 (Timed [(1000, 0.5)])) `shouldBe` True
 
+-- | This test case looks at how to set the seed when using @mwc-random@. We
+-- care about this because we want to be able to generate reproducible
+-- simulations without being restricted to the fixed seed that is the default
+-- value.
 testMWCSeeding :: SpecWith ()
 testMWCSeeding = do
   describe "Testing MWC seeding" $ do
