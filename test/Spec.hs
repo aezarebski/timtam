@@ -432,24 +432,29 @@ testParameterUpdate =
 
 testMWCSeeding :: SpecWith ()
 testMWCSeeding = do
-  describe "Testing MWC seeding" $
-    it "test" $ do
-      True `shouldBe` True
-  
--- import System.Random.MWC
--- import Data.Vector.Unboxed as Unboxed
- 
--- example :: IO (Double,Double)
--- example = do
---   gen <- create
---   x1 <- uniform gen
---   x2 <- uniform gen
---   gen' <- initialise (Unboxed.fromList [1,2,3])
---   y1 <- uniform gen'
---   y2 <- uniform gen'
---   gen'' <- initialise (Unboxed.fromList [1,2,3])
---   z <- uniform gen''
---   return (x1,x2,y1,y2,z) 
+  describe "Testing MWC seeding" $ do
+    it "test create works as expected" $ do
+      gen <- create
+      x1 <- (uniform gen :: IO Double)
+      x2 <- (uniform gen :: IO Double)
+      gen' <- create
+      x1' <- (uniform gen' :: IO Double)
+      (x1 /= x2) `shouldBe` True
+      (x1 == x1') `shouldBe` True
+    it "test initialise works as expected" $ do
+      xGen <- create
+      x1 <- (uniform xGen :: IO Double)
+      yGen <- initialize (Unboxed.fromList [1,2,3])
+      y1 <- (uniform yGen :: IO Double)
+      (x1 /= y1) `shouldBe` True
+      y2 <- (uniform yGen :: IO Double)
+      (y1 /= y2) `shouldBe` True
+      zGen <- initialize (Unboxed.fromList [1,2,3])
+      z1 <- (uniform zGen :: IO Double)
+      (y1 == z1) `shouldBe` True
+      wGen <- initialize (Unboxed.fromList [3,2,1])
+      w1 <- (uniform wGen :: IO Double)
+      (z1 /= w1) `shouldBe` True
 
 
 main :: IO ()
