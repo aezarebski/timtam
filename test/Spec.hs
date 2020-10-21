@@ -459,16 +459,16 @@ testMWCSeeding = do
 
 main :: IO ()
 main = hspec $ do
-  -- testNbPGF
-  -- testPdeStatistics
-  -- testp0
-  -- testRr
-  -- testPdeGF
-  -- testLlhd
-  -- testConversion
-  -- testImpossibleParameters
-  -- testInhomBDSLlhd
-  -- testConditioningProbability
-  -- testHmatrixUsage
-  -- testParameterUpdate
+  testNbPGF
+  testPdeStatistics
+  testp0
+  testRr
+  testPdeGF
+  testLlhd
+  testConversion
+  testImpossibleParameters
+  testInhomBDSLlhd
+  testConditioningProbability
+  testHmatrixUsage
+  testParameterUpdate
   testMWCSeeding
