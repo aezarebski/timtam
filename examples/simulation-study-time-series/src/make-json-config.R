@@ -9,7 +9,7 @@ simulation_duration <- 17
 ## We want to see how the inference changes over times so we set several time
 ## points at which to generate estimates. This vector is used to specify when
 ## they occur.
-inference_times <- seq(from = 7, to = 17, by = 4) 
+inference_times <- seq(from = 12, to = 17, by = 4)
 
 ## These are the values of the parameters used in the simulation, we put them
 ## here so they stand out and we can re-use them in subsequent parts of the
@@ -64,7 +64,7 @@ llhd_profile_mesh <- list(
   lpmLambdaBounds = c(1.2, 1.9),
   lpmMuBounds = c(0.1, 0.9),
   lpmPsiBounds = c(0.10,0.3),
-  lpmOmegaBounds = c(0.15,0.25),
+  lpmOmegaBounds = c(0.15,0.35),
   lpmMeshSize = 100,
   lpmRhoBounds = c(0.10, 0.3),
   lpmNuBounds = c(0.10, 0.2)
