@@ -6,6 +6,7 @@ import BDSCOD.Types
 import BDSCOD.Utility
 import Control.Monad (replicateM)
 import Data.Maybe (fromJust, isJust)
+import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
 import Epidemic.Types.Events
@@ -14,6 +15,7 @@ import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
 import Numeric.GSL.SimulatedAnnealing
 import Numeric.LinearAlgebra.HMatrix
+import System.Random.MWC
 import Test.Hspec
 
 -- | Check if @y@ is withing @delta@ of @x@
@@ -428,6 +430,36 @@ testParameterUpdate =
               (params1 /= params3) `shouldBe` True
               (params1 == putRhos params3 (Timed [(1000, 0.5)])) `shouldBe` True
 
+-- | This test case looks at how to set the seed when using @mwc-random@. We
+-- care about this because we want to be able to generate reproducible
+-- simulations without being restricted to the fixed seed that is the default
+-- value.
+testMWCSeeding :: SpecWith ()
+testMWCSeeding = do
+  describe "Testing MWC seeding" $ do
+    it "test create works as expected" $ do
+      gen <- create
+      x1 <- (uniform gen :: IO Double)
+      x2 <- (uniform gen :: IO Double)
+      gen' <- create
+      x1' <- (uniform gen' :: IO Double)
+      (x1 /= x2) `shouldBe` True
+      (x1 == x1') `shouldBe` True
+    it "test initialise works as expected" $ do
+      xGen <- create
+      x1 <- (uniform xGen :: IO Double)
+      yGen <- initialize (Unboxed.fromList [1,2,3])
+      y1 <- (uniform yGen :: IO Double)
+      (x1 /= y1) `shouldBe` True
+      y2 <- (uniform yGen :: IO Double)
+      (y1 /= y2) `shouldBe` True
+      zGen <- initialize (Unboxed.fromList [1,2,3])
+      z1 <- (uniform zGen :: IO Double)
+      (y1 == z1) `shouldBe` True
+      wGen <- initialize (Unboxed.fromList [3,2,1])
+      w1 <- (uniform wGen :: IO Double)
+      (z1 /= w1) `shouldBe` True
+
 
 main :: IO ()
 main = hspec $ do
@@ -443,3 +475,4 @@ main = hspec $ do
   testConditioningProbability
   testHmatrixUsage
   testParameterUpdate
+  testMWCSeeding

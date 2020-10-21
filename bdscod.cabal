@@ -27,7 +27,7 @@ library
                , bytestring >= 0.10
                , deepseq >= 1.4.4.0
                , cassava >= 0.5
-               , epi-sim
+               , epi-sim >= 0.2.2.0
                , vector
                , aeson
   default-language:    Haskell2010
@@ -43,7 +43,7 @@ executable manceau-comparison
       apps/manceau-comparison
   ghc-options: 
   build-depends:
-      base >=4.7 && <5
+      base
     , bytestring
     , cassava
     , epi-sim
@@ -61,7 +61,7 @@ executable simulation-study
       apps/simulation-study
   ghc-options: 
   build-depends:
-      base >=4.7 && <5
+      base
     , aeson
     , bytestring
     , cassava
@@ -81,7 +81,7 @@ executable simulation-study-time-series
       apps/simulation-study-time-series
   ghc-options: 
   build-depends:
-      base >=4.7 && <5
+      base
     , aeson
     , bdscod
     , bytestring
@@ -91,6 +91,7 @@ executable simulation-study-time-series
     , hmatrix >= 0.20.0.0
     , hmatrix-gsl >= 0.19.0.1
     , mtl >= 2.2
+    , mwc-random >= 0.14
     , vector
   default-language: Haskell2010
 
@@ -102,7 +103,7 @@ executable simulation-study-time-dependent-rates
       apps/simulation-study-time-dependent-rates
   ghc-options: 
   build-depends:
-      base >=4.7 && <5
+      base
     , bytestring
     , aeson
     , cassava
@@ -125,7 +126,7 @@ executable timing-evaluation
                 , bdscod
                 , bytestring       >= 0.10
                 , criterion
-                , cassava >= 0.5
+                , cassava
                 , deepseq          >= 1.4.4.0
                 , epi-sim
                 , statistics       >= 0.15
@@ -147,5 +148,6 @@ test-suite tests
     , hmatrix >= 0.20.0.0
     , hmatrix-gsl >= 0.19.0.1
     , hspec
+    , mwc-random
     , vector
   default-language: Haskell2010
