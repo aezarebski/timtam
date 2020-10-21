@@ -18,6 +18,7 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
 import Data.List (intercalate, intersperse,nub)
 import Data.Maybe (fromMaybe)
+import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
   ( EpidemicEvent(..)
@@ -33,8 +34,8 @@ import GHC.Generics
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra.Data (linspace, toList)
 import Numeric.LinearAlgebra.HMatrix
-
 import System.Environment (getArgs)
+import System.Random.MWC
 
 -- | These objects define the specifics for an inference evaluation which can be
 -- run at differing points in the simulation to understand how differing amounts
@@ -102,8 +103,10 @@ bdscodConfiguration = do
     Nothing -> throwError "Could not construct BDSCOD configuration"
     (Just config) -> return config
 
--- | Simulate the actual epidemic making sure that the results are acceptable
--- before returning a filtration of the events.
+-- | Simulate the transmission process part of the epidemic making sure that the
+-- results are acceptable in terms of the number of observed events before
+-- returning a filtration of the events, i.e., the data that was availble at
+-- several points in time.
 --
 -- __NOTE__ the filteration must happen before these are processed into
 -- observations since the observations do not accumulate chronologically due to
@@ -111,10 +114,9 @@ bdscodConfiguration = do
 -- present.
 partialSimulatedEpidemic bdscodConfig =
   do
-    -- simulate the epidemic without conditioning because the conditioning code
-    -- assumes there will be psi-samples. Use the system random to get a better
-    -- idea of robustness of the simulation.
-    simEvents <- liftIO $ SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
+    let randomSeed = Unboxed.fromList [1,2,3]
+    gen <- liftIO $ initialize randomSeed
+    simEvents <- liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents gen
     (sizeLowerBound,sizeUpperBound) <- asks simulationSizeBounds
     if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
       then do infTimes <- map inferenceTime <$> asks inferenceConfigurations
