@@ -522,3 +522,4 @@ main = hspec $ do
   testHmatrixUsage
   testParameterUpdate
   testMWCSeeding
+  testAggregationSequenced
