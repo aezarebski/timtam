@@ -1,5 +1,6 @@
 
 import BDSCOD.Conditioning
+import BDSCOD.Aggregation
 import qualified BDSCOD.InhomogeneousBDSLlhd as InhomBDSLlhd
 import BDSCOD.Llhd
 import BDSCOD.Types
@@ -9,6 +10,7 @@ import Data.Maybe (fromJust, isJust)
 import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
+import qualified Epidemic.BDSCOD as EpiBDSCOD
 import Epidemic.Types.Events
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population
@@ -318,6 +320,52 @@ testConversion = do
             ]
        in eventsAsObservations simObsEvents `shouldSatisfy` (== llhdObsEvents)
 
+
+
+
+testAggregationSequenced =
+  let p1 = Person 1
+      p2 = Person 2
+      p3 = Person 3
+      p4 = Person 4
+      allEpiEvents = -- the events of the full epidemic
+        [ Infection 1 p1 p2
+        , Sampling 2 p1
+        , Infection 3 p2 p3
+        , Infection 4 p2 p4
+        , Removal 5 p4
+        , Sampling 6 p3
+        , Sampling 7 p2
+        ]
+      filteredEpiEvents = fromJust $ EpiBDSCOD.observedEvents allEpiEvents -- filter for just the observed epidemic events.
+      obs = -- the observations without aggregation
+        [ (1.0, OBirth)
+        , (1.0, OSample)
+        , (1.0, OBirth)
+        , (3.0, OSample)
+        , (1.0, OSample)
+        ]
+      obs' = eventsAsObservations filteredEpiEvents
+      aggTimes = fromJust $ maybeAggregationTimes [3.5,7.5]
+      aggObsObs =
+        [ (1.0, OBirth)
+        , (2.0, OBirth)
+        , (0.5, OCatastrophe 1)
+        , (4.0, OCatastrophe 2)
+        ]
+      aggObs = AggregatedObservations aggTimes aggObsObs
+      maybeAggObs' = aggregateUnscheduledObservations aggTimes obs
+    in
+    describe "Test aggregation definitions (only sequenced observations)" $ do
+      it "Observations are generated correctly" $ do
+          obs == obs' `shouldBe` True
+          allEpiEvents /= filteredEpiEvents `shouldBe` True
+      it "Aggregation works correctly" $ do
+        isJust maybeAggObs' `shouldBe` True
+        aggObs == fromJust maybeAggObs' `shouldBe` True
+
+
+
 testImpossibleParameters = do
   describe "Test correct handling of impossible parameters" $ do
     it "Test negative birth rate is impossible" $
@@ -393,18 +441,16 @@ bdsSimulations simRates simDuration =
          (a, b) <- pure . probCI $ map numObservations sims
          return $ a < (1 - probUnobserved) && (1 - probUnobserved) < b
 
--- | The tests is non-deterministic so on occasion it may fail. Unless it fails
--- multiple times this does not need further investigation.
 testConditioningProbability :: SpecWith ()
 testConditioningProbability =
-  describe "Test probability of going unobserved is correct" $
+  describe "Test probability of going unobserved is correct" $ do
     it "Test empirical estimate has CI containing value" $ do
-  x <- bdsSimulations (2.0,0.4,0.1) 0.7
-  x `shouldBe` True
-  x' <- bdsSimulations (2.0,0.1,0.4) 0.7
-  x' `shouldBe` True
-  x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
-  x'' `shouldBe` True
+      x <- bdsSimulations (2.0,0.4,0.1) 0.7
+      x `shouldBe` True
+      x' <- bdsSimulations (2.0,0.1,0.4) 0.7
+      x' `shouldBe` True
+      x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
+      x'' `shouldBe` True
 
 testHmatrixUsage :: SpecWith ()
 testHmatrixUsage =
