@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.2.16
+
+- Include the `Aggregation` module for working with aggregated unscheduled
+  observations.
+
 ## 0.1.2.15
 
 - Fix the seed used when simulating the data to ensure that the results are
