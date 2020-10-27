@@ -203,6 +203,10 @@ observeEpidemicThrice simEvents (regInfConfig, regInfConfig', aggInfConfig) = do
 -- regular data this function is the same, the only time it needs to be
 -- different is when using the parameters estimated from the aggregated data
 -- since the parameter space is different.
+--
+-- TODO Other simulation studies read in the parameter range to consider through
+-- the configuration.
+--
 adjustedEvaluationParameters :: AnnotatedParameter -> [Parameters]
 adjustedEvaluationParameters (TrueParameters ps) =
   let meshSize = 100
@@ -348,6 +352,9 @@ replMain = do
 --
 -- =============================================================================
 
+-- | Take a configuration file supplied at the command line and run a simulation
+-- study based on those details. See @simulationStudy@ for details of what is
+-- included in the simulation.
 main :: IO ()
 main = do
   configFilePath <- head <$> getArgs
@@ -377,7 +384,9 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 -- TODO Fix this so that there are only scheduled events (and births) being
 -- considered.
 --
--- TODO Fix this so that only a subset of the parameters are estimated.
+-- TODO Fix this so that only a subset of the parameters are estimated, i.e.,
+-- fix the death rate to a given value which is what is done in the other
+-- simulation studies.
 estimateAggregatedParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateAggregatedParameters deathRate sched obs =
@@ -404,7 +413,9 @@ estimateAggregatedParameters deathRate sched obs =
 --
 -- TODO Fix this so that there are only unscheduled events considered.
 --
--- TODO Fix this so that only a subset of the parameters are estimated.
+-- TODO Fix this so that only a subset of the parameters are estimated, i.e.,
+-- fix the death rate to a given value which is what is done in the other
+-- simulation studies.
 estimateRegularParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateRegularParameters deathRate sched obs =
