@@ -19,10 +19,18 @@ sampling_rate <- 0.2
 occurrence_rate <- 0.0
 
 disaster_params <- list()
-
 catastrophe_params <- list()
 
 
+#' Return a list corresponding to the \code{InferenceConfiguration} from
+#' \code{Main.hs}.
+#'
+#' @param inf_config_name a character label for the inference
+#' @param agg_times_vec a numeric vector of the aggregation times or \code{NULL}
+#'   if there are none.
+#'
+#' TODO Extend this to include both types of scheduled event.
+#'
 inference_configuration <- function(inf_config_name, agg_times_vec) {
     result <- list(
       reconstructedTreeOutputFiles = sprintf(c("out/reconstructed-newick-tree-%s.txt",
@@ -71,6 +79,10 @@ jsonlite::write_json(result,
 
 ## save a copy of the true parameters so they can be read out later rather than
 ## hardcoded.
+##
+## TODO convert this to using a JSON output rather than a CSV because it is
+## neater.
+##
 true_parameters <- data.frame(parameter = c("lambda", "mu"),
                               value = c(birth_rate,death_rate))
 write.table(x = true_parameters,
