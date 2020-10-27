@@ -96,6 +96,27 @@ executable simulation-study-time-series
     , vector
   default-language: Haskell2010
 
+executable simulation-study-aggregated-observations
+  main-is: Main.hs
+  other-modules:
+      Paths_bdscod
+  hs-source-dirs:
+      apps/simulation-study-aggregated-observations
+  ghc-options:
+  build-depends:
+      base
+    , aeson
+    , bdscod
+    , bytestring
+    , cassava
+    , directory
+    , epi-sim
+    , hmatrix
+    , hmatrix-gsl
+    , mtl
+    , vector
+  default-language: Haskell2010
+
 executable simulation-study-time-dependent-rates
   main-is: Main.hs
   other-modules:
@@ -149,5 +170,6 @@ test-suite tests
     , hmatrix
     , hmatrix-gsl
     , hspec
+    , mwc-random
     , vector
   default-language: Haskell2010
