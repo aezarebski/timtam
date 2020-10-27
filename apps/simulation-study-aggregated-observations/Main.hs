@@ -27,7 +27,7 @@ import BDSCOD.Types
   , scheduledTimes
   , unpackParameters
   )
-import BDSCOD.Utility (eventsAsObservations)
+import BDSCOD.Utility (eventsAsObservations,invLogit)
 import Control.Monad (liftM2, when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
@@ -253,7 +253,9 @@ adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
 -- the results to CSV including a description of the type of parameters and data
 -- used.
 --
--- TODO We should use either CSV or JSON to get proper output
+-- TODO We should use either CSV or JSON to get proper output because at the
+-- moment this just spits out a long string of comma seperated values which are
+-- strange.
 --
 generateLlhdProfileCurves ::
      InferenceConfiguration
