@@ -450,13 +450,3 @@ vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
         , [(t, p1) | t <- rhoTimes]
         , exp lnR3
         , [(t, p2) | t <- nuTimes])
-
-
--- TODO These functions are used in a few places so they should be put into one
--- of the library modules to keep them DRY.
-
-invLogit :: Double -> Probability
-invLogit a = 1 / (1 + exp (-a))
-
-logit :: Probability -> Double
-logit p = log (p / (1 - p))

@@ -231,12 +231,6 @@ vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
   in packParameters (exp lnR1, deathRate, exp lnR2, [(t,p1)|t<-rhoTimes], exp lnR3, [(t,p2)|t<-nuTimes])
 
 
-invLogit :: Double -> Probability
-invLogit a = 1 / (1 + exp (- a))
-
-logit :: Probability -> Double
-logit p = log (p / (1 - p))
-
 -- | Recenter the evaluation parametes about the parameters given.
 adjustedEvaluationParameters :: LlhdProfileMesh -> Parameters -> [Parameters]
 adjustedEvaluationParameters LlhdProfileMesh{..} ps =

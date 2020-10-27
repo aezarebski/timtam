@@ -115,3 +115,12 @@ pochhammer a i = (a + i - 1) * pochhammer a (i - 1)
 logPochhammer :: (Eq p, Floating p) => p -> p -> p
 logPochhammer _ 0 = 0
 logPochhammer a i = log (a + i - 1) + logPochhammer a (i - 1)
+
+
+-- | Return the probability from the log-odds
+invLogit :: Double -> Probability
+invLogit a = 1 / (1 + exp (- a))
+
+-- | Return the log-odds from the probability
+logit :: Probability -> Double
+logit p = log (p / (1 - p))

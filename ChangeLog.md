@@ -2,6 +2,7 @@
 
 ## 0.1.2.16
 
+- Move `logit` and `invLogit` into the `Utility` module out of the applications
 - Include the `Aggregation` module for working with aggregated unscheduled
   observations.
 
