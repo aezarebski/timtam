@@ -27,7 +27,7 @@ import BDSCOD.Types
   , scheduledTimes
   , unpackParameters
   )
-import BDSCOD.Utility (eventsAsObservations,invLogit)
+import BDSCOD.Utility (eventsAsObservations, invLogit)
 import Control.Monad (liftM2, when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
@@ -145,10 +145,14 @@ bdscodConfiguration = do
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
 -- before returning the results.
+--
+-- When the simulation fails this attempts to simulate the data set again useing
+-- a different seed to avoid getting stuck in a loop.
 simulateEpidemic seedInt bdscodConfig = do
   ifVerbosePutStrLn "Running simulateEpidemic..."
   genIO <- liftIO $ initialize (Unboxed.fromList [seedInt])
-  simEvents <- liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
+  simEvents <-
+    liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
   if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
     then do
