@@ -63,6 +63,8 @@ instance ToJSON Parameters
 
 instance FromJSON Parameters
 
+instance Csv.ToField Parameters
+
 -- | The putLambda function returns a new parameter vector with the lambda rate
 -- updated.
 putLambda :: Parameters -> Rate -> Parameters

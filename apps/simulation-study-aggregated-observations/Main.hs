@@ -13,6 +13,7 @@ import BDSCOD.Llhd (initLlhdState, llhdAndNB)
 import BDSCOD.Types
   ( AggregatedObservations(..)
   , AggregationTimes
+  , LogLikelihood(..)
   , Observation(..)
   , Parameters(..)
   , pattern AggTimes
@@ -257,35 +258,22 @@ adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
 -- the results to CSV including a description of the type of parameters and data
 -- used.
 --
--- TODO We should use either CSV or JSON to get proper output because at the
--- moment this just spits out a long string of comma seperated values which are
--- strange.
---
 generateLlhdProfileCurves ::
      InferenceConfiguration
   -> [Observation]
   -> (AnnotatedParameter, [Parameters])
   -> Simulation ()
 generateLlhdProfileCurves InferenceConfiguration {..} obs (centerParam, evalParams) =
-  let comma = BBuilder.charUtf8 ','
-      (parametersUsed,singleParams) = case centerParam of
-                                        (TrueParameters x) -> ("true_parameters_regular_data",x)
+  let (parametersUsed,singleParams) = case centerParam of
+                                        (TrueParameters x) -> ("true_parameters_regular_data" :: L.ByteString,x)
                                         (EstimatedParametersRegularData x) -> ("estimated_parameters_regular_data",x)
                                         (EstimatedParametersAggregatedData x) -> ("estimated_parameters_aggregated_data",x)
-      parametersUsed' = BBuilder.stringUtf8 parametersUsed
       llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
-      nBVal =
-        pure (parametersUsed, snd $ llhdAndNB obs singleParams initLlhdState)
-      doublesAsString =
-        BBuilder.toLazyByteString .
-        mconcat .
-        intersperse comma .
-        (parametersUsed' :) .
-        map BBuilder.doubleDec
+      nBVal = pure (parametersUsed, snd $ llhdAndNB obs singleParams initLlhdState)
    in do ifVerbosePutStrLn $ "\twriting LLHD values to: " ++ llhdOutputCsv
-         liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+         liftIO $ L.writeFile llhdOutputCsv (Csv.encode (zip (repeat parametersUsed) llhdVals))
          ifVerbosePutStrLn $ "\twriting NB values to: " ++ pointEstimatesCsv
-         liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBVal)
+         liftIO $ L.writeFile pointEstimatesCsv (Csv.encode nBVal)
 
 -- | Run the evaluation of the log-likelihood profiles on a given set of regular
 -- (i.e., disaggregated) observations at the parameters used to simulate the
