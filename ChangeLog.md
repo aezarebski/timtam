@@ -2,6 +2,8 @@
 
 ## 0.1.2.16
 
+- Use a fixed seed in the aggregated observations simulation study to make this
+  easier to debug.
 - Move `logit` and `invLogit` into the `Utility` module out of the applications
 - Include the `Aggregation` module for working with aggregated unscheduled
   observations.
