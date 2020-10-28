@@ -37,6 +37,7 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
 import Data.List (intersperse)
 import Data.Maybe (fromJust, isJust)
+import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
   ( EpidemicEvent(..)
@@ -50,9 +51,9 @@ import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
-
 -- import Numeric.LinearAlgebra.HMatrix
 import System.Environment (getArgs)
+import System.Random.MWC (initialize)
 
 -- | These objects define the specifics of the evaluation of LLHD profiles. If a
 -- point estimate is given, then that is the central point of the profiles,
@@ -144,11 +145,10 @@ bdscodConfiguration = do
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
 -- before returning the results.
-simulateEpidemic bdscodConfig = do
+simulateEpidemic seedInt bdscodConfig = do
   ifVerbosePutStrLn "Running simulateEpidemic..."
-  simEvents <-
-    liftIO $
-    SimUtil.simulationWithSystemRandom False bdscodConfig SimBDSCOD.allEvents
+  genIO <- liftIO $ initialize (Unboxed.fromList [seedInt])
+  simEvents <- liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
   if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
     then do
@@ -159,7 +159,7 @@ simulateEpidemic bdscodConfig = do
       return simEvents
     else do
       ifVerbosePutStrLn "\trepeating the simulation..."
-      simulateEpidemic bdscodConfig
+      simulateEpidemic (succ seedInt) bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
 -- resolution of the event times and the true epidemic parameters, second with
@@ -334,7 +334,8 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  epiSim <- simulateEpidemic bdscodConfig
+  let seedInt = 42
+  epiSim <- simulateEpidemic seedInt bdscodConfig
   infConfigs <- asks inferenceConfigurations
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim infConfigs
   uncurry evaluateLLHD regObs
