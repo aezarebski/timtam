@@ -297,9 +297,12 @@ evaluateLLHD infConfig obs = do
 -- | Using regular (i.e., disaggregated) observations, estimate the parameters
 -- and evaluate the log-likelihood profiles and write the result to file. This
 -- will also evaluate the density of the prevalence at the present and write
--- that to file. __NOTE__ This uses the actual simulation parameters as a way to
--- get the scheduled observation times, they are not used in the inference, that
--- starts at a fixed initial condition.
+-- that to file.
+--
+-- __NOTE__ This uses the actual simulation parameters as a way to get the
+-- scheduled observation times, they are not used in the inference, that starts
+-- at a fixed initial condition.
+--
 estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 estimateLLHD infConfig obs = do
   liftIO (putStrLn "Running estimateLLHD...")
