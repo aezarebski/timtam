@@ -8,19 +8,27 @@
 module Main where
 
 -- import BDSCOD.Conditioning
-import BDSCOD.Aggregation (aggregateUnscheduledObservations)
-import BDSCOD.Llhd (initLlhdState, llhdAndNB, pdeGF, pdeStatistics, logPdeStatistics)
-import BDSCOD.Types
+import BDSCOD.Aggregation
   ( AggregatedObservations(..)
   , AggregationTimes
-  , LogLikelihood(..)
+  , pattern AggTimes
+  , aggregateUnscheduledObservations
+  , maybeAggregationTimes
+  )
+import BDSCOD.Llhd
+  ( initLlhdState
+  , llhdAndNB
+  , logPdeStatistics
+  , pdeGF
+  , pdeStatistics
+  )
+import BDSCOD.Types
+  ( LogLikelihood(..)
   , NegativeBinomial(..)
   , NumLineages
   , Observation(..)
-  , Parameters(..)
   , PDESolution(..)
-  , pattern AggTimes
-  , maybeAggregationTimes
+  , Parameters(..)
   , packParameters
   , putLambda
   , putMu

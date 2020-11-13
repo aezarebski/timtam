@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module BDSCOD.Types
   ( Parameters(..)
@@ -32,13 +31,7 @@ module BDSCOD.Types
   , PDESolution(..)
   , LogLikelihood
   , LlhdAndNB
-  , LlhdCalcState
-  , AggregationTimes()
-  , pattern AggTimes
-  , maybeAggregationTimes
-  ,extractFirstAggregationTime
-  ,nullAggregationTimes
-  , AggregatedObservations(..)) where
+  , LlhdCalcState) where
 
 import Control.DeepSeq
 import Data.Aeson
@@ -46,9 +39,8 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
-import Data.List (intersperse,sort,sortBy)
+import Data.List (intersperse)
 import Epidemic.Types.Parameter
--- import Foreign.Storable
 import GHC.Generics (Generic)
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
@@ -224,62 +216,3 @@ type LlhdAndNB = (LogLikelihood,NegativeBinomial)
 type LlhdCalcState = (LlhdAndNB
                      ,Time
                      ,NumLineages)
-
-
--- | The times at which unscheduled samples are aggregated up to as part of the
--- observation process.
---
--- This does allow for a case in which there are no such times. The times are
--- ordered from smallest to largest and refer to /forward/ times, i.e., positive
--- from the origin time. The additional 'ObservedEvent' is there to describe
--- whether the aggregation refers to the aggregation of sequenced or unsequenced
--- samples.
-newtype AggregationTimes =
-  AggregationTimes_ [(Time,ObservedEvent)]
-  deriving (Show, Eq, Generic)
-
--- | A smart constructor which only creates an `AggregationTimes` if the
--- provided `Time`s are sorted and non-negative, since these represent absolute
--- times. If the given list of times is empty, then this returns an empty list
--- of `AggregationTimes`.
-maybeAggregationTimes :: [Time] -> [Time] -> Maybe AggregationTimes
-maybeAggregationTimes seqAggTimes unseqAggTimes
-  | null seqAggTimes && null unseqAggTimes = Just (AggregationTimes_ [])
-  | null seqAggTimes && validAggTimes unseqAggTimes = Just (AggregationTimes_ (pairUpUnseq unseqAggTimes))
-  | validAggTimes seqAggTimes && null unseqAggTimes = Just (AggregationTimes_ (pairUpSeq seqAggTimes))
-  | validAggTimes seqAggTimes && validAggTimes unseqAggTimes = Just (AggregationTimes_ (pairUpBoth seqAggTimes unseqAggTimes))
-  | otherwise = Nothing
-  where
-    validAggTimes aggTimes = sort aggTimes == aggTimes && minimum aggTimes >= 0
-    pairUp oe ats  = [(t,oe) | t <- ats]
-    pairUpUnseq = pairUp OOccurrence
-    pairUpSeq = pairUp ObsUnscheduledSequenced
-    pairUpBoth seqATs unseqATs = sortBy (\(a,_) (b,_) -> compare a b) (pairUpSeq seqATs ++ pairUpUnseq unseqATs)
-
--- | Use a pattern so we can force the construction via 'maybeAggregationTimes'
--- so that we can assume that they have sorted and non-negative times.
-pattern AggTimes :: [(Time,ObservedEvent)] -> AggregationTimes
-pattern AggTimes ts <- AggregationTimes_ ts
-
--- | Aggregated observations which contains aggregation times and the
--- observations which fall on those times. This is the result of adjusting the
--- delays in the times of unscheduled events up to the `AggregationTimes`. Note
--- that this includes the observations that are not aggregated, such as the
--- birth events.
-data AggregatedObservations =
-  AggregatedObservations AggregationTimes [Observation]
-  deriving (Show, Eq)
-
--- | Return the first aggregation time and the type of unscheduled observation
--- to aggregate in it, along with a new set of aggregation times with the first
--- one removed. Since there is a smart constructor, we assume that the initial
--- @AggregationTimes@ value is valid.
-extractFirstAggregationTime :: AggregationTimes -> Maybe ((Time,ObservedEvent),AggregationTimes)
-extractFirstAggregationTime (AggregationTimes_ ts) = case ts of
-  [] -> Nothing
-  [t] -> Just (t, AggregationTimes_ [])
-  (t:ts') -> Just (t, AggregationTimes_ ts')
-
--- | Predicate for there being no aggregation times in the @AggregationTimes@.
-nullAggregationTimes :: AggregationTimes -> Bool
-nullAggregationTimes (AggregationTimes_ ts) = null ts
