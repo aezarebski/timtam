@@ -606,7 +606,7 @@ bdsSimulations simRates simDuration =
           (\x -> probabilityUnobserved simRates (simDuration + x))
           [-0.1, 0.0, 0.1]
       probUnobserved = probUnobservedVals !! 1
-      numReplicates = 100
+      numReplicates = 1000
       numObservations = length . filter tmpIsSampling
       phat ns =
         (fromIntegral . length $ filter (> 0) ns) / (fromIntegral (length ns))
