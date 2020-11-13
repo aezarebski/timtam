@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.3.0
+
+- Change the constructor for `AggregationTimes` to include the type of event
+  that is being aggregated at that point in time.
+
 ## 0.1.2.16
 
 - Do the likelihood calculation in log-space now where possible and introduce
