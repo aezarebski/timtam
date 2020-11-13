@@ -26,7 +26,7 @@ module BDSCOD.Types
   , Observation
   , updateDelay
   , isBirth
-  , isSample
+  , isUnscheduledSequenced
   , isOccurrence
   , NegativeBinomial(..)
   , PDESolution(..)
@@ -132,7 +132,7 @@ type NumLineages = Double
 -- | The type of events that can be observed under the BDSCOD.
 data ObservedEvent
   = OBirth
-  | OSample
+  | ObsUnscheduledSequenced
   | OOccurrence
   | OCatastrophe NumLineages
   | ODisaster NumLineages
@@ -151,7 +151,7 @@ strictByteString = B.concat . BL.toChunks
 
 instance Csv.ToField ObservedEvent where
   toField OBirth = "obirth"
-  toField OSample = "osample"
+  toField ObsUnscheduledSequenced = "osample"
   toField OOccurrence = "ooccurrence"
   toField (OCatastrophe nl) =
     strictByteString . BBuilder.toLazyByteString $
@@ -175,9 +175,10 @@ updateDelay (_, oEvent) delay = (delay, oEvent)
 isBirth :: Observation -> Bool
 isBirth = (==OBirth) . snd
 
--- | Predicate for the observation referring to a sampling.
-isSample :: Observation -> Bool
-isSample = (==OSample) . snd
+-- | Predicate for the observation referring to an unscheduled and sequenced
+-- observation.
+isUnscheduledSequenced :: Observation -> Bool
+isUnscheduledSequenced = (==ObsUnscheduledSequenced) . snd
 
 -- | Predicate for the observation referring to an occurrence.
 isOccurrence :: Observation -> Bool

@@ -2,8 +2,12 @@
 
 ## 0.1.2.16
 
+- Do the likelihood calculation in log-space now where possible and introduce
+  `logSumExp` to assist with this. This has been checked with QuickCheck which
+  is now a dependency.
 - Use a fixed seed in the aggregated observations simulation study to make this
-  easier to debug.
+  easier to debug and include a regularisation term in the MLE computation to
+  prevent some numerical errors from parameters wandering off.
 - Move `logit` and `invLogit` into the `Utility` module out of the applications
 - Include the `Aggregation` module for working with aggregated unscheduled
   observations.

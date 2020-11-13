@@ -9,13 +9,18 @@ import Epidemic.Types.Parameter
 
 -- | Predicate for whether the parameters could possibly have given rise to the
 -- observations.
+--
+-- __WARNING__ we assume that all rates must be less than 100 to prevent
+-- numerical errors.
+--
 arePlausible :: [Observation]
              -> Parameters
              -> Bool
 arePlausible obs (Parameters (l, m, r, _, o, _))
   | minimum [l, m, r, o] < 0 = False
+  | maximum [l, m, r, o] > 100 = False
   | any isBirth obs && l == 0 = False
-  | any isSample obs && r == 0 = False
+  | any isUnscheduledSequenced obs && r == 0 = False
   | otherwise = True
 
 
@@ -111,23 +116,39 @@ rr params@(Parameters (lam, _, _, _, _, _)) delay z =
 
 
 
-
-
-
-
-
-
-
+-- | The generating function solution to the PDE.
+--
+-- __WARNING__ It is easy to get infinite values so try to use the @logPdeGF@
+-- function instead if possible.
+--
 pdeGF :: Parameters -> Time -> PDESolution -> Double -> Double
 pdeGF params delay (PDESol Zero 1) z = rz
   where
     rz = rr params delay z
-pdeGF params delay (PDESol nb k) z = f p0z * (rz ** k)
+pdeGF params delay (PDESol nb k) z =
+  f p0z * (rz ** k)
   where
     f = nbPGF nb
     p0z = p0 params delay z
     rz = rr params delay z
 
+-- | The log of the generating function solution to the PDE.
+logPdeGF :: Parameters -> Time -> PDESolution -> Double -> Double
+logPdeGF params delay (PDESol Zero 1) z = log rz
+  where
+    rz = rr params delay z
+logPdeGF params delay (PDESol nb k) z =
+  logF p0z + k * log rz
+  where
+    logF = logNbPGF nb
+    p0z = p0 params delay z
+    rz = rr params delay z
+
+-- | The partial derivative of the generating function solution to the PDE.
+--
+-- __WARNING__ It is easy to get infinite values so try to use the @logPdeGF'@
+-- function instead if possible.
+--
 pdeGF' :: Parameters -> Time -> PDESolution -> Double -> Double
 pdeGF' params delay (PDESol Zero 1) z = rdashz
   where
@@ -143,6 +164,33 @@ pdeGF' params delay (PDESol nb k) z =
     rz = rr params delay z
     rdashz = rr' params delay z
 
+-- | The log of the partial derivative of the generating function solution to
+-- the PDE.
+logPdeGF' :: Parameters -> Time -> PDESolution -> Double -> Double
+logPdeGF' params delay (PDESol Zero 1) z = log rdashz
+  where
+    rdashz = rr' params delay z
+logPdeGF' params delay (PDESol nb k) z =
+  logSumExp [firstTerm,secondTerm]
+  where
+    p0z = p0 params delay z
+    p0dashz = p0' params delay z
+    rz = rr params delay z
+    rdashz = rr' params delay z
+    firstTerm = logNbPGF' nb p0z +
+      log p0dashz +
+      k * log rz
+    secondTerm = log k +
+      (k-1) * log rz +
+      log rdashz +
+      logNbPGF nb p0z
+
+-- | The second partial derivative of the generating function solution to the
+-- PDE.
+--
+-- __WARNING__ It is easy to get infinite values so try to use the @logPdeGF''@
+-- function instead if possible.
+--
 pdeGF'' :: Parameters -> Time -> PDESolution -> Double -> Double
 pdeGF'' params delay (PDESol Zero 1) z = rdashdashz
   where
@@ -164,26 +212,69 @@ pdeGF'' params delay (PDESol nb k) z =
     rdashz = rr' params delay z
     rdashdashz = rr'' params delay z
 
+-- | The log of the second partial derivative of the generating function solution to
+-- the PDE.
+logPdeGF'' :: Parameters -> Time -> PDESolution -> Double -> Double
+logPdeGF'' params delay (PDESol Zero 1) z = log rdashdashz
+  where
+    rdashdashz = rr'' params delay z
+logPdeGF'' params delay (PDESol nb k) z =
+  logSumExp [term1, term2, term3, term4, term5]
+  where
+    f = nbPGF nb
+    fdash = nbPGF' nb
+    fdashdash = nbPGF'' nb
+    p0z = p0 params delay z
+    p0dashz = p0' params delay z
+    p0dashdashz = p0'' params delay z
+    rz = rr params delay z
+    rdashz = rr' params delay z
+    rdashdashz = rr'' params delay z
+    term1 = logNbPGF'' nb p0z + 2 * log p0dashz + k * log rz
+    term2 = logNbPGF' nb p0z + log p0dashdashz + k * log rz
+    term3 = log 2 + logNbPGF' nb p0z + log p0dashz + log k + (k-1) * log rz + log rdashz
+    term4 = logNbPGF nb p0z + log k + log (k-1) + (k-2) * log rz + 2 * log rdashz
+    term5 = logNbPGF nb p0z + log k + (k-1) * log rz + log rdashdashz
 
 
 
 
 
+-- | The PDE statistics: the normalisation factor and the mean and variance of
+-- the corresponding distribution.
+--
+-- __WARNING__ It is easy to get infinite values so try to use the
+-- @logPdeStatistics@ function instead if possible.
+--
 pdeStatistics :: Parameters
               -> Time
               -> PDESolution
               -> (Probability, Double, Double)
-pdeStatistics params delay pdeSol@PDESol{} =
-  if c > 1e-300
-    then (c, m, v)
-    else error $ "pdeStatistics had a c: " ++ show c
-  where
-    mGF = pdeGF params delay pdeSol
-    mGF' = pdeGF' params delay pdeSol
-    mGF'' = pdeGF'' params delay pdeSol
-    c = mGF 1
-    m = (1 / c) * mGF' 1
-    v = (1 / c) * mGF'' 1 + m * (1 - m)
+pdeStatistics params delay pdeSol@PDESol{}
+  | c > 0 && not (isNaN m) = (c, m, v)
+  | c <= 0 = error "not the case that c > 0"
+  | otherwise = error "not the case that m is not NaN"
+  where mGF = pdeGF params delay pdeSol
+        mGF' = pdeGF' params delay pdeSol
+        mGF'' = pdeGF'' params delay pdeSol
+        c = mGF 1
+        m = (1 / c) * mGF' 1
+        v = (1 / c) * mGF'' 1 + m * (1 - m)
+
+-- | The logarithm of the PDE statistics
+logPdeStatistics :: Parameters
+              -> Time
+              -> PDESolution
+              -> (Probability, Double, Double)
+logPdeStatistics params delay pdeSol@PDESol{} =
+  (logC, logm, logV)
+  where logmGF = logPdeGF params delay pdeSol
+        logmGF' = logPdeGF' params delay pdeSol
+        logmGF'' = logPdeGF'' params delay pdeSol
+        logC = logmGF 1
+        logm = logmGF' 1 - logC
+        -- v = (1 / c) * mGF'' 1 + m * (1 - m)
+        logV = log $ exp (logmGF'' 1 - logC) + exp logm * (1 - exp logm)
 
 
 
@@ -196,10 +287,9 @@ intervalLlhd :: Parameters
              -> NegativeBinomial
              -> (Probability, NegativeBinomial)
 intervalLlhd params delay k nb =
-  let (c, m, v) = pdeStatistics params delay (PDESol nb k)
-   in if isInfinite (log c)
-      then error "infinite log(c) in intervalLlhd function..."
-      else (log c, nbFromMAndV (m, v))
+  let (logC, logm, logV) = logPdeStatistics params delay (PDESol nb k)
+      nb' = nbFromMAndV (exp logm, exp logV)
+    in (logC, nb')
 
 
 
@@ -212,7 +302,7 @@ eventLlhd :: Time -- ^ Absolute time used to look up the parameter in the case o
           -> NegativeBinomial
           -> (LogLikelihood, NumLineages, NegativeBinomial)
 eventLlhd _ (Parameters (lam, _, _, _, _, _)) OBirth k nb = (log lam, k + 1, nb)
-eventLlhd _ (Parameters (_, _, psi, _, _, _)) OSample k nb = (log psi, k - 1, nb)
+eventLlhd _ (Parameters (_, _, psi, _, _, _)) ObsUnscheduledSequenced k nb = (log psi, k - 1, nb)
 eventLlhd _ (Parameters (_, _, _, _, om, _)) OOccurrence k nb@(NegBinom r p) =
   (log om + logNbPGF' nb 1, k, NegBinom (r + 1) p)
 eventLlhd t (Parameters (_, _, _, Timed rhs, _, _)) (OCatastrophe n) k nb@(NegBinom r p) =

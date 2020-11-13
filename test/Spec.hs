@@ -19,6 +19,9 @@ import Numeric.GSL.SimulatedAnnealing
 import Numeric.LinearAlgebra.HMatrix
 import System.Random.MWC
 import Test.Hspec
+import Test.Hspec.QuickCheck
+import Test.QuickCheck
+import Test.Hspec.Core.QuickCheck (modifyMaxDiscardRatio)
 
 -- | Check if @y@ is withing @delta@ of @x@
 withinDeltaOf :: (Ord a, Num a)
@@ -35,6 +38,32 @@ finiteDifference :: Fractional a
                  -> a         -- ^ x
                  -> a
 finiteDifference h f x = (f (x+h) - f (x-h)) / (2*h)
+
+testTestingHelpers =
+  describe "Testing the helper functions for the testing suite" $ do
+    context "withinDeltaOf" $ do
+      it "sanity" $ do
+        withinDeltaOf 0.2 1 2 `shouldBe` False
+        withinDeltaOf 0.2 1 1.1 `shouldBe` True
+      it "identity" $ property $
+        \x -> withinDeltaOf 0.2 x (x :: Double)
+      it "range" $ property $
+        \x -> withinDeltaOf 1 1 (1 + (x :: Double)) || not (x < 1 && x > (-1))
+    context "finiteDifference" $ do
+      it "sine" $ property $
+        \x -> let fFD = finiteDifference 0.01 sin
+                  f' = cos
+                in withinDeltaOf 1e-3 (fFD (x :: Double)) (f' x)
+      it "polynomial" $ property $
+        \x -> let fFD = finiteDifference 0.01 (\z -> z + 0.5 * z ** 2)
+                  f' = \z -> 1 + z
+                in withinDeltaOf 1e-3 (fFD (x :: Double)) (f' x)
+
+testLogSumExp =
+  describe "Test the log-sum-exp function" $
+    it "equivalence to unsafe implementation" $ property $
+      \x -> (not $ null x) ==> withinDeltaOf 1e-6 (logSumExp x) (log (sum [exp x' | x' <- x :: [Double]]))
+
 
 testNbPGF = do
   describe "Test nbPGF: 1" $ do
@@ -96,6 +125,161 @@ testNbPGF = do
     it "test nbPGF'' and logNbPGF''" $ do
       let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF'' (NegBinom r p) z) (logNbPGF'' (NegBinom r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
+
+testLogPdeGF1 = do
+    describe "test pdeGF and logPdeGF" $ do
+      modifyMaxDiscardRatio (const 1000) $
+        it "test pdeGF and logPdeGF" $ property $
+        \(z
+         , delay
+         , lam
+         , mu) -> (z > 0) &&
+                  (delay < 30) &&
+                  (delay > 0) &&
+                  (lam < 30) &&
+                  (lam > 0) &&
+                  (mu < 30) &&
+                  (mu > 0) ==>
+                  withinDeltaOf 1e-3 (log $ pdeGF (params lam mu) delay pdeSol z) (logPdeGF (params lam mu) delay pdeSol z)
+                  where params lam mu = (Parameters (lam, mu, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                        pdeSol = (PDESol Zero 1)
+
+testLogPdeGF2 = do
+    describe "test pdeGF and logPdeGF again" $ do
+      modifyMaxDiscardRatio (const 10000) $
+        it "test pdeGF and logPdeGF again" $ property $
+        \(z
+         , lam
+         , delay
+         , nbMean
+         , nbVar) -> (z <= 1) && (z > 0) &&
+                     (lam < 200) &&
+                     (lam > 0) &&
+                     (delay < 200) &&
+                     (delay > 0) &&
+                     (nbMean > 0) &&
+                     (nbVar > nbMean) ==>
+                     withinDeltaOf 1e-3 (log $ pdeGF (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z) (logPdeGF (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z)
+                     where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           scaledDelay d = d / 10
+
+
+testLogPdeGFDash1 = do
+    describe "test pdeGF' and logPdeGF'" $ do
+      modifyMaxDiscardRatio (const 1000) $
+        it "test pdeGF' and logPdeGF'" $ property $
+        \(z100
+         , delay
+         , lam
+         , mu) -> (z100 <= 100) &&
+                  (z100 > 0) &&
+                  (delay < 30) &&
+                  (delay > 0) &&
+                  (lam < 30) &&
+                  (lam > 0) &&
+                  (mu < 30) &&
+                  (mu > 0) ==>
+                  withinDeltaOf 1e-3 (log $ pdeGF' (params lam mu) delay pdeSol (z100 / 100)) (logPdeGF' (params lam mu) delay pdeSol (z100 / 100))
+                  where params lam mu = (Parameters (lam, mu, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                        pdeSol = (PDESol Zero 1)
+
+testLogPdeGFDash2 = do
+    describe "test pdeGF' and logPdeGF' again" $ do
+      modifyMaxDiscardRatio (const 10000) $
+        it "test pdeGF' and logPdeGF' again" $ property $
+        \(z
+         , lam
+         , delay
+         , nbMean
+         , nbVar) -> (z <= 1) && (z > 0) &&
+                     (lam < 200) &&
+                     (lam > 0) &&
+                     (delay < 200) &&
+                     (delay > 0) &&
+                     (nbMean > 0) &&
+                     (nbVar > nbMean) ==>
+                     withinDeltaOf 1e-3 (log $ pdeGF' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z) (logPdeGF' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z)
+                     where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           scaledDelay d = d / 50
+
+testLogPdeGFDashDash1 = do
+    describe "test pdeGF'' and logPdeGF''" $ do
+      modifyMaxDiscardRatio (const 1000) $
+        it "test pdeGF'' and logPdeGF''" $ property $
+        \(z100
+         , delay
+         , lam
+         , mu) -> (z100 <= 100) &&
+                  (z100 > 0) &&
+                  (delay < 30) &&
+                  (delay > 0) &&
+                  (lam < 30) &&
+                  (lam > 0) &&
+                  (mu < 30) &&
+                  (mu > 0) ==>
+                  withinDeltaOf 1e-3 (log $ pdeGF'' (params lam mu) delay pdeSol (z100 / 100)) (logPdeGF'' (params lam mu) delay pdeSol (z100 / 100))
+                  where params lam mu = (Parameters (lam, mu, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                        pdeSol = (PDESol Zero 1)
+
+testLogPdeGFDashDash2 = do
+    describe "test pdeGF'' and logPdeGF'' again" $ do
+      modifyMaxDiscardRatio (const 10000) $
+        it "test pdeGF'' and logPdeGF'' again" $ property $
+        \(z
+         , lam
+         , delay
+         , nbMean
+         , nbVar) -> (z <= 1) && (z > 0) &&
+                     (lam < 200) &&
+                     (lam > 0) &&
+                     (delay < 200) &&
+                     (delay > 0) &&
+                     (nbMean > 0) &&
+                     (nbVar > nbMean) ==>
+                     withinDeltaOf 1e-3 (log $ pdeGF'' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z) (logPdeGF'' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z)
+                     where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           scaledDelay d = d / 50
+
+
+
+testLogPdeStatistics = do
+    describe "test pdeStatistics and logPdeStatistics" $ do
+      modifyMaxDiscardRatio (const 10000) $
+        it "test pdeStatistics and logPdeStatistics" $ property $
+        \( lam
+         , delay
+         , nbMean
+         , nbVar) -> (lam < 200) &&
+                     (lam > 6) &&
+                     (delay < 200) &&
+                     (delay > 0) &&
+                     (nbMean > 1) &&
+                     (nbVar > nbMean) ==>
+                     withinDeltaOf 1e-3 (log . fst' $ fooUnlogged lam delay nbMean nbVar) (fst' $ fooLogged lam delay nbMean nbVar) &&
+                     withinDeltaOf 1e-3 (log . snd' $ fooUnlogged lam delay nbMean nbVar) (snd' $ fooLogged lam delay nbMean nbVar) &&
+                     withinDeltaOf 1e-3 (log . thd' $ fooUnlogged lam delay nbMean nbVar) (thd' $ fooLogged lam delay nbMean nbVar)
+                     where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           scaledDelay d = d / 50
+                           fooUnlogged lam delay nbMean nbVar = pdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar))
+                           fooLogged lam delay nbMean nbVar  = (logPdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)))
+                           fst' (a,_,_) = a
+                           snd' (_,a,_) = a
+                           thd' (_,_,a) = a
+
+foo lam delay nbMean nbVar = (fooUnlogged lam delay nbMean nbVar, (a,b,c))
+                     where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
+                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           scaledDelay d = d / 50
+                           fooUnlogged lam delay nbMean nbVar = pdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar))
+                           fooLogged lam delay nbMean nbVar  = (logPdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)))
+                           (lnA,lnB,lnC) = fooLogged lam delay nbMean nbVar
+                           (a,b,c) = (exp lnA, exp lnB, exp lnC)
+
+
 
 testp0 = do
   describe "Test p0" $ do
@@ -232,7 +416,7 @@ testPdeStatistics = do
 testLlhd = do
   describe "Test llhd" $ do
     it "Manceau example" $
-      let obs = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OOccurrence),(1.0,OCatastrophe 3)]
+      let obs = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,ObsUnscheduledSequenced),(1.0,OOccurrence),(1.0,OCatastrophe 3)]
           (llhdVal1,_) = llhdAndNB obs (Parameters (1.1,1.0,0.3, Timed [(7.0,0.5)],0.6,Timed [])) initLlhdState
           (llhdVal2,_) = llhdAndNB obs (Parameters (1.2,1.0,0.3, Timed [(7.0,0.5)],0.6,Timed [])) initLlhdState
           (llhdVal3,_) = llhdAndNB obs (Parameters (1.3,1.0,0.3, Timed [(7.0,0.5)],0.6,Timed [])) initLlhdState
@@ -246,7 +430,7 @@ testLlhd = do
 testInhomBDSLlhd = do
   describe "Test inhomogeneous BDS LLHD" $ do
     it "Check for constant parameters it looks right" $
-      let obs = [(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OSample),(1.0,OSample)]
+      let obs = [(1.0,OBirth),(1.0,OBirth),(1.0,ObsUnscheduledSequenced),(1.0,ObsUnscheduledSequenced),(1.0,ObsUnscheduledSequenced)]
           tlams = fromJust $ asTimed [(0,1.2)]
           tlams' = fromJust $ asTimed [(0,1.2),(10,5.0)]
           tlams'' = fromJust $ asTimed [(0,1.3),(10,5.0)]
@@ -272,11 +456,11 @@ testInhomBDSLlhd = do
     describe "Check values are finite when sensible" $
       let infParams = (InhomBDSLlhd.InhomParams (fromJust $ asTimed [(0.0,1.0),(1.0,1.0)],0.4,0.4)) :: InhomBDSLlhd.InhomParams
           (InhomBDSLlhd.InhomParams (tlams,_,_)) = infParams
-          obs = [(0.3,OBirth),(0.5,OBirth),(0.19,OSample)]
+          obs = [(0.3,OBirth),(0.5,OBirth),(0.19,ObsUnscheduledSequenced)]
           llhdVal = fst $ InhomBDSLlhd.inhomLlhdAndNB obs infParams InhomBDSLlhd.initLlhdState
-          obs' = [(0.3,OBirth),(0.5,OBirth),(0.20,OSample)]
+          obs' = [(0.3,OBirth),(0.5,OBirth),(0.20,ObsUnscheduledSequenced)]
           llhdVal' = fst $ InhomBDSLlhd.inhomLlhdAndNB obs' infParams InhomBDSLlhd.initLlhdState
-          obs'' = [(0.3,OBirth),(0.5,OBirth),(0.21,OSample)]
+          obs'' = [(0.3,OBirth),(0.5,OBirth),(0.21,ObsUnscheduledSequenced)]
           llhdVal'' = fst $ InhomBDSLlhd.inhomLlhdAndNB obs'' infParams InhomBDSLlhd.initLlhdState
        in do
         it "Check cadlagValue" $ do
@@ -311,12 +495,12 @@ testConversion = do
             ]
           llhdObsEvents =
             [ (1.0, OBirth)
-            , (2.0, OSample)
+            , (2.0, ObsUnscheduledSequenced)
             , (1.0, OBirth)
-            , (2.0, OSample)
+            , (2.0, ObsUnscheduledSequenced)
             , (2.0, OOccurrence)
             , (3.0, OOccurrence)
-            , (1.0, OSample)
+            , (1.0, ObsUnscheduledSequenced)
             ]
        in eventsAsObservations simObsEvents `shouldSatisfy` (== llhdObsEvents)
 
@@ -340,10 +524,10 @@ testAggregationSequenced =
       filteredEpiEvents = fromJust $ EpiBDSCOD.observedEvents allEpiEvents -- filter for just the observed epidemic events.
       obs = -- the observations without aggregation
         [ (1.0, OBirth)
-        , (1.0, OSample)
+        , (1.0, ObsUnscheduledSequenced)
         , (1.0, OBirth)
-        , (3.0, OSample)
-        , (1.0, OSample)
+        , (3.0, ObsUnscheduledSequenced)
+        , (1.0, ObsUnscheduledSequenced)
         ]
       obs' = eventsAsObservations filteredEpiEvents
       aggTimes = fromJust $ maybeAggregationTimes [3.5,7.5]
@@ -369,7 +553,7 @@ testAggregationSequenced =
 testImpossibleParameters = do
   describe "Test correct handling of impossible parameters" $ do
     it "Test negative birth rate is impossible" $
-      let obs = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OOccurrence)]
+      let obs = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,ObsUnscheduledSequenced),(1.0,OOccurrence)]
           llhd1 = fst $ llhdAndNB obs (Parameters (0.0000000001,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
           llhd2 = fst $ llhdAndNB obs (Parameters (0.0000000000,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
           llhd3 = fst $ llhdAndNB obs (Parameters (-0.0000000001,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
@@ -384,7 +568,7 @@ testImpossibleParameters = do
         llhd2 < 0 `shouldBe` True
         llhd3 < 0 `shouldBe` True
     it "Test negative sampling rate is impossible" $
-      let obs1 = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OSample),(1.0,OOccurrence)]
+      let obs1 = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,ObsUnscheduledSequenced),(1.0,OOccurrence)]
           obs2 = [(1.0,OBirth),(1.0,OOccurrence),(1.0,OBirth),(1.0,OBirth),(1.0,OOccurrence)]
           llhd11 = fst $ llhdAndNB obs1 (Parameters (1.0,1.0,0.1,Timed [],0.6,Timed [])) initLlhdState
           llhd12 = fst $ llhdAndNB obs1 (Parameters (1.0,1.0,0.0,Timed [],0.6,Timed [])) initLlhdState
@@ -509,6 +693,7 @@ testMWCSeeding = do
 
 main :: IO ()
 main = hspec $ do
+  testTestingHelpers
   testNbPGF
   testPdeStatistics
   testp0
@@ -523,3 +708,12 @@ main = hspec $ do
   testParameterUpdate
   testMWCSeeding
   testAggregationSequenced
+  testLogPdeGF1
+  testLogPdeGF2
+  testLogPdeGFDash1
+  testLogPdeGFDash2
+  testLogPdeGFDashDash1
+  testLogPdeGFDashDash2
+  testLogSumExp
+  testLogPdeStatistics
+

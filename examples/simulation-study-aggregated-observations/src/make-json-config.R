@@ -11,12 +11,10 @@ output_file <- "agg-app-config.json"
 
 simulation_duration <- 3.5 - 1e-6
 
-
-
 birth_rate <- 1.3
 death_rate <- 0.50
 sampling_rate <- 0.2
-occurrence_rate <- 0.0
+occurrence_rate <- 0.2
 
 disaster_params <- list()
 catastrophe_params <- list()
