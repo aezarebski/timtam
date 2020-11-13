@@ -51,7 +51,7 @@ aggregatedObs :: AggregationTimes
               -> Maybe [AnnotatedObservation]
 aggregatedObs aggTimes annObs
   | nullAggregationTimes aggTimes =
-    if or [isSample o || isOccurrence o | (_, o) <- annObs]
+    if or [isUnscheduledSequenced o || isOccurrence o | (_, o) <- annObs]
       then Nothing
       else Just annObs
   | otherwise = do
@@ -66,8 +66,8 @@ _aggregatedObs :: [AnnotatedObservation]
                -> Time
                -> Maybe [AnnotatedObservation]
 _aggregatedObs annObs aggTime =
-  let beforeObs = filter (\(absTime, obs) -> absTime <= aggTime && (not . isSample) obs) annObs
-      needAggObs = filter (\(absTime, obs) -> absTime <= aggTime && isSample obs) annObs
+  let beforeObs = filter (\(absTime, obs) -> absTime <= aggTime && (not . isUnscheduledSequenced) obs) annObs
+      needAggObs = filter (\(absTime, obs) -> absTime <= aggTime && isUnscheduledSequenced obs) annObs
       afterObs = filter (\(absTime, _) -> absTime > aggTime) annObs
       in do aggObs <- _aggregateSamples needAggObs aggTime
             return $ mconcat [beforeObs,[aggObs],afterObs]
@@ -80,7 +80,7 @@ _aggregatedObs annObs aggTime =
 --
 _aggregateSamples :: [AnnotatedObservation] -> Time -> Maybe AnnotatedObservation
 _aggregateSamples annSamples aggTime =
-  if all (isSample . snd) annSamples
+  if all (isUnscheduledSequenced . snd) annSamples
     then Just
            (aggTime, (-1/0, OCatastrophe (fromIntegral $ length annSamples)))
     else Nothing

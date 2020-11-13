@@ -178,9 +178,6 @@ simulateEpidemic seedInt bdscodConfig = do
 -- times aggregated as defined in the inference configuration.
 observeEpidemicThrice ::
   [EpidemicEvent]
-  -> ( InferenceConfiguration
-     , InferenceConfiguration
-     , InferenceConfiguration)
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
