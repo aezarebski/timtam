@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 
 import BDSCOD.Conditioning
 import BDSCOD.Aggregation
@@ -6,7 +7,9 @@ import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
 import Control.Monad (replicateM)
+import Data.List (sort)
 import Data.Maybe (fromJust, isJust)
+import Data.Tuple (swap)
 import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic as EpiSim
 import qualified Epidemic.BirthDeathSampling as EpiBDS
@@ -15,12 +18,15 @@ import Epidemic.Types.Events
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
+import GHC.Generics
+import Generic.Random (genericArbitraryU)
 import Numeric.GSL.SimulatedAnnealing
 import Numeric.LinearAlgebra.HMatrix
-import System.Random.MWC
+import qualified System.Random.MWC as MWC
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
+import Test.QuickCheck.Gen
 import Test.Hspec.Core.QuickCheck (modifyMaxDiscardRatio)
 
 -- | Check if @y@ is withing @delta@ of @x@
@@ -30,6 +36,17 @@ withinDeltaOf :: (Ord a, Num a)
               -> a -- ^ x
               -> Bool
 withinDeltaOf delta y x = abs (y - x) < delta
+
+-- | Apply the @withinDeltaOf@ function to two lists.
+allWithinDeltaOf :: (Ord a, Num a) => a -> [a] -> [a] -> Bool
+allWithinDeltaOf _ [] [] = True
+allWithinDeltaOf delta [y] [x] = withinDeltaOf delta y x
+allWithinDeltaOf delta (y:ys) (x:xs) = withinDeltaOf delta y x && allWithinDeltaOf delta ys xs
+allWithinDeltaOf _ _ _ = False
+
+
+
+
 
 -- | Approximate the derivative of @f@ at @x@ with a step of size @h@.
 finiteDifference :: Fractional a
@@ -269,15 +286,6 @@ testLogPdeStatistics = do
                            fst' (a,_,_) = a
                            snd' (_,a,_) = a
                            thd' (_,_,a) = a
-
-foo lam delay nbMean nbVar = (fooUnlogged lam delay nbMean nbVar, (a,b,c))
-                     where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(1000,0.5)], 0.6, Timed []))
-                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
-                           scaledDelay d = d / 50
-                           fooUnlogged lam delay nbMean nbVar = pdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar))
-                           fooLogged lam delay nbMean nbVar  = (logPdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)))
-                           (lnA,lnB,lnC) = fooLogged lam delay nbMean nbVar
-                           (a,b,c) = (exp lnA, exp lnB, exp lnC)
 
 
 
@@ -625,27 +633,102 @@ testMWCSeeding :: SpecWith ()
 testMWCSeeding = do
   describe "Testing MWC seeding" $ do
     it "test create works as expected" $ do
-      gen <- create
-      x1 <- (uniform gen :: IO Double)
-      x2 <- (uniform gen :: IO Double)
-      gen' <- create
-      x1' <- (uniform gen' :: IO Double)
+      gen <- MWC.create
+      x1 <- (MWC.uniform gen :: IO Double)
+      x2 <- (MWC.uniform gen :: IO Double)
+      gen' <- MWC.create
+      x1' <- (MWC.uniform gen' :: IO Double)
       (x1 /= x2) `shouldBe` True
       (x1 == x1') `shouldBe` True
     it "test initialise works as expected" $ do
-      xGen <- create
-      x1 <- (uniform xGen :: IO Double)
-      yGen <- initialize (Unboxed.fromList [1,2,3])
-      y1 <- (uniform yGen :: IO Double)
+      xGen <- MWC.create
+      x1 <- (MWC.uniform xGen :: IO Double)
+      yGen <- MWC.initialize (Unboxed.fromList [1,2,3])
+      y1 <- (MWC.uniform yGen :: IO Double)
       (x1 /= y1) `shouldBe` True
-      y2 <- (uniform yGen :: IO Double)
+      y2 <- (MWC.uniform yGen :: IO Double)
       (y1 /= y2) `shouldBe` True
-      zGen <- initialize (Unboxed.fromList [1,2,3])
-      z1 <- (uniform zGen :: IO Double)
+      zGen <- MWC.initialize (Unboxed.fromList [1,2,3])
+      z1 <- (MWC.uniform zGen :: IO Double)
       (y1 == z1) `shouldBe` True
-      wGen <- initialize (Unboxed.fromList [3,2,1])
-      w1 <- (uniform wGen :: IO Double)
+      wGen <- MWC.initialize (Unboxed.fromList [3,2,1])
+      w1 <- (MWC.uniform wGen :: IO Double)
       (z1 /= w1) `shouldBe` True
+
+
+
+-- | Generate a random @ObservedEvent@
+qcRandomObservedEvent :: Gen ObservedEvent
+qcRandomObservedEvent = do
+  isUnscheduled <- chooseAny
+  if isUnscheduled
+    then elements [OBirth,ObsUnscheduledSequenced,OOccurrence]
+    else do isSequenced <- chooseAny
+            numLineages <- suchThat chooseAny (>0)
+            if isSequenced
+              then return (OCatastrophe numLineages)
+              else return (ODisaster numLineages)
+
+
+-- | Generate a random list of @observation@ values
+qcRandomObservations :: Gen [Observation]
+qcRandomObservations = do
+  duration <- suchThat chooseAny (>0) :: Gen Time
+  eventAbsTimes <- listOf1 (choose (0,duration))
+  let eats = sort (0:eventAbsTimes)
+      timeDeltas = [b - a | (a, b) <- zip (init eats) (tail eats)]
+      numEvents = length eventAbsTimes
+  eventTypes <- vectorOf numEvents qcRandomObservedEvent
+  return $ zip timeDeltas eventTypes
+
+
+-- | A copy of the @withinDeltaOf@ function specialised to
+-- @AggregatedObservations@ to test for approximate equality of aggregated
+-- observations.
+withinDeltaOfAggObs :: Double
+                    -> AggregatedObservations
+                    -> AggregatedObservations
+                    -> Bool
+withinDeltaOfAggObs delta (AggregatedObservations aggTimes obs) (AggregatedObservations aggTimes' obs') =
+  withinDeltaOfAggTimes delta aggTimes aggTimes' &&  allWithinDeltaOfObs delta obs obs'
+
+withinDeltaOfAggTimes :: Double -> AggregationTimes -> AggregationTimes -> Bool
+withinDeltaOfAggTimes delta (AggTimes ts) (AggTimes ts') =
+  let times = map fst ts
+      obsEvents = map snd ts
+      times' = map fst ts'
+      obsEvents' = map snd ts'
+      timesWithinDelta = allWithinDeltaOf delta times times'
+      observedEventsEqual = all (uncurry (withinDeltaOfObsEvent delta)) (zip obsEvents obsEvents')
+  in timesWithinDelta && observedEventsEqual
+
+withinDeltaOfObsEvent :: Double -> ObservedEvent -> ObservedEvent -> Bool
+withinDeltaOfObsEvent delta (ODisaster nl) (ODisaster nl') = withinDeltaOf delta nl nl'
+withinDeltaOfObsEvent delta (OCatastrophe nl) (OCatastrophe nl') = withinDeltaOf delta nl nl'
+withinDeltaOfObsEvent _ OBirth OBirth = True
+withinDeltaOfObsEvent _ ObsUnscheduledSequenced ObsUnscheduledSequenced = True
+withinDeltaOfObsEvent _ OOccurrence OOccurrence = True
+withinDeltaOfObsEvent _ _ _ = False
+
+withinDeltaOfObs :: Double -> Observation -> Observation -> Bool
+withinDeltaOfObs delta (t,oe) (t',oe') = withinDeltaOf delta t t' && withinDeltaOfObsEvent delta oe oe'
+
+allWithinDeltaOfObs :: Double -> [Observation] -> [Observation] -> Bool
+allWithinDeltaOfObs _ [] [] = True
+allWithinDeltaOfObs delta [y] [x] = withinDeltaOfObs delta y x
+allWithinDeltaOfObs delta (y:ys) (x:xs) = withinDeltaOfObs delta y x && allWithinDeltaOfObs delta ys xs
+allWithinDeltaOfObs _ _ _ = False
+
+
+
+testAggregation :: SpecWith ()
+testAggregation = do
+  describe "Testing Aggregation" $ do
+    let emptyAggTimes = fromJust (maybeAggregationTimes [] [])
+        identityProperty obs = let aggObs1 = aggregateUnscheduledObservations emptyAggTimes obs
+                                   aggObs2 = AggregatedObservations emptyAggTimes obs
+                                  in withinDeltaOfAggObs 1e-4 aggObs1 aggObs2
+    it "without aggregation nothing changes" $ forAll qcRandomObservations identityProperty
 
 
 main :: IO ()
