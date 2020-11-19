@@ -725,10 +725,21 @@ testAggregation :: SpecWith ()
 testAggregation = do
   describe "Testing Aggregation" $ do
     let emptyAggTimes = fromJust (maybeAggregationTimes [] [])
-        identityProperty obs = let aggObs1 = aggregateUnscheduledObservations emptyAggTimes obs
+        propertyIdentity obs = let aggObs1 = aggregateUnscheduledObservations emptyAggTimes obs
                                    aggObs2 = AggregatedObservations emptyAggTimes obs
                                   in withinDeltaOfAggObs 1e-4 aggObs1 aggObs2
-    it "without aggregation nothing changes" $ forAll qcRandomObservations identityProperty
+        duration obs = sum [d | (d,_) <- obs]
+        propertyRemoveSeq obs = let dur = duration obs
+                                    ats = fromJust $ maybeAggregationTimes [dur] []
+                                    (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
+                                in  not $ any isUnscheduledSequenced obs'
+        propertyRemoveUnseq obs = let dur = duration obs
+                                      ats = fromJust $ maybeAggregationTimes [] [dur]
+                                      (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
+                                  in  not $ any isOccurrence obs'
+    it "without aggregation nothing changes" $ forAll qcRandomObservations propertyIdentity
+    it "sequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveSeq
+    it "unsequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveUnseq
 
 
 main :: IO ()
