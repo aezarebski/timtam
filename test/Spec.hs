@@ -769,9 +769,9 @@ testAggregation = do
 main :: IO ()
 main = hspec $ do
   -- ** slow tests **
-  -- testNbPGF
-  -- testHmatrixUsage
-  -- testConditioningProbability
+  testNbPGF
+  testHmatrixUsage
+  testConditioningProbability
   -- ** fast tests **
   testTestingHelpers
   testPdeStatistics
