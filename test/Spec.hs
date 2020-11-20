@@ -792,4 +792,4 @@ main = hspec $ do
   testLogPdeGFDashDash2
   testLogSumExp
   testLogPdeStatistics
-
+  testAggregation
