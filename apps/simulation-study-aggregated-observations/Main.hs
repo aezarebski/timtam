@@ -8,19 +8,27 @@
 module Main where
 
 -- import BDSCOD.Conditioning
-import BDSCOD.Aggregation (aggregateUnscheduledObservations)
-import BDSCOD.Llhd (initLlhdState, llhdAndNB, pdeGF, pdeStatistics, logPdeStatistics)
-import BDSCOD.Types
+import BDSCOD.Aggregation
   ( AggregatedObservations(..)
   , AggregationTimes
-  , LogLikelihood(..)
+  , pattern AggTimes
+  , aggregateUnscheduledObservations
+  , maybeAggregationTimes
+  )
+import BDSCOD.Llhd
+  ( initLlhdState
+  , llhdAndNB
+  , logPdeStatistics
+  , pdeGF
+  , pdeStatistics
+  )
+import BDSCOD.Types
+  ( LogLikelihood(..)
   , NegativeBinomial(..)
   , NumLineages
   , Observation(..)
-  , Parameters(..)
   , PDESolution(..)
-  , pattern AggTimes
-  , maybeAggregationTimes
+  , Parameters(..)
   , packParameters
   , putLambda
   , putMu
@@ -178,16 +186,13 @@ simulateEpidemic seedInt bdscodConfig = do
 -- times aggregated as defined in the inference configuration.
 observeEpidemicThrice ::
   [EpidemicEvent]
-  -> ( InferenceConfiguration
-     , InferenceConfiguration
-     , InferenceConfiguration)
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
 observeEpidemicThrice simEvents = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
-      maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= maybeAggregationTimes
+      maybeAggTimes = undefined -- icMaybeTimesForAgg aggInfConfig >>= maybeAggregationTimes
       maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
       maybeNewickData = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
@@ -197,14 +202,13 @@ observeEpidemicThrice simEvents = do
          liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
     Nothing -> throwError "Could not reconstruct tree..."
   case (maybeRegObs,maybeAggObs) of
-    (Just regObs,Just (Just aggObs@(AggregatedObservations _ unboxedAggObs))) ->
+    (Just regObs,Just aggObs@(AggregatedObservations _ unboxedAggObs)) ->
       do liftIO $ L.writeFile (observationsOutputCsv regInfConfig) (Csv.encode regObs)
          liftIO $ L.writeFile (observationsOutputCsv aggInfConfig) (Csv.encode unboxedAggObs)
          return ( (regInfConfig, regObs)
                 , (regInfConfig', regObs)
                 , (aggInfConfig, aggObs))
-    (Just _,  Nothing) -> throwError "Could not evaluate aggregated observations... they are Nothing"
-    (Just _,  Just Nothing) -> throwError "Could not evaluate aggregated observations... they are Just Nothing"
+    (Just _,  Nothing) -> throwError "Could not evaluate aggregated observations..."
     (Nothing, Just _) -> throwError "Could not evaluate regular observations..."
     (Nothing, Nothing) -> throwError "Could not evaluate either set of observations..."
 
@@ -322,7 +326,7 @@ estimateLLHDAggregated ::
 estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs) = do
   ifVerbosePutStrLn "Running estimateLLHDAggregated..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let schedTimes = (aggTimes,[]) :: ([Time], [Time])
+  let schedTimes = undefined -- (aggTimes,[]) :: ([Time], [Time])
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersAggregatedData mleParams
       evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters

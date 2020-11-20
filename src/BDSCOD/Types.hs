@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module BDSCOD.Types
   ( Parameters(..)
@@ -28,17 +27,13 @@ module BDSCOD.Types
   , isBirth
   , isUnscheduledSequenced
   , isOccurrence
+  , numUnsequenced
+  , numSequenced
   , NegativeBinomial(..)
   , PDESolution(..)
   , LogLikelihood
   , LlhdAndNB
-  , LlhdCalcState
-  , AggregationTimes()
-  , pattern AggTimes
-  , maybeAggregationTimes
-  ,extractFirstAggregationTime
-  ,nullAggregationTimes
-  , AggregatedObservations(..)) where
+  , LlhdCalcState) where
 
 import Control.DeepSeq
 import Data.Aeson
@@ -46,9 +41,8 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
-import Data.List (intersperse,sort)
+import Data.List (intersperse)
 import Epidemic.Types.Parameter
-import Foreign.Storable
 import GHC.Generics (Generic)
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
@@ -130,6 +124,13 @@ scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
 type NumLineages = Double
 
 -- | The type of events that can be observed under the BDSCOD.
+--
+--   * @OBirth@ event is an observed birth event.
+--   * @ObsUnscheduledSequenced@ is an unscheduled sequenced removal.
+--   * @OOccurrence@ is an unscheduled unsequenced removal.
+--   * @OCatastrophe@ is an scheduled sequenced removal.
+--   * @ODisaster@ is an scheduled unsequenced removal.
+--
 data ObservedEvent
   = OBirth
   | ObsUnscheduledSequenced
@@ -184,6 +185,24 @@ isUnscheduledSequenced = (==ObsUnscheduledSequenced) . snd
 isOccurrence :: Observation -> Bool
 isOccurrence = (==OOccurrence) . snd
 
+-- | The number of /unsequenced/ lineages that were observed.
+numUnsequenced :: Observation -> NumLineages
+numUnsequenced obs = case snd obs of
+  OBirth -> 0
+  ObsUnscheduledSequenced -> 0
+  OOccurrence -> 1
+  (OCatastrophe _) -> 0
+  (ODisaster n) -> n
+
+-- | The number of /sequenced/ lineages that were observed.
+numSequenced :: Observation -> NumLineages
+numSequenced obs = case snd obs of
+  OBirth -> 0
+  ObsUnscheduledSequenced -> 1
+  OOccurrence -> 0
+  (OCatastrophe n) -> n
+  (ODisaster _) -> 0
+
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
 -- parameter /r/, the size, and a probability /p/, the mean of the distribution
@@ -217,46 +236,3 @@ type LlhdAndNB = (LogLikelihood,NegativeBinomial)
 type LlhdCalcState = (LlhdAndNB
                      ,Time
                      ,NumLineages)
-
-
--- | The times at which unscheduled event times are adjusted up to under the
--- aggregation process. This does allow for a case in which there are no such
--- times.
-newtype AggregationTimes =
-  AggregationTimes_ [Time]
-  deriving (Show, Eq)
-
--- | A smart constructor which only creates an `AggregationTimes` if the
--- provided `Time`s are sorted and non-negative since these represent absolute
--- times. If the given list of times is empty, then this returns an empty list
--- of `AggregationTimes`.
-maybeAggregationTimes :: [Time] -> Maybe AggregationTimes
-maybeAggregationTimes ts
-  | null ts = Just (AggregationTimes_ ts)
-  | sort ts == ts && minimum ts >= 0 = Just (AggregationTimes_ ts)
-  | otherwise = Nothing
-
-pattern AggTimes ts <- AggregationTimes_ ts
-
--- | Aggregated observations which contains aggregation times and the
--- observations which fall on those times. This is the result of adjusting the
--- delays in the times of unscheduled events up to the `AggregationTimes`. Note
--- that this includes the observations that are not aggregated, such as the
--- birth events.
-data AggregatedObservations =
-  AggregatedObservations AggregationTimes [Observation]
-  deriving (Show, Eq)
-
--- | Return the first time aggregation time and a new set of aggregation times
--- with the first one removed. Since there is a smart constructor, we assume
--- that the initial object has sorted times.
-extractFirstAggregationTime :: AggregationTimes -> Maybe (Time,AggregationTimes)
-extractFirstAggregationTime (AggregationTimes_ ts) = case ts of
-  [] -> Nothing
-  [t] -> Just (t, AggregationTimes_ [])
-  (t:ts') -> Just (t, AggregationTimes_ ts')
-
--- | Predicate for there being no aggregation times in the `AggregationTimes`
--- object.
-nullAggregationTimes :: AggregationTimes -> Bool
-nullAggregationTimes (AggregationTimes_ ts) = null ts

@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.1.3.0
+
+- Rewrite the aggregation functionality and use QuickCheck to make sure that
+  this works as expected.
+- Change the constructor for `AggregationTimes` to include the type of event
+  that is being aggregated at that point in time.
+
 ## 0.1.2.16
 
 - Do the likelihood calculation in log-space now where possible and introduce
