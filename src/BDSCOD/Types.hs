@@ -27,6 +27,8 @@ module BDSCOD.Types
   , isBirth
   , isUnscheduledSequenced
   , isOccurrence
+  , numUnsequenced
+  , numSequenced
   , NegativeBinomial(..)
   , PDESolution(..)
   , LogLikelihood
@@ -182,6 +184,24 @@ isUnscheduledSequenced = (==ObsUnscheduledSequenced) . snd
 -- | Predicate for the observation referring to an occurrence.
 isOccurrence :: Observation -> Bool
 isOccurrence = (==OOccurrence) . snd
+
+-- | The number of /unsequenced/ lineages that were observed.
+numUnsequenced :: Observation -> NumLineages
+numUnsequenced obs = case snd obs of
+  OBirth -> 0
+  ObsUnscheduledSequenced -> 0
+  OOccurrence -> 1
+  (OCatastrophe _) -> 0
+  (ODisaster n) -> n
+
+-- | The number of /sequenced/ lineages that were observed.
+numSequenced :: Observation -> NumLineages
+numSequenced obs = case snd obs of
+  OBirth -> 0
+  ObsUnscheduledSequenced -> 1
+  OOccurrence -> 0
+  (OCatastrophe n) -> n
+  (ODisaster _) -> 0
 
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
