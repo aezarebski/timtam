@@ -1,7 +1,6 @@
 module BDSCOD.Llhd where
 
 import Data.List (find)
-import Data.Maybe (fromJust)
 import BDSCOD.Types
 import BDSCOD.Utility
 import Epidemic.Types.Parameter
