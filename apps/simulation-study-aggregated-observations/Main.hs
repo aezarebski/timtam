@@ -48,8 +48,6 @@ import qualified Data.Aeson as Json
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as Csv
-import Data.List (intersperse)
-import Data.Maybe (fromJust, isJust)
 import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
@@ -65,7 +63,6 @@ import GHC.Generics
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra (dot)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
--- import Numeric.LinearAlgebra.HMatrix
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
 
@@ -138,12 +135,6 @@ data AnnotatedParameter
 
 -- | A BDSCOD simulation configuration based on the parameters in the
 -- environment.
---
--- TODO We should be able to pattern match for empty scheduled event parameters
--- and throw an error otherwise.
---
--- TODO We need to resolve whether Omega is going to be included or set to zero
---
 bdscodConfiguration = do
   simParams@(Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) <-
     asks simulationParameters
@@ -193,7 +184,7 @@ observeEpidemicThrice ::
 observeEpidemicThrice simEvents = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
-      maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= (uncurry maybeAggregationTimes)
+      maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
       maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
       maybeNewickData = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
@@ -227,42 +218,42 @@ observeEpidemicThrice simEvents = do
 adjustedEvaluationParameters :: AnnotatedParameter -> [Parameters]
 adjustedEvaluationParameters (TrueParameters ps) =
   let meshSize = 100
-      lambdaMesh = toList $ linspace meshSize (1, 2.5)
-      muMesh = toList $ linspace meshSize (0.05, 1.5)
-      psiMesh = toList $ linspace meshSize (0.05, 1.5)
+      lambdaMesh = toList $ linspace meshSize (1, 3.5)
+      -- muMesh = toList $ linspace meshSize (0.05, 1.5)
+      -- psiMesh = toList $ linspace meshSize (0.05, 1.5)
       -- probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
       -- (rhoTimes, nuTimes) = scheduledTimes ps
       -- rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
       -- omegaMesh = toList $ linspace meshSize (0.05, 1.5)
       -- nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
       apply f = map (f ps)
-      [lPs, mPs, pPs] =
+      [lPs] =
         zipWith
           apply
-          [putLambda, putMu, putPsi]
-          [lambdaMesh, muMesh, psiMesh]
+          [putLambda]
+          [lambdaMesh]
       -- [rPs, nPs] = zipWith apply [putRhos, putNus] [rhoMesh, nuMesh]
-   in concat [lPs, mPs, pPs]
+   in concat [lPs]
 adjustedEvaluationParameters (EstimatedParametersRegularData ps) =
   adjustedEvaluationParameters (TrueParameters ps)
 adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
   let meshSize = 100
-      lambdaMesh = toList $ linspace meshSize (1, 2.5)
-      muMesh = toList $ linspace meshSize (0.05, 1.5)
+      lambdaMesh = toList $ linspace meshSize (1, 3.5)
+      -- muMesh = toList $ linspace meshSize (0.05, 1.5)
       -- psiMesh = toList $ linspace meshSize (0.05, 1.5)
-      probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
-      (rhoTimes, _) = scheduledTimes ps
-      rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
+      -- probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
+      -- (rhoTimes, _) = scheduledTimes ps
+      -- rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
       -- omegaMesh = toList $ linspace meshSize (0.05, 1.5)
       -- nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
       apply f = map (f ps)
-      [lPs, mPs] =
+      [lPs] =
         zipWith
           apply
-          [putLambda, putMu]
-          [lambdaMesh, muMesh]
-      [rPs] = zipWith apply [putRhos] [rhoMesh]
-   in concat [lPs, mPs, rPs]
+          [putLambda]
+          [lambdaMesh]
+      -- [rPs] = zipWith apply [putRhos] [rhoMesh]
+   in concat [lPs]
 
 
 -- | Evaluate the NB posterior approximation of the prevalence for a single
@@ -398,16 +389,16 @@ simulationStudy = do
 -- TODO This comment section needs to be deleted once the application has been
 -- finished and tested.
 --
--- replMain :: IO ()
--- replMain = do
---   let configFilePath = "agg-app-config.json"
---   config' <- getConfiguration configFilePath
---   case config' of
---     Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
---     (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
---                         case result of
---                           Right () -> return ()
---                           Left errMsg -> do putStrLn errMsg; return ()
+replMain :: IO ()
+replMain = do
+  let configFilePath = "agg-app-config.json"
+  config' <- getConfiguration configFilePath
+  case config' of
+    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
+    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
+                        case result of
+                          Right () -> return ()
+                          Left errMsg -> do putStrLn errMsg; return ()
 --
 -- =============================================================================
 
