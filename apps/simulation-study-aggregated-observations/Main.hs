@@ -355,7 +355,6 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
 -- parameters from wandering off which can occur with smaller data sets.
 --
 -- TODO Fix the stupid settings on this!!!
--- TODO Fix the handling of nu!!!
 --
 estimateAggregatedParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
@@ -447,7 +446,6 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 -- parameters from wandering off which can occur with smaller data sets.
 --
 -- TODO Fix the stupid settings on this!!!
--- TODO Fix the handling of nu!!!
 --
 estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
