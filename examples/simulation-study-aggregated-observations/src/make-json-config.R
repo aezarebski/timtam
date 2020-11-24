@@ -64,7 +64,7 @@ result <- list(
     simulationSizeBounds = c(100,100000),
     inferenceConfigurations = list(inference_configuration("true-params-regular-data", NULL),
                                    inference_configuration("est-params-regular-data", NULL),
-                                   inference_configuration("est-params-agg-data", list(list(2.5,3.5),list()))),
+                                   inference_configuration("est-params-agg-data", list(list(2.5,3.5),list(3.0)))),
     isVerbose = TRUE
 )
 

@@ -295,6 +295,8 @@ evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
   ifVerbosePutStrLn "Running evaluateLLHD..."
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
+  ifVerbosePutStrLn "\tUsing non-aggregated data with the true parameters..."
+  ifVerbosePutStrLn $ show simParams
   let evalParams = adjustedEvaluationParameters (TrueParameters simParams)
   generateLlhdProfileCurves infConfig obs (TrueParameters simParams, evalParams)
 
@@ -331,11 +333,6 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersAggregatedData mleParams
       evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
-  ifVerbosePutStrLn "================================================================================"
-  ifVerbosePutStrLn $ show deathRate
-  ifVerbosePutStrLn $ show schedTimes
-  ifVerbosePutStrLn $ show obs
-  ifVerbosePutStrLn "================================================================================"
   ifVerbosePutStrLn "\tUsing aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ show mleParams
   generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
@@ -391,7 +388,6 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration
   let seedInt = 42 + 40
   epiSim <- simulateEpidemic seedInt bdscodConfig
-  ifVerbosePutStrLn $ show epiSim
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
   uncurry estimateLLHD regObs'
