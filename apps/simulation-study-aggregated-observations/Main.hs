@@ -374,7 +374,7 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
           in packParameters (r, deathRate, 0, rts, 0, nts)
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-            regCost = 100 * dot x x
+            regCost = 10 * dot x x
           in negLlhd + regCost
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vecAsParams est
