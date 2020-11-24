@@ -24,8 +24,9 @@ catastrophe_params <- list()
 #' \code{Main.hs}.
 #'
 #' @param inf_config_name a character label for the inference
-#' @param agg_times_vec a numeric vector of the aggregation times or \code{NULL}
-#'   if there are none.
+#' @param agg_times_vec a list of numeric vectors defining the aggregation
+#'   times, first for the sequenced and then unsequenced samples, or \code{NULL}
+#'   if there are no aggregation times.
 #'
 #' TODO Extend this to include both types of scheduled event.
 #'
@@ -63,7 +64,7 @@ result <- list(
     simulationSizeBounds = c(100,100000),
     inferenceConfigurations = list(inference_configuration("true-params-regular-data", NULL),
                                    inference_configuration("est-params-regular-data", NULL),
-                                   inference_configuration("est-params-agg-data", c(2.5,3.5))),
+                                   inference_configuration("est-params-agg-data", list(list(2.5,3.5),list()))),
     isVerbose = TRUE
 )
 
