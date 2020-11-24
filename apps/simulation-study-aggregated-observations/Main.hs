@@ -27,6 +27,7 @@ import BDSCOD.Types
   , NegativeBinomial(..)
   , NumLineages
   , Observation(..)
+  , ObservedEvent(..)
   , PDESolution(..)
   , Parameters(..)
   , packParameters
@@ -326,10 +327,15 @@ estimateLLHDAggregated ::
 estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs) = do
   ifVerbosePutStrLn "Running estimateLLHDAggregated..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let schedTimes = undefined -- (aggTimes,[]) :: ([Time], [Time])
+  let (Just schedTimes) = icMaybeTimesForAgg infConfig -- (aggTimes,[]) :: ([Time], [Time])
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersAggregatedData mleParams
       evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
+  ifVerbosePutStrLn "================================================================================"
+  ifVerbosePutStrLn $ show deathRate
+  ifVerbosePutStrLn $ show schedTimes
+  ifVerbosePutStrLn $ show obs
+  ifVerbosePutStrLn "================================================================================"
   ifVerbosePutStrLn "\tUsing aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ show mleParams
   generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
@@ -359,14 +365,15 @@ estimateAggregatedParameters ::
 estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
   let maxIters = 100
       desiredPrec = 1e-4
-      initBox = fromList ([0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
-      randInit = fromList ([-0.1, -0.1] :: [Rate])
+      initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
+      randInit = fromList ([0.1, -0.1, 0.1] :: [Rate])
       vecAsParams x =
-        let [lnR, lnP1] = toList x
+        let [lnR1, lnP1, lnP2] = toList x
             p1 = invLogit lnP1
-            r = exp lnR
+            p2 = invLogit lnP2
+            r = exp lnR1
             rts = [(t, p1) | t <- rhoTimes]
-            nts = []
+            nts = [(t, p2) | t <- nuTimes]
           in packParameters (r, deathRate, 0, rts, 0, nts)
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
@@ -382,8 +389,9 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  let seedInt = 42
+  let seedInt = 42 + 40
   epiSim <- simulateEpidemic seedInt bdscodConfig
+  ifVerbosePutStrLn $ show epiSim
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
   uncurry estimateLLHD regObs'
@@ -397,11 +405,14 @@ simulationStudy = do
 --
 replMain :: IO ()
 replMain = do
-  (Just config) <- getConfiguration "agg-app-config.json"
-  result <- runExceptT (runReaderT simulationStudy config)
-  case result of
-    Right () -> return ()
-    Left errMsg -> do putStrLn errMsg; return ()
+  let configFilePath = "agg-app-config.json"
+  config' <- getConfiguration configFilePath
+  case config' of
+    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
+    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
+                        case result of
+                          Right () -> return ()
+                          Left errMsg -> do putStrLn errMsg; return ()
 --
 -- =============================================================================
 
