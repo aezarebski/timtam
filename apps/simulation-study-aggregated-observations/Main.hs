@@ -386,7 +386,7 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  let seedInt = 42 + 40
+  let seedInt = 42 + 40 + 20 + 20
   epiSim <- simulateEpidemic seedInt bdscodConfig
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
