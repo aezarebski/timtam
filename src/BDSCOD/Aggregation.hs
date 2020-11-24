@@ -63,6 +63,29 @@ data AggregatedObservations =
 -- event, not their absolute time.
 type AnnotatedObservation = (Time, Observation)
 
+-- | Based on the abosulte time annotations re-compute the delays for the
+-- observations and return the observations without the absolute time
+-- annotations.
+--
+-- NOTE that this completely ignores the the original delay times in the
+-- annotated observations.
+obsWithoutAnnotations :: [AnnotatedObservation] -> [Observation]
+obsWithoutAnnotations annObs =
+  let absTimes = map fst annObs
+      obs = map snd annObs
+      collectDelay (currTime, _) newTime = (newTime, newTime - currTime)
+      delays = map snd . tail . scanl collectDelay (0, 0) $ absTimes
+   in zipWith updateDelay obs delays
+
+-- | Add the absolute time of each observation as an annotation to the
+-- observation assuming that the first delay is relative to the origin time:
+-- zero. Otherwise the observations are left as they are.
+obsWithAnnotations :: [Observation] -> [AnnotatedObservation]
+obsWithAnnotations obs =
+  let delayVals = map fst obs
+      absTimes = (tail . scanl (+) 0) delayVals
+   in zip absTimes obs
+
 -- | The observations where unscheduled observations have been rounded up to the
 -- first aggregation time after they occurred. If there are unscheduled
 -- observations after the final aggregation time the resut is nothing.
@@ -74,28 +97,15 @@ aggregateUnscheduledObservations :: AggregationTimes
                                  -> [Observation]
                                  -> AggregatedObservations
 aggregateUnscheduledObservations aggTimes obs =
-  let annObs = annotatedObs obs
+  let annObs = obsWithAnnotations obs
       aggAnnObs = aggregatedObs aggTimes annObs
-      aggObs = withDelaysNoAnnotations aggAnnObs
-    in AggregatedObservations aggTimes aggObs
+      aggAnnObs' =
+        filter
+          (\(_, o) -> not (isUnscheduledSequenced o || isOccurrence o))
+          aggAnnObs
+      aggObs = obsWithoutAnnotations aggAnnObs'
+   in AggregatedObservations aggTimes aggObs
 
--- | The observations with the new delays computed from the annotations which
--- have been removed.
-withDelaysNoAnnotations :: [AnnotatedObservation] -> [Observation]
-withDelaysNoAnnotations annObs =
-  let absTimes = map fst annObs
-      obs = map snd annObs
-      collectDelay (currTime,_) newTime = (newTime,newTime-currTime)
-      delays = map snd . tail . scanl collectDelay (0,0) $ absTimes
-    in zipWith updateDelay obs delays
-
--- | Add the absolute time of each observation as an annotation to the
--- observation assuming that the first delay is since the origin time, zero.
-annotatedObs :: [Observation] -> [AnnotatedObservation]
-annotatedObs obs =
-  let delayVals = map fst obs
-      absTimes = (tail . scanl (+) 0) delayVals
-  in zip absTimes obs
 
 -- | Aggregate all annotated unscheduled observations into annotated scheduled
 -- observations at the given aggregation times. If there are annotated

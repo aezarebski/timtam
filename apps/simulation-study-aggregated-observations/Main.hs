@@ -27,6 +27,7 @@ import BDSCOD.Types
   , NegativeBinomial(..)
   , NumLineages
   , Observation(..)
+  , ObservedEvent(..)
   , PDESolution(..)
   , Parameters(..)
   , packParameters
@@ -81,7 +82,7 @@ data InferenceConfiguration =
     , llhdOutputCsv :: FilePath
     , pointEstimatesCsv :: FilePath
     , maybePointEstimate :: Maybe Parameters
-    , icMaybeTimesForAgg :: Maybe [Time]
+    , icMaybeTimesForAgg :: Maybe ([Time], [Time])
     }
   deriving (Show, Generic)
 
@@ -177,7 +178,7 @@ simulateEpidemic seedInt bdscodConfig = do
       liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
       return simEvents
     else do
-      ifVerbosePutStrLn "\trepeating the simulation..."
+      ifVerbosePutStrLn $ "\trepeating the simulation with seed: " ++ show seedInt
       simulateEpidemic (succ seedInt) bdscodConfig
 
 -- | Take a simulated epidemic and generate the observations, first with full
@@ -192,7 +193,7 @@ observeEpidemicThrice ::
 observeEpidemicThrice simEvents = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
   let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
-      maybeAggTimes = undefined -- icMaybeTimesForAgg aggInfConfig >>= maybeAggregationTimes
+      maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= (uncurry maybeAggregationTimes)
       maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
       maybeNewickData = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
@@ -294,6 +295,8 @@ evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
   ifVerbosePutStrLn "Running evaluateLLHD..."
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
+  ifVerbosePutStrLn "\tUsing non-aggregated data with the true parameters..."
+  ifVerbosePutStrLn $ show simParams
   let evalParams = adjustedEvaluationParameters (TrueParameters simParams)
   generateLlhdProfileCurves infConfig obs (TrueParameters simParams, evalParams)
 
@@ -313,8 +316,8 @@ estimateLLHD infConfig obs = do
   let mleParams = estimateRegularParameters deathRate obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersRegularData mleParams
       evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
-  ifVerbosePutStrLn "The computed MLE is..."
-  ifVerbosePutStrLn $ show mleParams
+  ifVerbosePutStrLn "\tUsing non-aggregated data the computed MLE is..."
+  ifVerbosePutStrLn $ "\t" ++ show annotatedMLE
   generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
 
 -- | Using __aggregated__ observations, estimate the parameters
@@ -326,11 +329,11 @@ estimateLLHDAggregated ::
 estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs) = do
   ifVerbosePutStrLn "Running estimateLLHDAggregated..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let schedTimes = undefined -- (aggTimes,[]) :: ([Time], [Time])
+  let (Just schedTimes) = icMaybeTimesForAgg infConfig -- (aggTimes,[]) :: ([Time], [Time])
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersAggregatedData mleParams
       evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
-  ifVerbosePutStrLn "The computed MLE is..."
+  ifVerbosePutStrLn "\tUsing aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ show mleParams
   generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
 
@@ -352,25 +355,25 @@ estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs
 -- parameters from wandering off which can occur with smaller data sets.
 --
 -- TODO Fix the stupid settings on this!!!
--- TODO Fix the handling of nu!!!
 --
 estimateAggregatedParameters ::
      Rate -> ([Time], [Time]) -> [Observation] -> Parameters
 estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
   let maxIters = 100
       desiredPrec = 1e-4
-      initBox = fromList ([0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
-      randInit = fromList ([-0.1, -0.1] :: [Rate])
+      initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
+      randInit = fromList ([0.1, -0.1, 0.1] :: [Rate])
       vecAsParams x =
-        let [lnR, lnP1] = toList x
+        let [lnR1, lnP1, lnP2] = toList x
             p1 = invLogit lnP1
-            r = exp lnR
+            p2 = invLogit lnP2
+            r = exp lnR1
             rts = [(t, p1) | t <- rhoTimes]
-            nts = []
+            nts = [(t, p2) | t <- nuTimes]
           in packParameters (r, deathRate, 0, rts, 0, nts)
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-            regCost = 100 * dot x x
+            regCost = 10 * dot x x
           in negLlhd + regCost
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vecAsParams est
@@ -382,7 +385,7 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  let seedInt = 42
+  let seedInt = 42 + 40
   epiSim <- simulateEpidemic seedInt bdscodConfig
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
@@ -395,13 +398,16 @@ simulationStudy = do
 -- TODO This comment section needs to be deleted once the application has been
 -- finished and tested.
 --
-replMain :: IO ()
-replMain = do
-  (Just config) <- getConfiguration "agg-app-config.json"
-  result <- runExceptT (runReaderT simulationStudy config)
-  case result of
-    Right () -> return ()
-    Left errMsg -> do putStrLn errMsg; return ()
+-- replMain :: IO ()
+-- replMain = do
+--   let configFilePath = "agg-app-config.json"
+--   config' <- getConfiguration configFilePath
+--   case config' of
+--     Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
+--     (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
+--                         case result of
+--                           Right () -> return ()
+--                           Left errMsg -> do putStrLn errMsg; return ()
 --
 -- =============================================================================
 
@@ -440,20 +446,20 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 -- parameters from wandering off which can occur with smaller data sets.
 --
 -- TODO Fix the stupid settings on this!!!
--- TODO Fix the handling of nu!!!
 --
 estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
 estimateRegularParameters deathRate obs =
   let maxIters = 100
       desiredPrec = 1e-4
-      initBox = fromList [0.2, 0.2] -- lambda, psi (because mu, rho, omega and nu are fixed)
-      randInit = fromList [0, 0]
+      initBox = fromList [0.2, 0.2, 0.2] -- lambda, psi (because mu, rho, omega and nu are fixed)
+      randInit = fromList [0.1, 0.0, 0.0]
       vecAsParams x =
-        let [lnR1, lnR2] = toList x
+        let [lnR1, lnR2, lnR3] = toList x
             r1 = exp lnR1
             r2 = exp lnR2
-           in packParameters (r1, deathRate, r2, [], 0, [])
+            r3 = exp lnR3
+           in packParameters (r1, deathRate, r2, [], r3, [])
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
             regCost = dot x x

@@ -726,10 +726,6 @@ testAggregation = do
   describe "Testing Aggregation" $ do
     let smallDelta = 1e-4
         tinyDelta = 1e-6
-        emptyAggTimes = fromJust (maybeAggregationTimes [] [])
-        propertyIdentity obs = let aggObs1 = aggregateUnscheduledObservations emptyAggTimes obs
-                                   aggObs2 = AggregatedObservations emptyAggTimes obs
-                                  in withinDeltaOfAggObs smallDelta aggObs1 aggObs2
         duration obs = sum $ map fst obs
         propertyRemoveSeq obs = let dur = duration obs
                                     ats = fromJust $ maybeAggregationTimes [dur + tinyDelta] []
@@ -739,10 +735,14 @@ testAggregation = do
                                       ats = fromJust $ maybeAggregationTimes [] [dur + tinyDelta]
                                       (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
                                   in  not $ any isOccurrence obs'
-        propertyRemoveUnsched obs = let dur = duration obs
-                                        ats = fromJust $ maybeAggregationTimes [dur + tinyDelta] [dur + tinyDelta + 1.0]
-                                        (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                    in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
+        propertyRemoveUnsched1 obs = let dur = duration obs
+                                         ats = fromJust $ maybeAggregationTimes [dur + tinyDelta] [dur + tinyDelta + 1.0]
+                                         (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
+                                     in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
+        propertyRemoveUnsched2 obs = let dur = duration obs
+                                         ats = fromJust $ maybeAggregationTimes [0.4 * dur] [0.5 * dur]
+                                         (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
+                                     in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
         propertyBirthsRemain obs = let dur = duration obs
                                        numBs = length $ filter isBirth obs
                                        ats = fromJust $ maybeAggregationTimes [dur + tinyDelta] [dur + tinyDelta + 1.0]
@@ -757,10 +757,10 @@ testAggregation = do
                                        numSeq' = sum $ map numSequenced os'
                                        numUnseq' = sum $ map numUnsequenced os'
                                    in withinDeltaOf smallDelta numSeq numSeq' && withinDeltaOf smallDelta numUnseq numUnseq'
-    it "without aggregation nothing changes" $ forAll qcRandomObservations propertyIdentity
     it "sequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveSeq
     it "unsequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveUnseq
-    it "aggregating both removes all relevent observations" $ forAll qcRandomObservations propertyRemoveUnsched
+    it "aggregating both removes all relevent observations 1" $ forAll qcRandomObservations propertyRemoveUnsched1
+    it "aggregating both removes all relevent observations 2" $ forAll qcRandomObservations propertyRemoveUnsched2
     it "aggregating leaves birth observations unchanged" $ forAll qcRandomObservations propertyBirthsRemain
     it "aggregating leaves the number of observed lineages unchanged" $ forAll qcRandomObservations propertyLineagesConst
 
