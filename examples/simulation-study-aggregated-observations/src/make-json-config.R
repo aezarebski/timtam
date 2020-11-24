@@ -9,15 +9,21 @@ if (not(dir.exists("out"))) {
 output_file <- "agg-app-config.json"
 
 
-simulation_duration <- 5.5 - 1e-6
+simulation_duration <- 6.5 - 1e-6
 
-birth_rate <- 1.8
+birth_rate <- 1.7
 death_rate <- 0.5
-sampling_rate <- 0.2
-occurrence_rate <- 0.2
+sampling_rate <- 0.1
+occurrence_rate <- 0.3
 
 disaster_params <- list()
 catastrophe_params <- list()
+
+## For the aggregation, these are the times at which we carry out the
+## aggregation.
+seq_agg_times <- as.list(seq(from = 2.5, to = 6.5, by = 1))
+unseq_agg_times <- as.list(seq(from = 2.0, to = 6.0, by = 1))
+
 
 
 #' Return a list corresponding to the \code{InferenceConfiguration} from
@@ -27,8 +33,6 @@ catastrophe_params <- list()
 #' @param agg_times_vec a list of numeric vectors defining the aggregation
 #'   times, first for the sequenced and then unsequenced samples, or \code{NULL}
 #'   if there are no aggregation times.
-#'
-#' TODO Extend this to include both types of scheduled event.
 #'
 inference_configuration <- function(inf_config_name, agg_times_vec) {
   result <- list(
@@ -69,6 +73,7 @@ sim_params <- list(
 )
 
 
+
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
@@ -77,7 +82,9 @@ result <- list(
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL),
     inference_configuration("est-params-regular-data", NULL),
-    inference_configuration("est-params-agg-data", list(list(2.5, 3.5, 4.5, 5.5), list(3.0, 4.0, 5.0)))
+    inference_configuration("est-params-agg-data",
+                            list(seq_agg_times,
+                                 unseq_agg_times))
   ),
   isVerbose = TRUE
 )
