@@ -9,7 +9,7 @@ if (not(dir.exists("out"))) {
 output_file <- "agg-app-config.json"
 
 
-simulation_duration <- 7.5 - 1e-6
+simulation_duration <- 8.5 - 1e-6
 
 birth_rate <- 1.7
 death_rate <- 0.5
@@ -21,8 +21,8 @@ catastrophe_params <- list()
 
 ## For the aggregation, these are the times at which we carry out the
 ## aggregation.
-seq_agg_times <- as.list(seq(from = 2.5, to = 7.5, by = 1))
-unseq_agg_times <- as.list(seq(from = 2.0, to = 7.0, by = 1))
+seq_agg_times <- as.list(seq(from = 2.5, to = 8.5, by = 1))
+unseq_agg_times <- as.list(seq(from = 2.0, to = 8.0, by = 1))
 
 
 
