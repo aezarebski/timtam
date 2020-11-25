@@ -7,7 +7,6 @@
 
 module Main where
 
--- import BDSCOD.Conditioning
 import BDSCOD.Aggregation
   ( AggregatedObservations(..)
   , AggregationTimes
