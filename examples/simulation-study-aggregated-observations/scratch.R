@@ -5,6 +5,10 @@ library(ggplot2)
 library(stringr)
 library(jsonlite)
 
+
+## =============================================================================
+## Generate cross sections of the LLHD function in the birth rate.
+## =============================================================================
 x <- list("out/llhd-evaluations-est-params-agg-data.csv",
           "out/llhd-evaluations-est-params-regular-data.csv",
           "out/llhd-evaluations-true-params-regular-data.csv")
@@ -32,7 +36,9 @@ g <- ggplot(y) +
 ggsave("scratch-output-1.png", g)
 
 
-
+## =============================================================================
+## Generate a figure looking at the posterior distribution of the prevalence
+## =============================================================================
 x <- list(
   "out/final-negative-binomial-est-params-agg-data.csv",
   "out/final-negative-binomial-est-params-regular-data.csv",
