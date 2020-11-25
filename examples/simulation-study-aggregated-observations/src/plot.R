@@ -5,6 +5,8 @@ library(ggplot2)
 library(stringr)
 library(jsonlite)
 
+green_hex_colour <- "#7fc97f"
+purple_hex_colour <- "#beaed4"
 
 ## =============================================================================
 ## Generate cross sections of the LLHD function in the birth rate.
@@ -29,25 +31,48 @@ read_llhds <- function(filename) {
   }
 }
 
-y <- map(
+cross_section_df <- map(
   x,
   read_llhds
 ) %>%
   keep(compose(not, is_null)) %>%
-  bind_rows()
+  bind_rows() %>%
+  mutate(
+    estimated_params = str_detect(type, "estimated.*"),
+    aggregated_data = str_detect(type, ".*aggregated.*")
+  )
 
-g <- ggplot(y) +
-  geom_line(mapping = aes(x = lambda, y = value)) +
+g <- ggplot(cross_section_df) +
+  geom_line(mapping = aes(x = lambda, y = value, colour = aggregated_data, linetype = estimated_params)) +
   geom_vline(xintercept = sim_lambda) +
-  facet_wrap(~type, scales = "free_y")
+  facet_wrap(~type, scales = "free_y") +
+  scale_linetype_manual(values = c("dashed", "solid")) +
+  scale_color_manual(values = c(green_hex_colour, purple_hex_colour)) +
+  labs(y = NULL, x = "Birth rate (lambda)") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        legend.position = "none")
 
 ggsave("out/lambda-llhd-cross-sections.png", g)
 
+fig_height <- 8
+ggsave("out/lambda-llhd-cross-sections.png",
+       g,
+       height = fig_height,
+       width = 2 * 1.618 * fig_height,
+       units = "cm"
+       )
+ggsave("out/lambda-llhd-cross-sections.pdf",
+       g,
+       height = fig_height,
+       width = 2 * 1.618 * fig_height,
+       units = "cm"
+       )
 
 ## =============================================================================
 ## Generate a figure looking at the posterior distribution of the prevalence
 ## =============================================================================
-x <- list(
+data_paths <- list(
   "out/final-negative-binomial-est-params-agg-data.csv",
   "out/final-negative-binomial-est-params-regular-data.csv",
   "out/final-negative-binomial-true-params-regular-data.csv"
@@ -78,17 +103,17 @@ read_nb <- function(filename) {
   }
 }
 
-y <- map(x, read_nb) %>%
+posterior_plot_df <- map(data_paths, read_nb) %>%
   keep(compose(not, is_null)) %>%
   bind_rows()
 
-g <- ggplot(y) +
+g <- ggplot(posterior_plot_df) +
   geom_point(mapping = aes(
     x = estimate_name,
     y = percentile_value,
     colour = percentile_prob
   )) +
-  ylim(c(0, 1.1 * max(y$percentile_value)))
+  ylim(c(0, 1.1 * max(posterior_plot_df$percentile_value)))
 
 
 ggsave("out/posterior-prevelance-estimates.png", g)
@@ -185,12 +210,72 @@ agg_occ_df <- aggregated_data %>%
 
 ## -----------------------------------------------------------------------------
 
+sim_duration <- app_config$simulationDuration
+
+tmp_true_regular <- filter(posterior_plot_df, estimate_name == "true_parameters_regular_data") %>% use_series("percentile_value")
+true_regular_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_true_regular), prev_est_mid = median(tmp_true_regular), prev_est_max = max(tmp_true_regular))
+
+tmp_est_regular <- filter(posterior_plot_df, estimate_name == "estimated_parameters_regular_data") %>% use_series("percentile_value")
+est_regular_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_est_regular), prev_est_mid = median(tmp_est_regular), prev_est_max = max(tmp_est_regular))
+
+tmp_est_aggregated <- filter(posterior_plot_df, estimate_name == "estimated_parameters_aggregated_data") %>% use_series("percentile_value")
+est_aggregated_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_est_aggregated), prev_est_mid = median(tmp_est_aggregated), prev_est_max = max(tmp_est_aggregated))
+
+
+
+
+
 g <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
-  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "green") +
-  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = "green", alpha = 0.1, colour = "green") +
-  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "purple") +
-  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = "purple") +
-  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = "purple")
+  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
+  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
+  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
+  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
+  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
+  geom_errorbar(
+    data = true_regular_df,
+    mapping = aes(x = absolute_time - 0.1, ymin = prev_est_min, ymax = prev_est_max),
+    colour = green_hex_colour, linetype = "dashed", width = 0.2
+  ) +
+  geom_point(
+    data = true_regular_df,
+    mapping = aes(x = absolute_time - 0.1, y = prev_est_mid),
+    colour = green_hex_colour
+  ) +
+  geom_errorbar(
+    data = est_regular_df,
+    mapping = aes(x = absolute_time, ymin = prev_est_min, ymax = prev_est_max),
+    colour = green_hex_colour, linetype = "solid", width = 0.2
+  ) +
+  geom_point(
+    data = est_regular_df,
+    mapping = aes(x = absolute_time, y = prev_est_mid),
+    colour = green_hex_colour
+  ) +
+  geom_errorbar(
+    data = est_aggregated_df,
+    mapping = aes(x = absolute_time + 0.1, ymin = prev_est_min, ymax = prev_est_max),
+    colour = purple_hex_colour, linetype = "solid", width = 0.2
+  ) +
+  geom_point(
+    data = est_aggregated_df,
+    mapping = aes(x = absolute_time + 0.1, y = prev_est_mid),
+    colour = purple_hex_colour
+  ) +
+  labs(y = NULL, x = "Time since origin") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"))
 
-ggsave("out/regular-and-aggregated-data.png", g)
+fig_height <- 10
+ggsave("out/regular-and-aggregated-data.png",
+  g,
+  height = fig_height,
+  width = 1.618 * fig_height,
+  units = "cm"
+)
+ggsave("out/regular-and-aggregated-data.pdf",
+  g,
+  height = fig_height,
+  width = 1.618 * fig_height,
+  units = "cm"
+)
