@@ -101,7 +101,6 @@ all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
   select(V1, V2) %>%
   set_names(c("event", "abs_time"))
 
-
 update_prev <- function(n, e) {
   switch(EXPR = e,
     infection = n + 1,
@@ -119,8 +118,29 @@ prev_df <- data.frame(
   )
 )
 
+regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE) %>% set_names(c("delay", "observed_event")) %>% mutate(abs_time =  cumsum(delay))
 
-g <- ggplot(prev_df) +
-  geom_step(mapping = aes(x = absolute_time, y = prevalence))
+update_reg_data_ltt <- function(n, e) {
+  switch(EXPR = e,
+         obirth = n + 1,
+         osample = n - 1
+         )
+}
+
+just_tree_obs <- regular_data %>% filter(observed_event != "ooccurrence") %>% select(-delay)
+
+foo <- accumulate(.x = just_tree_obs$observed_event,
+           .f = update_reg_data_ltt,
+           .init = 1)
+
+reg_tree_df <- data.frame(
+absolute_time = c(0, just_tree_obs$abs_time),
+ltt = accumulate(.x = just_tree_obs$observed_event,
+                 .f = update_reg_data_ltt,
+                 .init = 1))
+
+g <- ggplot() +
+  geom_step(data = prev_df,mapping = aes(x = absolute_time, y = prevalence)) +
+  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "green")
 
 ggsave("scratch-output-3.png", g)
