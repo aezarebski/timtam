@@ -92,3 +92,35 @@ g <- ggplot(y) +
 
 
 ggsave("scratch-output-2.png", g)
+
+## =============================================================================
+## Generate a figure looking at the prevalence through time and the data used in
+## the inference.
+## =============================================================================
+all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
+  select(V1, V2) %>%
+  set_names(c("event", "abs_time"))
+
+
+update_prev <- function(n, e) {
+  switch(EXPR = e,
+    infection = n + 1,
+    occurrence = n - 1,
+    removal = n - 1,
+    sampling = n - 1
+  )
+}
+
+prev_df <- data.frame(
+  absolute_time = c(0, all_events$abs_time),
+  prevalence = accumulate(
+    .x = all_events$event,
+    .f = update_prev, .init = 1
+  )
+)
+
+
+g <- ggplot(prev_df) +
+  geom_step(mapping = aes(x = absolute_time, y = prevalence))
+
+ggsave("scratch-output-3.png", g)
