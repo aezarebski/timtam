@@ -399,16 +399,16 @@ simulationStudy = do
 -- TODO This comment section needs to be deleted once the application has been
 -- finished and tested.
 --
-replMain :: IO ()
-replMain = do
-  let configFilePath = "agg-app-config.json"
-  config' <- getConfiguration configFilePath
-  case config' of
-    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
-    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
-                        case result of
-                          Right () -> return ()
-                          Left errMsg -> do putStrLn errMsg; return ()
+-- replMain :: IO ()
+-- replMain = do
+--   let configFilePath = "agg-app-config.json"
+--   config' <- getConfiguration configFilePath
+--   case config' of
+--     Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
+--     (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
+--                         case result of
+--                           Right () -> return ()
+--                           Left errMsg -> do putStrLn errMsg; return ()
 --
 -- =============================================================================
 
