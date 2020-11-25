@@ -243,4 +243,16 @@ g <- ggplot() +
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
 
-ggsave("out/regular-and-aggregated-data.png", g)
+fig_height <- 10
+ggsave("out/regular-and-aggregated-data.png",
+  g,
+  height = fig_height,
+  width = 1.618 * fig_height,
+  units = "cm"
+)
+ggsave("out/regular-and-aggregated-data.pdf",
+  g,
+  height = fig_height,
+  width = 1.618 * fig_height,
+  units = "cm"
+)
