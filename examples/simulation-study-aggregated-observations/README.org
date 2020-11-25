@@ -17,8 +17,7 @@ Rscript src/make-json-config.R
 stack build
 stack exec -- simulation-study-aggregated-observations agg-app-config.json
 
-# Rscript src/plot-simulated-data.R
-# Rscript src/plot-llhd-profiles.R
+Rscript src/plot.R
 #+END_SRC
 
 ** TODO Delete this section when this is finished
