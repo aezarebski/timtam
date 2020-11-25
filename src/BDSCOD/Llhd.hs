@@ -220,9 +220,9 @@ logPdeGF'' params delay (PDESol Zero 1) z = log rdashdashz
 logPdeGF'' params delay (PDESol nb k) z =
   logSumExp [term1, term2, term3, term4, term5]
   where
-    f = nbPGF nb
-    fdash = nbPGF' nb
-    fdashdash = nbPGF'' nb
+    -- f = nbPGF nb
+    -- fdash = nbPGF' nb
+    -- fdashdash = nbPGF'' nb
     p0z = p0 params delay z
     p0dashz = p0' params delay z
     p0dashdashz = p0'' params delay z
@@ -354,7 +354,9 @@ updatedLlhdCalcState :: Parameters
                      -> LlhdCalcState
                      -> LlhdCalcState
 updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
-  ((l+l'+l'',nb''),t',k'')
+  if k > 0
+  then ((l+l'+l'',nb''),t',k'')
+  else error $ "bad k in updatedLlhdCalcState: k = " ++ show k
   where
     t' = t + delay
     (l',nb') = intervalLlhd params delay k nb
