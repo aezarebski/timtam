@@ -13,6 +13,7 @@ There are a couple of simulation studies; see the following files for details.
 
 - `examples/simulation-study/README.md`
 - `examples/simulation-study-time-series/README.md`
+- `examples/simulation-study-aggregated-observations/README.org`
 
 ## Evaluation timing
 
