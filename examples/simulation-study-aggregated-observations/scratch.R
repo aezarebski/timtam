@@ -133,12 +133,6 @@ just_tree_obs <- regular_data %>%
   filter(observed_event != "ooccurrence") %>%
   select(-delay)
 
-foo <- accumulate(
-  .x = just_tree_obs$observed_event,
-  .f = update_reg_data_ltt,
-  .init = 1
-)
-
 reg_tree_df <- data.frame(
   absolute_time = c(0, just_tree_obs$abs_time),
   ltt = accumulate(
@@ -148,8 +142,14 @@ reg_tree_df <- data.frame(
   )
 )
 
+occ_df <- regular_data %>%
+  filter(observed_event == "ooccurrence") %>%
+  select(-delay) %>%
+  rename(absolute_time = abs_time)
+
 g <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
-  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "green")
+  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "green") +
+  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = "green", alpha = 0.1, colour = "green")
 
 ggsave("scratch-output-3.png", g)
