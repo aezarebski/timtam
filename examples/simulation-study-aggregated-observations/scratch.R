@@ -9,9 +9,14 @@ library(jsonlite)
 ## =============================================================================
 ## Generate cross sections of the LLHD function in the birth rate.
 ## =============================================================================
-x <- list("out/llhd-evaluations-est-params-agg-data.csv",
-          "out/llhd-evaluations-est-params-regular-data.csv",
-          "out/llhd-evaluations-true-params-regular-data.csv")
+x <- list(
+  "out/llhd-evaluations-est-params-agg-data.csv",
+  "out/llhd-evaluations-est-params-regular-data.csv",
+  "out/llhd-evaluations-true-params-regular-data.csv"
+)
+
+app_config <- read_json("agg-app-config.json")
+sim_lambda <- app_config$simulationParameters[[1]]
 
 read_llhds <- function(filename) {
   if (file.exists(filename)) {
@@ -22,16 +27,19 @@ read_llhds <- function(filename) {
   } else {
     NULL
   }
-  }
+}
 
-y <- map(x,
-         read_llhds) %>%
-  keep(compose(not, is_null)) %>% 
-  bind_rows
+y <- map(
+  x,
+  read_llhds
+) %>%
+  keep(compose(not, is_null)) %>%
+  bind_rows()
 
 g <- ggplot(y) +
   geom_line(mapping = aes(x = lambda, y = value)) +
-  facet_wrap(~type)
+  geom_vline(xintercept = sim_lambda) +
+  facet_wrap(~type, scales = "free_y")
 
 ggsave("scratch-output-1.png", g)
 
@@ -43,22 +51,28 @@ x <- list(
   "out/final-negative-binomial-est-params-agg-data.csv",
   "out/final-negative-binomial-est-params-regular-data.csv",
   "out/final-negative-binomial-true-params-regular-data.csv"
-  )
+)
 
 read_nb <- function(filename) {
-
   if (file.exists(filename)) {
-    foo <- filename %>% readLines %>% str_split(pattern = "(,| )") %>% unlist
+    foo <- filename %>%
+      readLines() %>%
+      str_split(pattern = "(,| )") %>%
+      unlist()
 
     percentile_probs <- c(0.025, 0.25, 0.5, 0.75, 0.975)
-    percentile_vals <- qnbinom(p = c(0.025, 0.25, 0.5, 0.75, 0.975),
-                               size = as.numeric(foo[3]),
-                               prob = 1 - as.numeric(foo[4]))
+    percentile_vals <- qnbinom(
+      p = c(0.025, 0.25, 0.5, 0.75, 0.975),
+      size = as.numeric(foo[3]),
+      prob = 1 - as.numeric(foo[4])
+    )
     estimate_type <- foo[1]
 
-    data.frame(percentile_prob = percentile_probs,
-               percentile_value = percentile_vals,
-               estimate_name = estimate_type)
+    data.frame(
+      percentile_prob = percentile_probs,
+      percentile_value = percentile_vals,
+      estimate_name = estimate_type
+    )
   } else {
     NULL
   }
@@ -66,12 +80,14 @@ read_nb <- function(filename) {
 
 y <- map(x, read_nb) %>%
   keep(compose(not, is_null)) %>%
-  bind_rows
+  bind_rows()
 
 g <- ggplot(y) +
-  geom_point(mapping = aes(x = estimate_name,
-                           y = percentile_value,
-                           colour = percentile_prob)) +
+  geom_point(mapping = aes(
+    x = estimate_name,
+    y = percentile_value,
+    colour = percentile_prob
+  )) +
   ylim(c(0, 1.1 * max(y$percentile_value)))
 
 
