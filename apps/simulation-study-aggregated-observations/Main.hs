@@ -180,6 +180,11 @@ _isSamplingEE e = case e of
 -- resolution of the event times and the true epidemic parameters, second with
 -- the event times and the estimated parameters and third with the sampling
 -- times aggregated as defined in the inference configuration.
+--
+-- NOTE that this observation model assumes that it is acceptable to remove
+-- every occurrence from the raw events that happens after the last unscheduled
+-- sequenced sample.
+--
 observeEpidemicThrice ::
   [EpidemicEvent]
   -> Simulation ( (InferenceConfiguration, [Observation])
