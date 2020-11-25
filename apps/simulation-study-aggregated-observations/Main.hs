@@ -7,7 +7,6 @@
 
 module Main where
 
--- import BDSCOD.Conditioning
 import BDSCOD.Aggregation
   ( AggregatedObservations(..)
   , AggregationTimes
@@ -172,18 +171,29 @@ simulateEpidemic seedInt bdscodConfig = do
       ifVerbosePutStrLn $ "\trepeating the simulation with seed: " ++ show seedInt
       simulateEpidemic (succ seedInt) bdscodConfig
 
+_isSamplingEE :: EpidemicEvent -> Bool
+_isSamplingEE e = case e of
+  (Sampling _ _) -> True
+  _ -> False
+
 -- | Take a simulated epidemic and generate the observations, first with full
 -- resolution of the event times and the true epidemic parameters, second with
 -- the event times and the estimated parameters and third with the sampling
 -- times aggregated as defined in the inference configuration.
+--
+-- NOTE that this observation model assumes that it is acceptable to remove
+-- every occurrence from the raw events that happens after the last unscheduled
+-- sequenced sample.
+--
 observeEpidemicThrice ::
   [EpidemicEvent]
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
-observeEpidemicThrice simEvents = do
+observeEpidemicThrice simEvents' = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
-  let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+  let simEvents = reverse . dropWhile (not . _isSamplingEE) . reverse $ simEvents'
+      maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
       maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
@@ -376,7 +386,7 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  let seedInt = 42 + 40
+  let seedInt = 42
   epiSim <- simulateEpidemic seedInt bdscodConfig
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
@@ -389,16 +399,16 @@ simulationStudy = do
 -- TODO This comment section needs to be deleted once the application has been
 -- finished and tested.
 --
-replMain :: IO ()
-replMain = do
-  let configFilePath = "agg-app-config.json"
-  config' <- getConfiguration configFilePath
-  case config' of
-    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
-    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
-                        case result of
-                          Right () -> return ()
-                          Left errMsg -> do putStrLn errMsg; return ()
+-- replMain :: IO ()
+-- replMain = do
+--   let configFilePath = "agg-app-config.json"
+--   config' <- getConfiguration configFilePath
+--   case config' of
+--     Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
+--     (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
+--                         case result of
+--                           Right () -> return ()
+--                           Left errMsg -> do putStrLn errMsg; return ()
 --
 -- =============================================================================
 
@@ -433,11 +443,6 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
 --
--- __NOTE__ The `energyFunc` uses a regularisation cost to prevent the
--- parameters from wandering off which can occur with smaller data sets.
---
--- TODO Fix the stupid settings on this!!!
---
 estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
 estimateRegularParameters deathRate obs =
@@ -453,7 +458,6 @@ estimateRegularParameters deathRate obs =
            in packParameters (r1, deathRate, r2, [], r3, [])
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-            regCost = dot x x
-         in negLlhd + regCost
+         in negLlhd
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vecAsParams est

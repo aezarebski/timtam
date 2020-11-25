@@ -2,8 +2,10 @@
 
 ## 0.1.3.0
 
-- Change the behaviour of the aggregation functions to remove any unscheduled
-  events that occur after the last aggregation time.
+- **Important** The aggregation simulation study now ignores any occurrence
+  events that occur after the last unscheduled sequenced sample.
+- **Important** Change the behaviour of the aggregation functions to remove any
+  unscheduled events that occur after the last aggregation time.
 - Rewrite the aggregation functionality and use QuickCheck to make sure that
   this works as expected.
 - Change the constructor for `AggregationTimes` to include the type of event

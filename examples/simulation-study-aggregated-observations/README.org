@@ -20,17 +20,6 @@ stack exec -- simulation-study-aggregated-observations agg-app-config.json
 Rscript src/plot.R
 #+END_SRC
 
-** TODO Delete this section when this is finished
-
-Here are some notes to explain what happens =Main.hs=.
-
-- =simulationStudy= runs the simulation in the =Simulation= monad which means
-  that it already has all of the configuration data.
-- =observeEpidemicThrice= takes a full simulation and returns pairs of inference
-  configuration and the accompanying data.
-- The function =evaluateLLHD=, =estimateLLHD= and =estimateLLHDAggregated= are
-  there to take the observations and computes the cross-sections of the LLHD
-  function and the distribution of prevalence and writes these to the files
-  pointed at by the given =InferenceConfiguration=.
-- =generateLlhdProfileCurves= is the function used to evaluate the
-  cross-sections and prevalence distribution and record this to disk.
+Note that there is an assumption here that every occurrence event that occurs
+after the last unscheduled sequenced sample is removed before the aggregation
+step.
