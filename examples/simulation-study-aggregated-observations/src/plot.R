@@ -41,7 +41,7 @@ g <- ggplot(y) +
   geom_vline(xintercept = sim_lambda) +
   facet_wrap(~type, scales = "free_y")
 
-ggsave("scratch-output-1.png", g)
+ggsave("out/lambda-llhd-cross-sections.png", g)
 
 
 ## =============================================================================
@@ -91,7 +91,7 @@ g <- ggplot(y) +
   ylim(c(0, 1.1 * max(y$percentile_value)))
 
 
-ggsave("scratch-output-2.png", g)
+ggsave("out/posterior-prevelance-estimates.png", g)
 
 ## =============================================================================
 ## Generate a figure looking at the prevalence through time and the data used in
@@ -193,4 +193,4 @@ g <- ggplot() +
   geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = "purple") +
   geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = "purple")
 
-ggsave("scratch-output-3.png", g)
+ggsave("out/regular-and-aggregated-data.png", g)
