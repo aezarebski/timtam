@@ -199,44 +199,48 @@ est_aggregated_df <- data.frame(absolute_time = sim_duration, prev_est_min = min
 
 
 
+green_hex_colour <- "#7fc97f"
+purple_hex_colour <- "#beaed4"
 
 g <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
-  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "green") +
-  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = "green", alpha = 0.1, colour = "green") +
-  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "purple") +
-  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = "purple") +
-  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = "purple") +
+  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
+  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
+  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
+  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
+  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
   geom_errorbar(
     data = true_regular_df,
     mapping = aes(x = absolute_time - 0.1, ymin = prev_est_min, ymax = prev_est_max),
-    colour = "green", linetype = "dashed", width = 0.2
+    colour = green_hex_colour, linetype = "dashed", width = 0.2
   ) +
   geom_point(
     data = true_regular_df,
     mapping = aes(x = absolute_time - 0.1, y = prev_est_mid),
-    colour = "green"
+    colour = green_hex_colour
   ) +
   geom_errorbar(
     data = est_regular_df,
     mapping = aes(x = absolute_time, ymin = prev_est_min, ymax = prev_est_max),
-    colour = "green", linetype = "solid", width = 0.2
+    colour = green_hex_colour, linetype = "solid", width = 0.2
   ) +
   geom_point(
     data = est_regular_df,
     mapping = aes(x = absolute_time, y = prev_est_mid),
-    colour = "green"
+    colour = green_hex_colour
   ) +
   geom_errorbar(
     data = est_aggregated_df,
     mapping = aes(x = absolute_time + 0.1, ymin = prev_est_min, ymax = prev_est_max),
-    colour = "purple", linetype = "solid", width = 0.2
+    colour = purple_hex_colour, linetype = "solid", width = 0.2
   ) +
   geom_point(
     data = est_aggregated_df,
     mapping = aes(x = absolute_time + 0.1, y = prev_est_mid),
-    colour = "purple"
+    colour = purple_hex_colour
   ) +
-  labs(y = NULL, x = "Time since origin")
+  labs(y = NULL, x = "Time since origin") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"))
 
 ggsave("out/regular-and-aggregated-data.png", g)
