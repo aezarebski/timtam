@@ -172,6 +172,11 @@ simulateEpidemic seedInt bdscodConfig = do
       ifVerbosePutStrLn $ "\trepeating the simulation with seed: " ++ show seedInt
       simulateEpidemic (succ seedInt) bdscodConfig
 
+_isSamplingEE :: EpidemicEvent -> Bool
+_isSamplingEE e = case e of
+  (Sampling _ _) -> True
+  _ -> False
+
 -- | Take a simulated epidemic and generate the observations, first with full
 -- resolution of the event times and the true epidemic parameters, second with
 -- the event times and the estimated parameters and third with the sampling
@@ -181,9 +186,10 @@ observeEpidemicThrice ::
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, AggregatedObservations))
-observeEpidemicThrice simEvents = do
+observeEpidemicThrice simEvents' = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
-  let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+  let simEvents = reverse . dropWhile (not . _isSamplingEE) . reverse $ simEvents'
+      maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
       maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
@@ -376,7 +382,7 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  let seedInt = 42 + 40
+  let seedInt = 42
   epiSim <- simulateEpidemic seedInt bdscodConfig
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
@@ -433,11 +439,6 @@ getConfiguration fp = Json.decode <$> L.readFile fp
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
 --
--- __NOTE__ The `energyFunc` uses a regularisation cost to prevent the
--- parameters from wandering off which can occur with smaller data sets.
---
--- TODO Fix the stupid settings on this!!!
---
 estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
 estimateRegularParameters deathRate obs =
@@ -453,7 +454,6 @@ estimateRegularParameters deathRate obs =
            in packParameters (r1, deathRate, r2, [], r3, [])
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-            regCost = dot x x
-         in negLlhd + regCost
+         in negLlhd
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vecAsParams est
