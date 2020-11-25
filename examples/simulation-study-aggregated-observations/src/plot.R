@@ -47,7 +47,7 @@ ggsave("out/lambda-llhd-cross-sections.png", g)
 ## =============================================================================
 ## Generate a figure looking at the posterior distribution of the prevalence
 ## =============================================================================
-x <- list(
+data_paths <- list(
   "out/final-negative-binomial-est-params-agg-data.csv",
   "out/final-negative-binomial-est-params-regular-data.csv",
   "out/final-negative-binomial-true-params-regular-data.csv"
@@ -78,17 +78,17 @@ read_nb <- function(filename) {
   }
 }
 
-y <- map(x, read_nb) %>%
+posterior_plot_df <- map(data_paths, read_nb) %>%
   keep(compose(not, is_null)) %>%
   bind_rows()
 
-g <- ggplot(y) +
+g <- ggplot(posterior_plot_df) +
   geom_point(mapping = aes(
     x = estimate_name,
     y = percentile_value,
     colour = percentile_prob
   )) +
-  ylim(c(0, 1.1 * max(y$percentile_value)))
+  ylim(c(0, 1.1 * max(posterior_plot_df$percentile_value)))
 
 
 ggsave("out/posterior-prevelance-estimates.png", g)
@@ -185,12 +185,58 @@ agg_occ_df <- aggregated_data %>%
 
 ## -----------------------------------------------------------------------------
 
+sim_duration <- app_config$simulationDuration
+
+tmp_true_regular <- filter(posterior_plot_df, estimate_name == "true_parameters_regular_data") %>% use_series("percentile_value")
+true_regular_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_true_regular), prev_est_mid = median(tmp_true_regular), prev_est_max = max(tmp_true_regular))
+
+tmp_est_regular <- filter(posterior_plot_df, estimate_name == "estimated_parameters_regular_data") %>% use_series("percentile_value")
+est_regular_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_est_regular), prev_est_mid = median(tmp_est_regular), prev_est_max = max(tmp_est_regular))
+
+tmp_est_aggregated <- filter(posterior_plot_df, estimate_name == "estimated_parameters_aggregated_data") %>% use_series("percentile_value")
+est_aggregated_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_est_aggregated), prev_est_mid = median(tmp_est_aggregated), prev_est_max = max(tmp_est_aggregated))
+
+
+
+
+
 g <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
   geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "green") +
   geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = "green", alpha = 0.1, colour = "green") +
   geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = "purple") +
   geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = "purple") +
-  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = "purple")
+  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = "purple") +
+  geom_errorbar(
+    data = true_regular_df,
+    mapping = aes(x = absolute_time - 0.1, ymin = prev_est_min, ymax = prev_est_max),
+    colour = "green", linetype = "dashed", width = 0.2
+  ) +
+  geom_point(
+    data = true_regular_df,
+    mapping = aes(x = absolute_time - 0.1, y = prev_est_mid),
+    colour = "green"
+  ) +
+  geom_errorbar(
+    data = est_regular_df,
+    mapping = aes(x = absolute_time, ymin = prev_est_min, ymax = prev_est_max),
+    colour = "green", linetype = "solid", width = 0.2
+  ) +
+  geom_point(
+    data = est_regular_df,
+    mapping = aes(x = absolute_time, y = prev_est_mid),
+    colour = "green"
+  ) +
+  geom_errorbar(
+    data = est_aggregated_df,
+    mapping = aes(x = absolute_time + 0.1, ymin = prev_est_min, ymax = prev_est_max),
+    colour = "purple", linetype = "solid", width = 0.2
+  ) +
+  geom_point(
+    data = est_aggregated_df,
+    mapping = aes(x = absolute_time + 0.1, y = prev_est_mid),
+    colour = "purple"
+  ) +
+  labs(y = NULL, x = "Time since origin")
 
 ggsave("out/regular-and-aggregated-data.png", g)
