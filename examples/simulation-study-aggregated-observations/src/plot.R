@@ -5,6 +5,8 @@ library(ggplot2)
 library(stringr)
 library(jsonlite)
 
+green_hex_colour <- "#7fc97f"
+purple_hex_colour <- "#beaed4"
 
 ## =============================================================================
 ## Generate cross sections of the LLHD function in the birth rate.
@@ -29,20 +31,43 @@ read_llhds <- function(filename) {
   }
 }
 
-y <- map(
+cross_section_df <- map(
   x,
   read_llhds
 ) %>%
   keep(compose(not, is_null)) %>%
-  bind_rows()
+  bind_rows() %>%
+  mutate(
+    estimated_params = str_detect(type, "estimated.*"),
+    aggregated_data = str_detect(type, ".*aggregated.*")
+  )
 
-g <- ggplot(y) +
-  geom_line(mapping = aes(x = lambda, y = value)) +
+g <- ggplot(cross_section_df) +
+  geom_line(mapping = aes(x = lambda, y = value, colour = aggregated_data, linetype = estimated_params)) +
   geom_vline(xintercept = sim_lambda) +
-  facet_wrap(~type, scales = "free_y")
+  facet_wrap(~type, scales = "free_y") +
+  scale_linetype_manual(values = c("dashed", "solid")) +
+  scale_color_manual(values = c(green_hex_colour, purple_hex_colour)) +
+  labs(y = NULL, x = "Birth rate (lambda)") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        legend.position = "none")
 
 ggsave("out/lambda-llhd-cross-sections.png", g)
 
+fig_height <- 8
+ggsave("out/lambda-llhd-cross-sections.png",
+       g,
+       height = fig_height,
+       width = 2 * 1.618 * fig_height,
+       units = "cm"
+       )
+ggsave("out/lambda-llhd-cross-sections.pdf",
+       g,
+       height = fig_height,
+       width = 2 * 1.618 * fig_height,
+       units = "cm"
+       )
 
 ## =============================================================================
 ## Generate a figure looking at the posterior distribution of the prevalence
@@ -199,8 +224,6 @@ est_aggregated_df <- data.frame(absolute_time = sim_duration, prev_est_min = min
 
 
 
-green_hex_colour <- "#7fc97f"
-purple_hex_colour <- "#beaed4"
 
 g <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
