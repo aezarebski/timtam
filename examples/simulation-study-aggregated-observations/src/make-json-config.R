@@ -13,7 +13,7 @@ simulation_duration <- 8.5 - 1e-6
 
 birth_rate <- 1.7
 death_rate <- 0.5
-sampling_rate <- 0.15
+sampling_rate <- 0.2
 occurrence_rate <- 0.3
 
 disaster_params <- list()
@@ -22,7 +22,7 @@ catastrophe_params <- list()
 ## For the aggregation, these are the times at which we carry out the
 ## aggregation.
 seq_agg_times <- as.list(seq(from = 2.5, to = 8.5, by = 1))
-unseq_agg_times <- as.list(seq(from = 2.0, to = 8.0, by = 1))
+unseq_agg_times <- as.list(seq(from = 2.4, to = 8.4, by = 1))
 
 
 
@@ -82,11 +82,16 @@ result <- list(
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL),
     inference_configuration("est-params-regular-data", NULL),
-    inference_configuration("est-params-agg-data",
-                            list(seq_agg_times,
-                                 unseq_agg_times))
+    inference_configuration(
+      "est-params-agg-data",
+      list(
+        seq_agg_times,
+        unseq_agg_times
+      )
+    )
   ),
-  isVerbose = TRUE
+  isVerbose = TRUE,
+  mwcSeed = 56
 )
 
 jsonlite::write_json(result,
@@ -94,22 +99,4 @@ jsonlite::write_json(result,
   pretty = TRUE,
   auto_unbox = TRUE,
   digits = 7
-)
-
-
-
-## save a copy of the true parameters so they can be read out later rather than
-## hardcoded.
-##
-## TODO convert this to using a JSON output rather than a CSV because it is
-## neater.
-##
-true_parameters <- data.frame(
-  parameter = c("lambda", "mu"),
-  value = c(birth_rate, death_rate)
-)
-write.table(
-  x = true_parameters,
-  file = "out/true-parameters.csv",
-  row.names = FALSE
 )
