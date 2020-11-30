@@ -82,11 +82,16 @@ result <- list(
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL),
     inference_configuration("est-params-regular-data", NULL),
-    inference_configuration("est-params-agg-data",
-                            list(seq_agg_times,
-                                 unseq_agg_times))
+    inference_configuration(
+      "est-params-agg-data",
+      list(
+        seq_agg_times,
+        unseq_agg_times
+      )
+    )
   ),
-  isVerbose = TRUE
+  isVerbose = TRUE,
+  mwcSeed = 56
 )
 
 jsonlite::write_json(result,

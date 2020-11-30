@@ -59,11 +59,15 @@ import Epidemic.Types.Parameter (Probability, Rate, Time, Timed(..))
 import Epidemic.Types.Population (Person(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
+import GHC.Word (Word32(..))
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra (dot)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
+
+-- | Alias for the type used to seed the MWC PRNG.
+type MWCSeed = Word32
 
 -- | These objects define the specifics of the evaluation of LLHD profiles. If a
 -- point estimate is given, then that is the central point of the profiles,
@@ -106,6 +110,7 @@ data Configuration =
                                  , InferenceConfiguration
                                  , InferenceConfiguration)
     , isVerbose :: Bool
+    , mwcSeed :: MWCSeed
     }
   deriving (Show, Generic)
 
@@ -386,8 +391,8 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  let seedInt = 42
-  epiSim <- simulateEpidemic seedInt bdscodConfig
+  prngSeed <- asks mwcSeed
+  epiSim <- simulateEpidemic prngSeed bdscodConfig
   (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
   uncurry estimateLLHD regObs'
