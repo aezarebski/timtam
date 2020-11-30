@@ -2,6 +2,9 @@
 
 ## 0.1.3.0
 
+- The aggregation simulation study now accepts a random seed from the
+  configuration file and assumes there will be a positive rate for unscheduled
+  unsequenced sampling.
 - **Important** The aggregation simulation study now ignores any occurrence
   events that occur after the last unscheduled sequenced sample.
 - **Important** Change the behaviour of the aggregation functions to remove any
