@@ -8,7 +8,9 @@ aggregated into scheduled observations.
 The running of this simulation study is coordinated by the script =run.sh=. The
 contents of that file are given below. The simulation study is specified in a
 JSON file which is given as a command line argument. The R script
-=make-json-config.R= produces this so you don't need to edit it manually.
+=make-json-config.R= produces this so you don't need to edit it manually. Note
+that this also contains the seed for the random number generator so you control
+this from outside of the application.
 
 =run.sh=
 #+BEGIN_SRC sh :tangle run.sh
@@ -23,3 +25,7 @@ Rscript src/plot.R
 Note that there is an assumption here that every occurrence event that occurs
 after the last unscheduled sequenced sample is removed before the aggregation
 step.
+
+The =src/plot.R= script generates all of the figures and writes them to =out/=.
+The most interesting figure is =regular-and-aggregated-data.png= which contrasts
+the prevalence estimate using the regular and aggregated data.
