@@ -142,7 +142,7 @@ data AnnotatedParameter
 bdscodConfiguration = do
   simParams@(Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) <-
     asks simulationParameters
-  if pLambda > 0 && pMu > 0 && pPsi > 0 && null pRhos && null pNus
+  if pLambda > 0 && pMu > 0 && pPsi > 0 && pOmega > 0 && null pRhos && null pNus
     then do
       simDur <- asks simulationDuration
       let bdscodConfig =
