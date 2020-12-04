@@ -421,18 +421,17 @@ simulationStudy = do
 -- try different parameter values and random seeds. The @simulationStudy@
 -- function is real driver of this and runs in the @Simulation@ monad.
 main :: IO ()
-main =
-  do
-    configFilePath <- head <$> getArgs
-    maybeConfig <- Json.decode <$> L.readFile configFilePath
-    case maybeConfig of
-      Nothing ->
-        putStrLn $ "Could not get configuration from file: " ++ configFilePath
-      Just config -> do
-        result <- runExceptT (runReaderT simulationStudy config)
-        case result of
-          Left errMsg -> putStrLn errMsg
-          Right _ -> return ()
+main = do
+  configFilePath <- head <$> getArgs
+  maybeConfig <- Json.decode <$> L.readFile configFilePath
+  case maybeConfig of
+    Nothing ->
+      putStrLn $ "Could not get configuration from file: " ++ configFilePath
+    Just config -> do
+      result <- runExceptT (runReaderT simulationStudy config)
+      case result of
+        Left errMsg -> putStrLn errMsg
+        Right _ -> return ()
 
 
 
