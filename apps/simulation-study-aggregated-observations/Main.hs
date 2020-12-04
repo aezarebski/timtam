@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -184,113 +183,79 @@ _isSamplingEE e = case e of
 -- | Take a simulated epidemic and generate the observations, first with full
 -- resolution of the event times and the true epidemic parameters, second with
 -- the event times and the estimated parameters and third with the sampling
--- times aggregated as defined in the inference configuration.
+-- times aggregated as defined in the inference configuration. This is done all
+-- at the same time because the raw epidemic events are needed to genereate the
+-- observations and the aggregated observations.
 --
 -- NOTE that this observation model assumes that it is acceptable to remove
 -- every occurrence from the raw events that happens after the last unscheduled
 -- sequenced sample.
 --
 observeEpidemicThrice ::
-  [EpidemicEvent]
+     [EpidemicEvent] -- ^ the raw simulated epidemic events
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
-                , (InferenceConfiguration, AggregatedObservations))
+                , (InferenceConfiguration, AggregatedObservations) -- ^ a triplet of data sets ready for analysis.
+                 )
 observeEpidemicThrice simEvents' = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
-  let simEvents = reverse . dropWhile (not . _isSamplingEE) . reverse $ simEvents'
+  let simEvents =
+        reverse . dropWhile (not . _isSamplingEE) . reverse $ simEvents'
       maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
-      maybeAggTimes = icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
-      maybeAggObs = liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
-      (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles regInfConfig
-      maybeNewickData = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
+      maybeAggTimes =
+        icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
+      maybeAggObs =
+        liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
+      (reconNewickTxt, reconNewickCsv) =
+        reconstructedTreeOutputFiles regInfConfig
+      maybeNewickData =
+        asNewickString (0, Person 1) =<<
+        maybeReconstructedTree =<< maybeEpidemicTree simEvents
   case maybeNewickData of
-    Just (newickBuilder,newickMetaData) ->
-      do liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
-         liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
+    Just (newickBuilder, newickMetaData) -> do
+      ifVerbosePutStrLn $
+        "Writing reconstructed tree Newick to " ++ reconNewickTxt
+      liftIO $
+        L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
+      ifVerbosePutStrLn $
+        "Writing reconstructed tree tip labels to " ++ reconNewickCsv
+      liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
     Nothing -> throwError "Could not reconstruct tree..."
-  case (maybeRegObs,maybeAggObs) of
-    (Just regObs,Just aggObs@(AggregatedObservations _ unboxedAggObs)) ->
-      do liftIO $ L.writeFile (observationsOutputCsv regInfConfig) (Csv.encode regObs)
-         liftIO $ L.writeFile (observationsOutputCsv aggInfConfig) (Csv.encode unboxedAggObs)
-         return ( (regInfConfig, regObs)
-                , (regInfConfig', regObs)
-                , (aggInfConfig, aggObs))
-    (Just _,  Nothing) -> throwError "Could not evaluate aggregated observations..."
+  case (maybeRegObs, maybeAggObs) of
+    (Just regObs, Just aggObs@(AggregatedObservations _ unboxedAggObs)) -> do
+      ifVerbosePutStrLn "Writing the regular observations to CSV"
+      liftIO $
+        L.writeFile (observationsOutputCsv regInfConfig) (Csv.encode regObs)
+      ifVerbosePutStrLn "Writing the aggregated observations to CSV"
+      liftIO $
+        L.writeFile
+          (observationsOutputCsv aggInfConfig)
+          (Csv.encode unboxedAggObs)
+      return
+        ( (regInfConfig, regObs)
+        , (regInfConfig', regObs)
+        , (aggInfConfig, aggObs))
+    (Just _, Nothing) ->
+      throwError "Could not evaluate aggregated observations..."
     (Nothing, Just _) -> throwError "Could not evaluate regular observations..."
-    (Nothing, Nothing) -> throwError "Could not evaluate either set of observations..."
-
--- | Recenter the evaluation parametes about the parameters given so that we can
--- get a sensible range of values for visualisation. Since there are several
--- types of parameters in use, the `AnnotatedParameter` type is used to convey
--- what to do. __NOTE__ that for the true parameters and the estimates under the
--- regular data this function is the same, the only time it needs to be
--- different is when using the parameters estimated from the aggregated data
--- since the parameter space is different.
---
--- TODO Other simulation studies read in the parameter range to consider through
--- the configuration.
---
-adjustedEvaluationParameters :: AnnotatedParameter -> [Parameters]
-adjustedEvaluationParameters (TrueParameters ps) =
-  let meshSize = 100
-      lambdaMesh = toList $ linspace meshSize (1, 3.5)
-      -- muMesh = toList $ linspace meshSize (0.05, 1.5)
-      -- psiMesh = toList $ linspace meshSize (0.05, 1.5)
-      -- probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
-      -- (rhoTimes, nuTimes) = scheduledTimes ps
-      -- rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
-      -- omegaMesh = toList $ linspace meshSize (0.05, 1.5)
-      -- nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
-      apply f = map (f ps)
-      [lPs] =
-        zipWith
-          apply
-          [putLambda]
-          [lambdaMesh]
-      -- [rPs, nPs] = zipWith apply [putRhos, putNus] [rhoMesh, nuMesh]
-   in concat [lPs]
-adjustedEvaluationParameters (EstimatedParametersRegularData ps) =
-  adjustedEvaluationParameters (TrueParameters ps)
-adjustedEvaluationParameters (EstimatedParametersAggregatedData ps) =
-  let meshSize = 100
-      lambdaMesh = toList $ linspace meshSize (1, 3.5)
-      -- muMesh = toList $ linspace meshSize (0.05, 1.5)
-      -- psiMesh = toList $ linspace meshSize (0.05, 1.5)
-      -- probMesh = toList $ linspace meshSize (0.05, 0.6) :: [Probability]
-      -- (rhoTimes, _) = scheduledTimes ps
-      -- rhoMesh = [Timed [(t, r) | t <- rhoTimes] | r <- probMesh]
-      -- omegaMesh = toList $ linspace meshSize (0.05, 1.5)
-      -- nuMesh = [Timed [(t, n) | t <- nuTimes] | n <- probMesh]
-      apply f = map (f ps)
-      [lPs] =
-        zipWith
-          apply
-          [putLambda]
-          [lambdaMesh]
-      -- [rPs] = zipWith apply [putRhos] [rhoMesh]
-   in concat [lPs]
+    (Nothing, Nothing) ->
+      throwError "Could not evaluate either set of observations..."
 
 
 -- | Evaluate the NB posterior approximation of the prevalence for a single
--- point in parameter space and the LLHD over a list of points and write all of
--- the results to CSV including a description of the type of parameters and data
--- used.
---
-generateLlhdProfileCurves ::
+-- point in parameter space
+recordPresentPrevalenceEstimate ::
      InferenceConfiguration
   -> [Observation]
-  -> (AnnotatedParameter, [Parameters])
+  -> AnnotatedParameter
   -> Simulation ()
-generateLlhdProfileCurves InferenceConfiguration {..} obs (centerParam, evalParams) =
+recordPresentPrevalenceEstimate InferenceConfiguration {..} obs centerParam =
   let (parametersUsed,singleParams) = case centerParam of
                                         (TrueParameters x) -> ("true_parameters_regular_data" :: L.ByteString,x)
                                         (EstimatedParametersRegularData x) -> ("estimated_parameters_regular_data",x)
                                         (EstimatedParametersAggregatedData x) -> ("estimated_parameters_aggregated_data",x)
-      llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
       nBVal = pure (parametersUsed, snd $ llhdAndNB obs singleParams initLlhdState)
-   in do ifVerbosePutStrLn $ "\twriting LLHD values to: " ++ llhdOutputCsv
-         liftIO $ L.writeFile llhdOutputCsv (Csv.encode (zip (repeat parametersUsed) llhdVals))
-         ifVerbosePutStrLn $ "\twriting NB values to: " ++ pointEstimatesCsv
+   in do ifVerbosePutStrLn $ "\twriting NB values to: " ++ pointEstimatesCsv
          liftIO $ L.writeFile pointEstimatesCsv (Csv.encode nBVal)
 
 -- | Run the evaluation of the log-likelihood profiles on a given set of regular
@@ -303,8 +268,7 @@ evaluateLLHD infConfig obs = do
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
   ifVerbosePutStrLn "\tUsing non-aggregated data with the true parameters..."
   ifVerbosePutStrLn $ show simParams
-  let evalParams = adjustedEvaluationParameters (TrueParameters simParams)
-  generateLlhdProfileCurves infConfig obs (TrueParameters simParams, evalParams)
+  recordPresentPrevalenceEstimate infConfig obs (TrueParameters simParams)
 
 -- | Using regular (i.e., disaggregated) observations, estimate the parameters
 -- and evaluate the log-likelihood profiles and write the result to file. This
@@ -321,10 +285,9 @@ estimateLLHD infConfig obs = do
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
   let mleParams = estimateRegularParameters deathRate obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersRegularData mleParams
-      evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
   ifVerbosePutStrLn "\tUsing non-aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ "\t" ++ show annotatedMLE
-  generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
+  recordPresentPrevalenceEstimate infConfig obs annotatedMLE
 
 -- | Using __aggregated__ observations, estimate the parameters
 -- and evaluate the log-likelihood profiles and write the result to file. This
@@ -332,16 +295,15 @@ estimateLLHD infConfig obs = do
 -- that to file.
 estimateLLHDAggregated ::
      InferenceConfiguration -> AggregatedObservations -> Simulation ()
-estimateLLHDAggregated infConfig (AggregatedObservations (AggTimes aggTimes) obs) = do
+estimateLLHDAggregated infConfig (AggregatedObservations _ obs) = do
   ifVerbosePutStrLn "Running estimateLLHDAggregated..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
   let (Just schedTimes) = icMaybeTimesForAgg infConfig -- (aggTimes,[]) :: ([Time], [Time])
       mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
       annotatedMLE = EstimatedParametersAggregatedData mleParams
-      evalParams = adjustedEvaluationParameters annotatedMLE -- generate a list of evaluation parameters
   ifVerbosePutStrLn "\tUsing aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ show mleParams
-  generateLlhdProfileCurves infConfig obs (annotatedMLE, evalParams)
+  recordPresentPrevalenceEstimate infConfig obs annotatedMLE
 
 
 -- | Use GSL to estimate the MLE based on the observations given. This uses a
@@ -385,9 +347,10 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
    in vecAsParams est
 
 
--- | This is the main entry point to the actual simulation study. Since this is
--- within the simulation monad it has access to all the configuration data and
--- can perform IO.
+-- | This is the main entry point to the actual simulation study, it is its own
+-- function to avoid stressing about configuration IO. Since this is within the
+-- simulation monad it has access to all the configuration data and can perform
+-- IO.
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
