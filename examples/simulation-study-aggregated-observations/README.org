@@ -1,16 +1,18 @@
 * Simulation Study of Aggregated Observations
 
-This simulation study looks at the loss of information when unscheduled data is
-aggregated into scheduled observations.
+This simulation study looks at the loss of information when unscheduled
+observations are aggregated into scheduled observations at pre-determined times.
+
+*Assumption:* the application removes all occurrence events that occur
+after the last unscheduled sequenced sample.
 
 ** Running the simulation study
 
 The running of this simulation study is coordinated by the script =run.sh=. The
-contents of that file are given below. The simulation study is specified in a
-JSON file which is given as a command line argument. The R script
-=make-json-config.R= produces this so you don't need to edit it manually. Note
-that this also contains the seed for the random number generator so you control
-this from outside of the application.
+contents of that file are given below. There are three steps to the simulation
+study: 1) make a JSON configuration file for the simulation study, 2) run the
+application code with the JSON file, and 3) generate some visualisations of the
+results.
 
 =run.sh=
 #+BEGIN_SRC sh :tangle run.sh
@@ -22,10 +24,16 @@ stack exec -- simulation-study-aggregated-observations agg-app-config.json
 Rscript src/plot.R
 #+END_SRC
 
-Note that there is an assumption here that every occurrence event that occurs
-after the last unscheduled sequenced sample is removed before the aggregation
-step.
+*** Details
+
+The R script =make-json-config.R= produces the JSON configuration file and
+provides a cleaner way to generate this than writing it by hand.
+
+The actual code for the application lives in
+=bdscod/apps/simulation-study-aggregated-observations/Main.hs= and runs in a
+=Simulation= monad.
 
 The =src/plot.R= script generates all of the figures and writes them to =out/=.
 The most interesting figure is =regular-and-aggregated-data.png= which contrasts
-the prevalence estimate using the regular and aggregated data.
+the prevalence estimate using the regular and aggregated data and shows a simple
+visualisation of these data.
