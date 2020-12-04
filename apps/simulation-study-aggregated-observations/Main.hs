@@ -417,24 +417,22 @@ simulationStudy = do
 --
 -- =============================================================================
 
--- | Take a configuration file supplied at the command line and run a simulation
--- study based on those details. See @simulationStudy@ for details of what is
--- included in the simulation.
+-- | We use an external file to configure the simulation so that it is easier to
+-- try different parameter values and random seeds. The @simulationStudy@
+-- function is real driver of this and runs in the @Simulation@ monad.
 main :: IO ()
-main = do
-  configFilePath <- head <$> getArgs
-  maybeConfig <- getConfiguration configFilePath
-  case maybeConfig of
-    Nothing ->
-      putStrLn $ "Could not get configuration from file: " ++ configFilePath
-    Just config -> do
-      result <- runExceptT (runReaderT simulationStudy config)
-      case result of
-        Left errMsg -> putStrLn errMsg
-        Right _ -> return ()
-
-getConfiguration :: FilePath -> IO (Maybe Configuration)
-getConfiguration fp = Json.decode <$> L.readFile fp
+main =
+  do
+    configFilePath <- head <$> getArgs
+    maybeConfig <- Json.decode <$> L.readFile configFilePath
+    case maybeConfig of
+      Nothing ->
+        putStrLn $ "Could not get configuration from file: " ++ configFilePath
+      Just config -> do
+        result <- runExceptT (runReaderT simulationStudy config)
+        case result of
+          Left errMsg -> putStrLn errMsg
+          Right _ -> return ()
 
 
 
