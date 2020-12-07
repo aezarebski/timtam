@@ -99,7 +99,7 @@ sim_params <- list(
   disaster_params
 )
 
-
+num_mcmc_samples <- 1e3
 
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
@@ -113,7 +113,7 @@ result <- list(
       NULL,
       mcmc_configuration(
         "regular-data-mcmc-samples.csv",
-        1e4,
+        num_mcmc_samples,
         1e-2,
         7
       )
@@ -126,14 +126,14 @@ result <- list(
       ),
       mcmc_configuration(
         "aggregated-data-mcmc-samples.csv",
-        1e4,
+        num_mcmc_samples,
         1e-2,
         7
       )
     )
   ),
   isVerbose = TRUE,
-  configSimulationSeed = 56
+  configSimulationSeed = 66
 )
 
 jsonlite::write_json(result,
