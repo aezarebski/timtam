@@ -444,7 +444,7 @@ estimateRegularParameters deathRate obs =
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vecAsParams est
 
-
+-- | Action to run an MCMC analysis based on regular unscheduled observations.
 runUnscheduledObservationMCMC :: InferenceConfiguration
                               -> Rate
                               -> [Observation]
@@ -467,7 +467,7 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
                liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
              liftIO $
                L.writeFile
-                 "demo-mcmc-values.csv"
+                 (mcmcOutputCSV mcmcConfig)
                  (chainAsByteString variableNames chainVals)
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
