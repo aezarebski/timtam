@@ -8,66 +8,9 @@ library(jsonlite)
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
-## =============================================================================
-## Generate cross sections of the LLHD function in the birth rate.
-## =============================================================================
-x <- list(
-  "out/llhd-evaluations-est-params-agg-data.csv",
-  "out/llhd-evaluations-est-params-regular-data.csv",
-  "out/llhd-evaluations-true-params-regular-data.csv"
-)
 
 app_config <- read_json("agg-app-config.json")
 sim_lambda <- app_config$simulationParameters[[1]]
-
-read_llhds <- function(filename) {
-  if (file.exists(filename)) {
-    filename %>%
-      read.csv(header = FALSE) %>%
-      set_names(c("type", "value")) %>%
-      mutate(lambda = seq(from = 1, to = 3.5, length = 100))
-  } else {
-    NULL
-  }
-}
-
-cross_section_df <- map(
-  x,
-  read_llhds
-) %>%
-  keep(compose(not, is_null)) %>%
-  bind_rows() %>%
-  mutate(
-    estimated_params = str_detect(type, "estimated.*"),
-    aggregated_data = str_detect(type, ".*aggregated.*")
-  )
-
-g <- ggplot(cross_section_df) +
-  geom_line(mapping = aes(x = lambda, y = value, colour = aggregated_data, linetype = estimated_params)) +
-  geom_vline(xintercept = sim_lambda) +
-  facet_wrap(~type, scales = "free_y") +
-  scale_linetype_manual(values = c("dashed", "solid")) +
-  scale_color_manual(values = c(green_hex_colour, purple_hex_colour)) +
-  labs(y = NULL, x = "Birth rate (lambda)") +
-  theme_classic() +
-  theme(axis.title = element_text(face = "bold"),
-        legend.position = "none")
-
-ggsave("out/lambda-llhd-cross-sections.png", g)
-
-fig_height <- 8
-ggsave("out/lambda-llhd-cross-sections.png",
-       g,
-       height = fig_height,
-       width = 2 * 1.618 * fig_height,
-       units = "cm"
-       )
-ggsave("out/lambda-llhd-cross-sections.pdf",
-       g,
-       height = fig_height,
-       width = 2 * 1.618 * fig_height,
-       units = "cm"
-       )
 
 ## =============================================================================
 ## Generate a figure looking at the posterior distribution of the prevalence
