@@ -458,7 +458,7 @@ chainAsByteString :: [String] -- ^ the names of the elements of the chain
                   -> [Chain [Double] b] -- ^ the samples in the chain
                   -> L.ByteString
 chainAsByteString varNames chainVals =
-  let header = pack $ intercalate "," ("llhd":varNames)
+  let header = pack $ intercalate "," ("llhd" : varNames)
       records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
       linebreak = singleton '\n'
-  in mconcat [header,linebreak,records]
+   in mconcat [header, linebreak, records]
