@@ -500,7 +500,13 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
           variableNames = ["lambda", "rho", "nu"]
           x0 = [mleR1, 0.5, 0.5]
           listAsParams [r1, p1, p2] =
-            packParameters (r1, deathRate, 0, [(p1,rt) | rt <- stRhoTimes], 0, [(p2,nt) | nt <- stNuTimes])
+            packParameters
+              ( r1
+              , deathRate
+              , 0
+              , [(rt, p1) | rt <- stRhoTimes]
+              , 0
+              , [(nt, p2) | nt <- stNuTimes])
           logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
           prngSeed = mcmcSeed mcmcConfig
        in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
