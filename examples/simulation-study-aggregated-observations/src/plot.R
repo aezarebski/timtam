@@ -4,6 +4,7 @@ library(magrittr)
 library(ggplot2)
 library(stringr)
 library(jsonlite)
+library(coda)
 
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
@@ -222,3 +223,31 @@ ggsave("out/regular-and-aggregated-data.pdf",
   width = 1.618 * fig_height,
   units = "cm"
 )
+
+## =============================================================================
+## Generate a figure looking at the posterior samples
+## =============================================================================
+
+reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
+  extract2(2) %>%
+  extract("icMaybeMCMCConfig") %>%
+  extract2(1) %>%
+  extract2("mcmcOutputCSV")
+
+reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv)
+
+small_mcmc_subset <- if (nrow(reg_data_mcmc_df) < 1000) {
+  sample_n(reg_data_mcmc_df, 1000)
+} else {
+  reg_data_mcmc_df
+}
+png("out/regular-data-mcmc-pairs-plot.png")
+pairs(small_mcmc_subset)
+dev.off()
+
+
+reg_data_mcmc <- mcmc(reg_data_mcmc_df)
+
+png("out/regular-data-mcmc-trace.png")
+plot(reg_data_mcmc)
+dev.off()
