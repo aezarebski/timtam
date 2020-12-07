@@ -71,6 +71,14 @@ import System.Random.MWC (initialize)
 -- | Alias for the type used to seed the MWC PRNG.
 type MWCSeed = Word32
 
+-- | Record of the scheduled observation times.
+data ScheduledTimes =
+  ScheduledTimes
+    { stRhoTimes :: [Time]
+    , stNuTimes :: [Time]
+    }
+  deriving (Show)
+
 -- | These objects define the specifics of the evaluation of LLHD profiles. If a
 -- point estimate is given, then that is the central point of the profiles,
 -- otherwise the parameters are estimated first. In every case the natural death
@@ -288,7 +296,8 @@ evaluateLLHD infConfig obs = do
 
 -- | Using regular (i.e., disaggregated) observations, estimate the parameters
 -- used in the simulation and run the estimation of the prevalence (at present)
--- using this estimate.
+-- using this estimate. Finally generate MCMC samples of the posterior
+-- distribution to understand the likelihood surface.
 --
 -- __NOTE__ This uses the actual simulation parameters as a way to get the
 -- scheduled observation times, /they are not used in the inference/. The
@@ -309,18 +318,22 @@ estimateLLHD infConfig obs = do
 
 -- | Using __aggregated__ observations, estimate the parameters of the process
 -- and run the estimation of the prevalence (at present) using this estimate.
+-- Finally generate MCMC samples of the posterior distribution to understand the
+-- likelihood surface.
 estimateLLHDAggregated :: InferenceConfiguration
                        -> AggregatedObservations -- ^ the aggregated observations
                        -> Simulation ()
 estimateLLHDAggregated infConfig (AggregatedObservations _ obs) = do
   ifVerbosePutStrLn "Running estimateLLHDAggregated..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let (Just schedTimes) = icMaybeTimesForAgg infConfig
+  let (Just (rhoTimes,nuTimes)) = icMaybeTimesForAgg infConfig
+      schedTimes = ScheduledTimes {stRhoTimes = rhoTimes, stNuTimes = nuTimes}
       mleParams = estimateAggregatedParameters deathRate schedTimes obs
       annotatedMLE = EstimatedParametersAggregatedData mleParams
   ifVerbosePutStrLn "\tUsing aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ "\t" ++ show mleParams
   recordPresentPrevalenceEstimate infConfig obs annotatedMLE
+  runScheduledObservationMCMC infConfig deathRate schedTimes obs annotatedMLE
 
 -- | Use GSL to estimate the MLE based on the observations given. This uses a
 -- simplex method because it seems to be faster and more accurate than the
@@ -340,9 +353,11 @@ estimateLLHDAggregated infConfig (AggregatedObservations _ obs) = do
 --
 -- TODO Fix the stupid settings on this!!!
 --
-estimateAggregatedParameters ::
-     Rate -> ([Time], [Time]) -> [Observation] -> Parameters
-estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
+estimateAggregatedParameters :: Rate -- ^ the known death rate
+                             -> ScheduledTimes -- ^ the time of scheduled observations
+                             -> [Observation] -- ^ the aggregated observations
+                             -> Parameters
+estimateAggregatedParameters deathRate ScheduledTimes{..} obs =
   let maxIters = 100
       desiredPrec = 1e-4
       initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
@@ -352,8 +367,8 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
             p1 = invLogit lnP1
             p2 = invLogit lnP2
             r = exp lnR1
-            rts = [(t, p1) | t <- rhoTimes]
-            nts = [(t, p2) | t <- nuTimes]
+            rts = [(t, p1) | t <- stRhoTimes]
+            nts = [(t, p2) | t <- stNuTimes]
           in packParameters (r, deathRate, 0, rts, 0, nts)
       energyFunc x =
         let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
@@ -372,11 +387,10 @@ simulationStudy = do
   bdscodConfig <- bdscodConfiguration
   prngSeed <- asks configSimulationSeed
   epiSim <- simulateEpidemic prngSeed bdscodConfig
-  (regObs, regObs', _) <- observeEpidemicThrice epiSim
-  -- (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
+  (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
   uncurry estimateLLHD regObs'
-  -- uncurry estimateLLHDAggregated aggObs
+  uncurry estimateLLHDAggregated aggObs
 
 -- =============================================================================
 -- The following can be used in the REPL to test things out.
@@ -462,6 +476,34 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
           logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
           prngSeed = mcmcSeed mcmcConfig
        in do ifVerbosePutStrLn "Running runUnscheduledObservationMCMC..."
+             genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
+             chainVals <-
+               liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
+             liftIO $
+               L.writeFile
+                 (mcmcOutputCSV mcmcConfig)
+                 (chainAsByteString variableNames chainVals)
+             return ()
+    Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
+
+runScheduledObservationMCMC :: InferenceConfiguration
+                              -> Rate
+                              -> ScheduledTimes
+                              -> [Observation]
+                              -> AnnotatedParameter
+                              -> Simulation ()
+runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes {..} obs (EstimatedParametersAggregatedData (Parameters (mleR1, _, _, _, _, _))) =
+  case icMaybeMCMCConfig of
+    (Just mcmcConfig) ->
+      let numIters = mcmcNumIters mcmcConfig
+          stepSd = mcmcStepSD mcmcConfig
+          variableNames = ["lambda", "rho", "nu"]
+          x0 = [mleR1, 0.5, 0.5]
+          listAsParams [r1, p1, p2] =
+            packParameters (r1, deathRate, 0, [(p1,rt) | rt <- stRhoTimes], 0, [(p2,nt) | nt <- stNuTimes])
+          logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
+          prngSeed = mcmcSeed mcmcConfig
+       in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
              genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
              chainVals <-
                liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
