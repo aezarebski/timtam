@@ -243,7 +243,7 @@ observeEpidemicThrice simEvents' = do
 
 
 -- | Evaluate the NB posterior approximation of the prevalence for a single
--- point in parameter space
+-- point in parameter space.
 recordPresentPrevalenceEstimate ::
      InferenceConfiguration
   -> [Observation]
@@ -258,53 +258,53 @@ recordPresentPrevalenceEstimate InferenceConfiguration {..} obs centerParam =
    in do ifVerbosePutStrLn $ "\twriting NB values to: " ++ pointEstimatesCsv
          liftIO $ L.writeFile pointEstimatesCsv (Csv.encode nBVal)
 
--- | Run the evaluation of the log-likelihood profiles on a given set of regular
+-- | Run the estimation of the prevalence (at present) on the given set of regular
 -- (i.e., disaggregated) observations at the parameters used to simulate the
--- data set and write the result to file. This will also evaluate the density of
--- the prevalence at the present and write that to file.
-evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
+-- data set and write the result to file.
+evaluateLLHD :: InferenceConfiguration
+             -> [Observation] -- ^ the regular observations
+             -> Simulation ()
 evaluateLLHD infConfig obs = do
   ifVerbosePutStrLn "Running evaluateLLHD..."
-  simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
+  simParams <- asks simulationParameters
   ifVerbosePutStrLn "\tUsing non-aggregated data with the true parameters..."
   ifVerbosePutStrLn $ show simParams
   recordPresentPrevalenceEstimate infConfig obs (TrueParameters simParams)
 
 -- | Using regular (i.e., disaggregated) observations, estimate the parameters
--- and evaluate the log-likelihood profiles and write the result to file. This
--- will also evaluate the density of the prevalence at the present and write
--- that to file.
+-- used in the simulation and run the estimation of the prevalence (at present)
+-- using this estimate.
 --
 -- __NOTE__ This uses the actual simulation parameters as a way to get the
--- scheduled observation times, they are not used in the inference, that starts
--- at a fixed initial condition.
+-- scheduled observation times, /they are not used in the inference/. The
+-- optimisation starts at a fixed initial condition.
 --
-estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
+estimateLLHD :: InferenceConfiguration
+             -> [Observation] -- ^ the regular observations
+             -> Simulation ()
 estimateLLHD infConfig obs = do
   ifVerbosePutStrLn "Running estimateLLHD..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let mleParams = estimateRegularParameters deathRate obs -- get the MLE estimate of the parameters
+  let mleParams = estimateRegularParameters deathRate obs
       annotatedMLE = EstimatedParametersRegularData mleParams
   ifVerbosePutStrLn "\tUsing non-aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ "\t" ++ show annotatedMLE
   recordPresentPrevalenceEstimate infConfig obs annotatedMLE
 
--- | Using __aggregated__ observations, estimate the parameters
--- and evaluate the log-likelihood profiles and write the result to file. This
--- will also evaluate the density of the prevalence at the present and write
--- that to file.
-estimateLLHDAggregated ::
-     InferenceConfiguration -> AggregatedObservations -> Simulation ()
+-- | Using __aggregated__ observations, estimate the parameters of the process
+-- and run the estimation of the prevalence (at present) using this estimate.
+estimateLLHDAggregated :: InferenceConfiguration
+                       -> AggregatedObservations -- ^ the aggregated observations
+                       -> Simulation ()
 estimateLLHDAggregated infConfig (AggregatedObservations _ obs) = do
   ifVerbosePutStrLn "Running estimateLLHDAggregated..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let (Just schedTimes) = icMaybeTimesForAgg infConfig -- (aggTimes,[]) :: ([Time], [Time])
-      mleParams = estimateAggregatedParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
+  let (Just schedTimes) = icMaybeTimesForAgg infConfig
+      mleParams = estimateAggregatedParameters deathRate schedTimes obs
       annotatedMLE = EstimatedParametersAggregatedData mleParams
   ifVerbosePutStrLn "\tUsing aggregated data the computed MLE is..."
-  ifVerbosePutStrLn $ show mleParams
+  ifVerbosePutStrLn $ "\t" ++ show mleParams
   recordPresentPrevalenceEstimate infConfig obs annotatedMLE
-
 
 -- | Use GSL to estimate the MLE based on the observations given. This uses a
 -- simplex method because it seems to be faster and more accurate than the
