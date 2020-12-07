@@ -225,7 +225,8 @@ ggsave("out/regular-and-aggregated-data.pdf",
 )
 
 ## =============================================================================
-## Generate a figure looking at the posterior samples
+## Generate a figure looking at the posterior samples conditioned upon the
+## regular data, i.e., the unscheduled observations.
 ## =============================================================================
 
 reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%

@@ -2,6 +2,8 @@
 
 ## 0.1.3.0
 
+- The calculation of the likelihood surface cross sections has been replaced by
+  a proper MCMC analysis in the aggregated data simulation study.
 - The aggregation simulation study now accepts a random seed from the
   configuration file and assumes there will be a positive rate for unscheduled
   unsequenced sampling.
