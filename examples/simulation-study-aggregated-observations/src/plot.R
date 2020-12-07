@@ -237,7 +237,7 @@ reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
 
 reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv)
 
-small_mcmc_subset <- if (nrow(reg_data_mcmc_df) < 1000) {
+small_mcmc_subset <- if (nrow(reg_data_mcmc_df) > 1000) {
   sample_n(reg_data_mcmc_df, 1000)
 } else {
   reg_data_mcmc_df
@@ -251,4 +251,34 @@ reg_data_mcmc <- mcmc(reg_data_mcmc_df)
 
 png("out/regular-data-mcmc-trace.png")
 plot(reg_data_mcmc)
+dev.off()
+
+## =============================================================================
+## Generate a figure looking at the posterior samples conditioned upon the
+## aggregated data, i.e., the observations that have been aggregated into
+## scheduled observations.
+## =============================================================================
+
+agg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
+  extract2(3) %>%
+  extract("icMaybeMCMCConfig") %>%
+  extract2(1) %>%
+  extract2("mcmcOutputCSV")
+
+agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv)
+
+small_mcmc_subset <- if (nrow(agg_data_mcmc_df) > 1000) {
+                       sample_n(agg_data_mcmc_df, 1000)
+                     } else {
+                       agg_data_mcmc_df
+                     }
+png("out/aggregated-data-mcmc-pairs-plot.png")
+pairs(small_mcmc_subset)
+dev.off()
+
+
+agg_data_mcmc <- mcmc(agg_data_mcmc_df)
+
+png("out/aggregated-data-mcmc-trace.png")
+plot(agg_data_mcmc)
 dev.off()
