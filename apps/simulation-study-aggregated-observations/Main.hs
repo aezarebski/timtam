@@ -45,7 +45,9 @@ import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
+import Data.ByteString.Lazy.Char8 (pack,singleton)
 import qualified Data.Csv as Csv
+import Data.List (intercalate)
 import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
@@ -62,6 +64,7 @@ import GHC.Word (Word32(..))
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra (dot)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
+import Numeric.MCMC.Metropolis
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
 
@@ -109,7 +112,8 @@ data Configuration =
                                  , InferenceConfiguration
                                  , InferenceConfiguration)
     , isVerbose :: Bool
-    , mwcSeed :: MWCSeed
+    , configSimulationSeed :: MWCSeed
+    , configMCMCSeed :: MWCSeed
     }
   deriving (Show, Generic)
 
@@ -290,6 +294,7 @@ estimateLLHD infConfig obs = do
   ifVerbosePutStrLn "\tUsing non-aggregated data the computed MLE is..."
   ifVerbosePutStrLn $ "\t" ++ show annotatedMLE
   recordPresentPrevalenceEstimate infConfig obs annotatedMLE
+  runUnscheduledObservationMCMC infConfig deathRate obs annotatedMLE
 
 -- | Using __aggregated__ observations, estimate the parameters of the process
 -- and run the estimation of the prevalence (at present) using this estimate.
@@ -354,12 +359,13 @@ estimateAggregatedParameters deathRate (rhoTimes,nuTimes) obs =
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
-  prngSeed <- asks mwcSeed
+  prngSeed <- asks configSimulationSeed
   epiSim <- simulateEpidemic prngSeed bdscodConfig
-  (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
+  (regObs, regObs', _) <- observeEpidemicThrice epiSim
+  -- (regObs, regObs', aggObs) <- observeEpidemicThrice epiSim
   uncurry evaluateLLHD regObs
   uncurry estimateLLHD regObs'
-  uncurry estimateLLHDAggregated aggObs
+  -- uncurry estimateLLHDAggregated aggObs
 
 -- =============================================================================
 -- The following can be used in the REPL to test things out.
@@ -367,16 +373,16 @@ simulationStudy = do
 -- TODO This comment section needs to be deleted once the application has been
 -- finished and tested.
 --
--- replMain :: IO ()
--- replMain = do
---   let configFilePath = "agg-app-config.json"
---   config' <- getConfiguration configFilePath
---   case config' of
---     Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
---     (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
---                         case result of
---                           Right () -> return ()
---                           Left errMsg -> do putStrLn errMsg; return ()
+replMain :: IO ()
+replMain = do
+  let configFilePath = "agg-app-config.json"
+  maybeConfig <- Json.decode <$> L.readFile configFilePath
+  case maybeConfig of
+    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
+    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
+                        case result of
+                          Right () -> return ()
+                          Left errMsg -> do putStrLn errMsg; return ()
 --
 -- =============================================================================
 
@@ -426,3 +432,33 @@ estimateRegularParameters deathRate obs =
          in negLlhd
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
    in vecAsParams est
+
+
+runUnscheduledObservationMCMC :: InferenceConfiguration
+                              -> Rate
+                              -> [Observation]
+                              -> AnnotatedParameter
+                              -> Simulation ()
+runUnscheduledObservationMCMC InferenceConfiguration{..} deathRate obs (EstimatedParametersRegularData (Parameters (mleR1, _, mleR2, _,mleR3,_))) =
+  let numIters = 10
+      stepSd = 0.01
+      variableNames = ["lambda", "psi", "omega"]
+      x0 = [mleR1,mleR2,mleR3]
+      listAsParams [r1,r2,r3] = packParameters (r1, deathRate, r2, [], r3, [])
+      logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
+   in do ifVerbosePutStrLn "Running runUnscheduledObservationMCMC..."
+         prngSeed <- asks configMCMCSeed
+         genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
+         chainVals <- liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
+         liftIO $ L.writeFile "demo-mcmc-values.csv" (chainAsByteString variableNames chainVals)
+         return ()
+
+-- | A bytestring representation of the MCMC samples.
+chainAsByteString :: [String] -- ^ the names of the elements of the chain
+                  -> [Chain [Double] b] -- ^ the samples in the chain
+                  -> L.ByteString
+chainAsByteString varNames chainVals =
+  let header = pack $ intercalate "," ("llhd":varNames)
+      records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
+      linebreak = singleton '\n'
+  in mconcat [header,linebreak,records]
