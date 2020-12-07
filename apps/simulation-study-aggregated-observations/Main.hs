@@ -85,10 +85,22 @@ data InferenceConfiguration =
     , pointEstimatesCsv :: FilePath
     , maybePointEstimate :: Maybe Parameters
     , icMaybeTimesForAgg :: Maybe ([Time], [Time])
+    , icMaybeMCMCConfig :: Maybe MCMCConfiguration
     }
   deriving (Show, Generic)
 
 instance Json.FromJSON InferenceConfiguration
+
+-- | These objects configure an MCMC run.
+data MCMCConfiguration =
+  MCMCConfiguration
+  { mcmcOutputCSV :: FilePath
+  , mcmcNumIters :: Int
+  , mcmcStepSD :: Double
+  , mcmcSeed :: MWCSeed
+  } deriving (Show, Generic)
+
+instance Json.FromJSON MCMCConfiguration
 
 -- | This object configures the whole evaluation of this program and is to be
 -- read in from a suitable JSON file.
@@ -113,7 +125,6 @@ data Configuration =
                                  , InferenceConfiguration)
     , isVerbose :: Bool
     , configSimulationSeed :: MWCSeed
-    , configMCMCSeed :: MWCSeed
     }
   deriving (Show, Generic)
 
@@ -440,18 +451,20 @@ runUnscheduledObservationMCMC :: InferenceConfiguration
                               -> AnnotatedParameter
                               -> Simulation ()
 runUnscheduledObservationMCMC InferenceConfiguration{..} deathRate obs (EstimatedParametersRegularData (Parameters (mleR1, _, mleR2, _,mleR3,_))) =
-  let numIters = 10
-      stepSd = 0.01
-      variableNames = ["lambda", "psi", "omega"]
-      x0 = [mleR1,mleR2,mleR3]
-      listAsParams [r1,r2,r3] = packParameters (r1, deathRate, r2, [], r3, [])
-      logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
-   in do ifVerbosePutStrLn "Running runUnscheduledObservationMCMC..."
-         prngSeed <- asks configMCMCSeed
-         genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
-         chainVals <- liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
-         liftIO $ L.writeFile "demo-mcmc-values.csv" (chainAsByteString variableNames chainVals)
-         return ()
+  case icMaybeMCMCConfig of
+    (Just mcmcConfig) -> let numIters = mcmcNumIters mcmcConfig
+                             stepSd = mcmcStepSD mcmcConfig
+                             variableNames = ["lambda", "psi", "omega"]
+                             x0 = [mleR1,mleR2,mleR3]
+                             listAsParams [r1,r2,r3] = packParameters (r1, deathRate, r2, [], r3, [])
+                             logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
+                             prngSeed = mcmcSeed mcmcConfig
+                           in do ifVerbosePutStrLn "Running runUnscheduledObservationMCMC..."
+                                 genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
+                                 chainVals <- liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
+                                 liftIO $ L.writeFile "demo-mcmc-values.csv" (chainAsByteString variableNames chainVals)
+                                 return ()
+    Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
 -- | A bytestring representation of the MCMC samples.
 chainAsByteString :: [String] -- ^ the names of the elements of the chain
