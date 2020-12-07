@@ -113,9 +113,10 @@ result <- list(
       NULL,
       mcmc_configuration(
         "regular-data-mcmc-samples.csv",
-        1e3,
+        1e4,
         1e-2,
-        7)
+        7
+      )
     ),
     inference_configuration(
       "est-params-agg-data",
@@ -123,7 +124,12 @@ result <- list(
         seq_agg_times,
         unseq_agg_times
       ),
-      NULL
+      mcmc_configuration(
+        "aggregated-data-mcmc-samples.csv",
+        1e4,
+        1e-2,
+        7
+      )
     )
   ),
   isVerbose = TRUE,
