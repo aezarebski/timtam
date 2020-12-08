@@ -13,14 +13,14 @@ if (not(dir.exists("out"))) {
 
 output_file <- "agg-app-config.json"
 
+num_mcmc_samples <- 5e4 # the number of MCMC iterations to use.
 
-epsilon_time <- 1e-6
-simulation_duration <- 10.5
+simulation_duration <- 13.5
 
 birth_rate <- 1.7
-death_rate <- 0.5
-sampling_rate <- 0.2
-occurrence_rate <- 0.3
+death_rate <- 0.9
+sampling_rate <- 0.05
+occurrence_rate <- 0.25
 
 disaster_params <- list()
 catastrophe_params <- list()
@@ -101,7 +101,6 @@ sim_params <- list(
   disaster_params
 )
 
-num_mcmc_samples <- 1e4
 
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
@@ -117,7 +116,7 @@ result <- list(
         "regular-data-mcmc-samples.csv",
         0.1 * num_mcmc_samples,
         2e-2,
-        7
+        7 # the mcmc seed
       )
     ),
     inference_configuration(
@@ -129,8 +128,8 @@ result <- list(
       mcmc_configuration(
         "aggregated-data-mcmc-samples.csv",
         num_mcmc_samples,
-        1e-3,
-        7
+        5e-3,
+        7 # the mcmc seed
       )
     )
   ),
