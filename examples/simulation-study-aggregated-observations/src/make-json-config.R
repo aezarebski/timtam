@@ -1,3 +1,8 @@
+#' This script generates the configuration file for the
+#' \code{simulation-study-aggregated-observations} application, the resulting
+#' JSON needs to conform to the type of the \code{Configuration} object
+#' described in the source code for that application.
+
 library(purrr)
 library(magrittr)
 
@@ -9,7 +14,8 @@ if (not(dir.exists("out"))) {
 output_file <- "agg-app-config.json"
 
 
-simulation_duration <- 8.5 - 1e-6
+epsilon_time <- 1e-6
+simulation_duration <- 10.5
 
 birth_rate <- 1.7
 death_rate <- 0.5
@@ -21,10 +27,27 @@ catastrophe_params <- list()
 
 ## For the aggregation, these are the times at which we carry out the
 ## aggregation.
-seq_agg_times <- as.list(seq(from = 2.5, to = 8.5, by = 1))
-unseq_agg_times <- as.list(seq(from = 2.4, to = 8.4, by = 1))
+time_mesh <- seq(from = 2.5, to = simulation_duration, by = 1)
+seq_agg_times <- as.list(time_mesh)
+unseq_agg_times <- as.list(time_mesh - 0.1)
 
 
+#' Return a list corresponding to the \code{MCMCConfiguration} from \code{Main.hs}
+#'
+#' @param output_file a filepath for the mcmc samples
+#' @param num_iters a numeric defining the number of iterations
+#' @param step_sd a numeric defining the step standard deviation
+#' @param seed a numeric defining the seed to use for the PRNG
+#'
+mcmc_configuration <- function(output_file, num_iters, step_sd, seed) {
+  result <- list(
+    mcmcOutputCSV = output_file,
+    mcmcNumIters = num_iters,
+    mcmcStepSD = step_sd,
+    mcmcSeed = seed
+  )
+  return(result)
+}
 
 #' Return a list corresponding to the \code{InferenceConfiguration} from
 #' \code{Main.hs}.
@@ -33,8 +56,10 @@ unseq_agg_times <- as.list(seq(from = 2.4, to = 8.4, by = 1))
 #' @param agg_times_vec a list of numeric vectors defining the aggregation
 #'   times, first for the sequenced and then unsequenced samples, or \code{NULL}
 #'   if there are no aggregation times.
+#' @param mcmc_config a list of MCMC configuration such as the one returned by
+#'   \code{mcmc_configuration}.
 #'
-inference_configuration <- function(inf_config_name, agg_times_vec) {
+inference_configuration <- function(inf_config_name, agg_times_vec, mcmc_config) {
   result <- list(
     reconstructedTreeOutputFiles = sprintf(
       c(
@@ -59,6 +84,10 @@ inference_configuration <- function(inf_config_name, agg_times_vec) {
   if (not(is.null(agg_times_vec))) {
     result$icMaybeTimesForAgg <- agg_times_vec
   }
+
+  if (not(is.null(mcmc_config))) {
+    result$icMaybeMCMCConfig <- mcmc_config
+  }
   return(result)
 }
 
@@ -72,26 +101,41 @@ sim_params <- list(
   disaster_params
 )
 
-
+num_mcmc_samples <- 1e4
 
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
-  simulationDuration = simulation_duration + 1e-5,
+  simulationDuration = simulation_duration,
   simulationSizeBounds = c(100, 100000),
   inferenceConfigurations = list(
-    inference_configuration("true-params-regular-data", NULL),
-    inference_configuration("est-params-regular-data", NULL),
+    inference_configuration("true-params-regular-data", NULL, NULL),
+    inference_configuration(
+      "est-params-regular-data",
+      NULL,
+      mcmc_configuration(
+        "regular-data-mcmc-samples.csv",
+        0.1 * num_mcmc_samples,
+        2e-2,
+        7
+      )
+    ),
     inference_configuration(
       "est-params-agg-data",
       list(
         seq_agg_times,
         unseq_agg_times
+      ),
+      mcmc_configuration(
+        "aggregated-data-mcmc-samples.csv",
+        num_mcmc_samples,
+        1e-3,
+        7
       )
     )
   ),
   isVerbose = TRUE,
-  mwcSeed = 56
+  configSimulationSeed = 66
 )
 
 jsonlite::write_json(result,
