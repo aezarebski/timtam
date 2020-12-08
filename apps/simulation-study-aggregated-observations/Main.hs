@@ -498,7 +498,7 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
     (Just mcmcConfig) ->
       let numIters = mcmcNumIters mcmcConfig
           stepSd = mcmcStepSD mcmcConfig
-          variableNames = ["lambda", "rho", "nu"]
+          variableNames = ["lambda", "rho", "nu", "nbSize", "nbProb"]
           x0 = [mleR1, 0.5, 0.5]
           listAsParams [r1, p1, p2] =
             packParameters
@@ -511,14 +511,15 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
           -- logPost x@([r1,p1,p2]) = llhd - lnNotExtinct where llhd = fst $ llhdAndNB obs (listAsParams x) initLlhdState; lnNotExtinct = log (r1 - (p1 + p2 + deathRate)) - log r1
           logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
           prngSeed = mcmcSeed mcmcConfig
+          maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
              genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
              chainVals <-
-               liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
+               liftIO $ (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc) genIO
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
-                 (chainAsByteString variableNames chainVals)
+                 (chainAsByteString' variableNames chainVals)
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
