@@ -29,11 +29,17 @@ reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
   extract2("mcmcOutputCSV")
 
 reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv) %>%
-  mutate(nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
-         nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
-         nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb))
+  mutate(
+    nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
+    nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
+    nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb)
+  )
 
-reg_data_nb_summary <- reg_data_mcmc_df %>% select(starts_with("nb_")) %>% colMeans %>% as.list %>% as.data.frame
+reg_data_nb_summary <- reg_data_mcmc_df %>%
+  select(starts_with("nb_")) %>%
+  colMeans() %>%
+  as.list() %>%
+  as.data.frame()
 reg_data_nb_summary$absolute_time <- sim_duration
 
 small_mcmc_subset <- if (nrow(reg_data_mcmc_df) > 1000) {
@@ -69,19 +75,25 @@ agg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
   extract2("mcmcOutputCSV")
 
 agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv) %>%
-  mutate(nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
-         nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
-         nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb))
+  mutate(
+    nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
+    nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
+    nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb)
+  )
 
 
-agg_data_nb_summary <- agg_data_mcmc_df %>% select(starts_with("nb_")) %>% colMeans %>% as.list %>% as.data.frame
+agg_data_nb_summary <- agg_data_mcmc_df %>%
+  select(starts_with("nb_")) %>%
+  colMeans() %>%
+  as.list() %>%
+  as.data.frame()
 agg_data_nb_summary$absolute_time <- sim_duration
 
 small_mcmc_subset <- if (nrow(agg_data_mcmc_df) > 1000) {
-                       sample_n(agg_data_mcmc_df, 1000)
-                     } else {
-                       agg_data_mcmc_df
-                     }
+  sample_n(agg_data_mcmc_df, 1000)
+} else {
+  agg_data_mcmc_df
+}
 
 
 if (SAVE_FIGURES) {
@@ -226,17 +238,15 @@ fig_height <- 10
 
 if (SAVE_FIGURES) {
   ggsave("out/regular-and-aggregated-data.png",
-         g,
-         height = fig_height,
-         width = 1.618 * fig_height,
-         units = "cm"
-         )
+    g,
+    height = fig_height,
+    width = 1.618 * fig_height,
+    units = "cm"
+  )
   ggsave("out/regular-and-aggregated-data.pdf",
-         g,
-         height = fig_height,
-         width = 1.618 * fig_height,
-         units = "cm"
-         )
+    g,
+    height = fig_height,
+    width = 1.618 * fig_height,
+    units = "cm"
+  )
 }
-
-
