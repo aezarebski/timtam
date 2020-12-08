@@ -10,7 +10,7 @@ green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
 
-SAVE_FIGURES <- FALSE
+SAVE_FIGURES <- TRUE
 
 app_config <- read_json("agg-app-config.json")
 sim_lambda <- app_config$simulationParameters[[1]]
@@ -48,11 +48,53 @@ if (SAVE_FIGURES) {
   dev.off()
 }
 
-reg_data_mcmc <- mcmc(reg_data_mcmc_df)
+reg_data_mcmc <- mcmc(select(reg_data_mcmc_df, llhd, lambda, psi, omega))
 
 if (SAVE_FIGURES) {
   png("out/regular-data-mcmc-trace.png")
   plot(reg_data_mcmc)
+  dev.off()
+}
+
+## =============================================================================
+## Generate a figure looking at the posterior samples conditioned upon the
+## aggregated data, i.e., the observations that have been aggregated into
+## scheduled observations.
+## =============================================================================
+
+agg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
+  extract2(3) %>%
+  extract("icMaybeMCMCConfig") %>%
+  extract2(1) %>%
+  extract2("mcmcOutputCSV")
+
+agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv) %>%
+  mutate(nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
+         nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
+         nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb))
+
+
+agg_data_nb_summary <- agg_data_mcmc_df %>% select(starts_with("nb_")) %>% colMeans %>% as.list %>% as.data.frame
+agg_data_nb_summary$absolute_time <- sim_duration
+
+small_mcmc_subset <- if (nrow(agg_data_mcmc_df) > 1000) {
+                       sample_n(agg_data_mcmc_df, 1000)
+                     } else {
+                       agg_data_mcmc_df
+                     }
+
+
+if (SAVE_FIGURES) {
+  png("out/aggregated-data-mcmc-pairs-plot.png")
+  pairs(select(small_mcmc_subset, llhd, lambda, rho, nu))
+  dev.off()
+}
+
+agg_data_mcmc <- mcmc(select(agg_data_mcmc_df, llhd, lambda, rho, nu))
+
+if (SAVE_FIGURES) {
+  png("out/aggregated-data-mcmc-trace.png")
+  plot(agg_data_mcmc)
   dev.off()
 }
 
@@ -166,16 +208,16 @@ g <- ggplot() +
     mapping = aes(x = absolute_time - 0.1, y = nb_med),
     colour = green_hex_colour
   ) +
-  ## geom_errorbar(
-  ##   data = est_aggregated_df,
-  ##   mapping = aes(x = absolute_time + 0.1, ymin = prev_est_min, ymax = prev_est_max),
-  ##   colour = purple_hex_colour, linetype = "solid", width = 0.2
-  ## ) +
-  ## geom_point(
-  ##   data = est_aggregated_df,
-  ##   mapping = aes(x = absolute_time + 0.1, y = prev_est_mid),
-  ##   colour = purple_hex_colour
-  ## ) +
+  geom_errorbar(
+    data = agg_data_nb_summary,
+    mapping = aes(x = absolute_time + 0.1, ymin = nb_min, ymax = nb_max),
+    colour = purple_hex_colour, linetype = "solid", width = 0.2
+  ) +
+  geom_point(
+    data = agg_data_nb_summary,
+    mapping = aes(x = absolute_time + 0.1, y = nb_med),
+    colour = purple_hex_colour
+  ) +
   labs(y = NULL, x = "Time since origin") +
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
@@ -198,37 +240,3 @@ if (SAVE_FIGURES) {
 }
 
 
-## =============================================================================
-## Generate a figure looking at the posterior samples conditioned upon the
-## aggregated data, i.e., the observations that have been aggregated into
-## scheduled observations.
-## =============================================================================
-
-agg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
-  extract2(3) %>%
-  extract("icMaybeMCMCConfig") %>%
-  extract2(1) %>%
-  extract2("mcmcOutputCSV")
-
-agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv)
-
-small_mcmc_subset <- if (nrow(agg_data_mcmc_df) > 1000) {
-                       sample_n(agg_data_mcmc_df, 1000)
-                     } else {
-                       agg_data_mcmc_df
-                     }
-
-
-if (SAVE_FIGURES) {
-  png("out/aggregated-data-mcmc-pairs-plot.png")
-  pairs(select(small_mcmc_subset, llhd, lambda, rho, nu))
-  dev.off()
-}
-
-agg_data_mcmc <- mcmc(agg_data_mcmc_df)
-
-if (SAVE_FIGURES) {
-  png("out/aggregated-data-mcmc-trace.png")
-  plot(agg_data_mcmc)
-  dev.off()
-}
