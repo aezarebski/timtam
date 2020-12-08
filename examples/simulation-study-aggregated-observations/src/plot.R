@@ -28,7 +28,7 @@ reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
   extract2(1) %>%
   extract2("mcmcOutputCSV")
 
-reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv) %>%
+reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv, stringsAsFactors = FALSE) %>%
   mutate(
     nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
     nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
@@ -60,7 +60,23 @@ if (SAVE_FIGURES) {
   png("out/regular-data-mcmc-trace.png")
   plot(reg_data_mcmc)
   dev.off()
+
+  sink(file = "out/regular-data-mcmc-diagnostics.txt")
+  cat("MCMC diagnostics based on analysis of regular data\n")
+  cat("==================================================\n")
+  cat("\nSummary\n")
+  cat("-------\n")
+  print(summary(reg_data_mcmc))
+  cat("\n\nThe rejection rate of samples\n")
+  cat("-----------------------------\n")
+  print(rejectionRate(reg_data_mcmc))
+  cat("\n\nThe effective sample size\n")
+  cat("-------------------------\n\n")
+  print(effectiveSize(reg_data_mcmc))
+  sink()
 }
+
+
 
 ## =============================================================================
 ## Generate a figure looking at the posterior samples conditioned upon the
@@ -74,7 +90,7 @@ agg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
   extract2(1) %>%
   extract2("mcmcOutputCSV")
 
-agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv) %>%
+agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv, stringsAsFactors = FALSE) %>%
   mutate(
     nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
     nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
@@ -108,18 +124,32 @@ if (SAVE_FIGURES) {
   png("out/aggregated-data-mcmc-trace.png")
   plot(agg_data_mcmc)
   dev.off()
+
+  sink(file = "out/aggregated-data-mcmc-diagnostics.txt")
+  cat("MCMC diagnostics based on analysis of aggregated data\n")
+  cat("=====================================================\n")
+  cat("\nSummary\n")
+  cat("-------\n")
+  print(summary(agg_data_mcmc))
+  cat("\n\nThe rejection rate of samples\n")
+  cat("-----------------------------\n")
+  print(rejectionRate(agg_data_mcmc))
+  cat("\n\nThe effective sample size\n")
+  cat("-------------------------\n\n")
+  print(effectiveSize(agg_data_mcmc))
+  sink()
 }
 
 ## =============================================================================
 ## Generate a figure looking at the prevalence through time and the data used in
 ## the inference.
 ## =============================================================================
-all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
+all_events <- read.csv("out/all-simulated-events.csv", header = FALSE, stringsAsFactors = FALSE) %>%
   select(V1, V2) %>%
   set_names(c("event", "abs_time"))
 
 update_prev <- function(n, e) {
-  switch(EXPR = e,
+  switch(EXPR = as.character(e),
     infection = n + 1,
     occurrence = n - 1,
     removal = n - 1,
@@ -137,12 +167,12 @@ prev_df <- data.frame(
 
 ## -----------------------------------------------------------------------------
 
-regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE) %>%
+regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
 update_reg_data_ltt <- function(n, e) {
-  switch(EXPR = e,
+  switch(EXPR = as.character(e),
     obirth = n + 1,
     osample = n - 1
   )
@@ -168,7 +198,7 @@ occ_df <- regular_data %>%
 
 ## -----------------------------------------------------------------------------
 
-aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv", header = FALSE) %>%
+aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
