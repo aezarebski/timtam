@@ -28,7 +28,7 @@ reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
   extract2(1) %>%
   extract2("mcmcOutputCSV")
 
-reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv) %>%
+reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv, stringsAsFactors = FALSE) %>%
   mutate(
     nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
     nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
@@ -74,7 +74,7 @@ agg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
   extract2(1) %>%
   extract2("mcmcOutputCSV")
 
-agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv) %>%
+agg_data_mcmc_df <- read.csv(agg_data_mcmc_csv, stringsAsFactors = FALSE) %>%
   mutate(
     nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
     nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
@@ -168,7 +168,7 @@ occ_df <- regular_data %>%
 
 ## -----------------------------------------------------------------------------
 
-aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv", header = FALSE) %>%
+aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
