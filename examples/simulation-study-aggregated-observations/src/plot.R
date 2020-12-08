@@ -119,7 +119,7 @@ all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
   set_names(c("event", "abs_time"))
 
 update_prev <- function(n, e) {
-  switch(EXPR = e,
+  switch(EXPR = as.character(e),
     infection = n + 1,
     occurrence = n - 1,
     removal = n - 1,
@@ -142,7 +142,7 @@ regular_data <- read.csv("out/simulated-observations-true-params-regular-data.cs
   mutate(abs_time = cumsum(delay))
 
 update_reg_data_ltt <- function(n, e) {
-  switch(EXPR = e,
+  switch(EXPR = as.character(e),
     obirth = n + 1,
     osample = n - 1
   )
