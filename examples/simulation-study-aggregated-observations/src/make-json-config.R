@@ -5,6 +5,7 @@
 
 library(purrr)
 library(magrittr)
+library(jsonlite)
 
 if (not(dir.exists("out"))) {
   err_message <- "\n\n---> cannot find the output directory: out <---\n\n"
@@ -106,7 +107,7 @@ result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
   simulationDuration = simulation_duration,
-  simulationSizeBounds = c(100, 100000),
+  simulationSizeBounds = c(1000, 10000),
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL, NULL),
     inference_configuration(
@@ -114,8 +115,8 @@ result <- list(
       NULL,
       mcmc_configuration(
         "regular-data-mcmc-samples.csv",
-        0.1 * num_mcmc_samples,
-        2e-2,
+        num_mcmc_samples,
+        1e-2,
         7 # the mcmc seed
       )
     ),
@@ -128,16 +129,16 @@ result <- list(
       mcmc_configuration(
         "aggregated-data-mcmc-samples.csv",
         num_mcmc_samples,
-        5e-3,
+        1e-2,
         7 # the mcmc seed
       )
     )
   ),
   isVerbose = TRUE,
-  configSimulationSeed = 66
+  configSimulationSeed = 46
 )
 
-jsonlite::write_json(result,
+write_json(result,
   output_file,
   pretty = TRUE,
   auto_unbox = TRUE,
