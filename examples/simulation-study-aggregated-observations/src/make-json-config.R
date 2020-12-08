@@ -14,7 +14,8 @@ if (not(dir.exists("out"))) {
 output_file <- "agg-app-config.json"
 
 
-simulation_duration <- 8.5 - 1e-6
+epsilon_time <- 1e-6
+simulation_duration <- 10.5
 
 birth_rate <- 1.7
 death_rate <- 0.5
@@ -26,8 +27,9 @@ catastrophe_params <- list()
 
 ## For the aggregation, these are the times at which we carry out the
 ## aggregation.
-seq_agg_times <- as.list(seq(from = 2.5, to = 8.5, by = 1))
-unseq_agg_times <- as.list(seq(from = 2.4, to = 8.4, by = 1))
+time_mesh <- seq(from = 2.5, to = simulation_duration, by = 1)
+seq_agg_times <- as.list(time_mesh)
+unseq_agg_times <- as.list(time_mesh - 0.1)
 
 
 #' Return a list corresponding to the \code{MCMCConfiguration} from \code{Main.hs}
@@ -99,12 +101,12 @@ sim_params <- list(
   disaster_params
 )
 
-num_mcmc_samples <- 1e3
+num_mcmc_samples <- 1e4
 
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
-  simulationDuration = simulation_duration + 1e-5,
+  simulationDuration = simulation_duration,
   simulationSizeBounds = c(100, 100000),
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL, NULL),
@@ -113,8 +115,8 @@ result <- list(
       NULL,
       mcmc_configuration(
         "regular-data-mcmc-samples.csv",
-        num_mcmc_samples,
-        1e-2,
+        0.1 * num_mcmc_samples,
+        2e-2,
         7
       )
     ),
@@ -127,7 +129,7 @@ result <- list(
       mcmc_configuration(
         "aggregated-data-mcmc-samples.csv",
         num_mcmc_samples,
-        1e-2,
+        1e-3,
         7
       )
     )
