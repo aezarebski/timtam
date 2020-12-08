@@ -60,7 +60,23 @@ if (SAVE_FIGURES) {
   png("out/regular-data-mcmc-trace.png")
   plot(reg_data_mcmc)
   dev.off()
+
+  sink(file = "out/regular-data-mcmc-diagnostics.txt")
+  cat("MCMC diagnostics based on analysis of regular data\n")
+  cat("==================================================\n")
+  cat("\nSummary\n")
+  cat("-------\n")
+  print(summary(reg_data_mcmc))
+  cat("\n\nThe rejection rate of samples\n")
+  cat("-----------------------------\n")
+  print(rejectionRate(reg_data_mcmc))
+  cat("\n\nThe effective sample size\n")
+  cat("-------------------------\n\n")
+  print(effectiveSize(reg_data_mcmc))
+  sink()
 }
+
+
 
 ## =============================================================================
 ## Generate a figure looking at the posterior samples conditioned upon the
@@ -108,6 +124,20 @@ if (SAVE_FIGURES) {
   png("out/aggregated-data-mcmc-trace.png")
   plot(agg_data_mcmc)
   dev.off()
+
+  sink(file = "out/aggregated-data-mcmc-diagnostics.txt")
+  cat("MCMC diagnostics based on analysis of aggregated data\n")
+  cat("=====================================================\n")
+  cat("\nSummary\n")
+  cat("-------\n")
+  print(summary(agg_data_mcmc))
+  cat("\n\nThe rejection rate of samples\n")
+  cat("-----------------------------\n")
+  print(rejectionRate(agg_data_mcmc))
+  cat("\n\nThe effective sample size\n")
+  cat("-------------------------\n\n")
+  print(effectiveSize(agg_data_mcmc))
+  sink()
 }
 
 ## =============================================================================
