@@ -114,7 +114,7 @@ if (SAVE_FIGURES) {
 ## Generate a figure looking at the prevalence through time and the data used in
 ## the inference.
 ## =============================================================================
-all_events <- read.csv("out/all-simulated-events.csv", header = FALSE) %>%
+all_events <- read.csv("out/all-simulated-events.csv", header = FALSE, stringsAsFactors = FALSE) %>%
   select(V1, V2) %>%
   set_names(c("event", "abs_time"))
 
@@ -137,7 +137,7 @@ prev_df <- data.frame(
 
 ## -----------------------------------------------------------------------------
 
-regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE) %>%
+regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
