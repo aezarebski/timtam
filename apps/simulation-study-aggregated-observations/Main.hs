@@ -469,20 +469,21 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
     (Just mcmcConfig) ->
       let numIters = mcmcNumIters mcmcConfig
           stepSd = mcmcStepSD mcmcConfig
-          variableNames = ["lambda", "psi", "omega"]
+          variableNames = ["lambda", "psi", "omega", "nbSize", "nbProb"]
           x0 = [mleR1, mleR2, mleR3]
           listAsParams [r1, r2, r3] =
             packParameters (r1, deathRate, r2, [], r3, [])
           logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
           prngSeed = mcmcSeed mcmcConfig
+          maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runUnscheduledObservationMCMC..."
              genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
              chainVals <-
-               liftIO $ (asGenIO $ chain numIters stepSd x0 logPost) genIO
+               liftIO $ (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc) genIO
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
-                 (chainAsByteString variableNames chainVals)
+                 (chainAsByteString' variableNames chainVals)
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
@@ -528,5 +529,22 @@ chainAsByteString :: [String] -- ^ the names of the elements of the chain
 chainAsByteString varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
       records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
+      linebreak = singleton '\n'
+   in mconcat [header, linebreak, records]
+
+-- | A bytestring representation of the MCMC samples.
+chainAsByteString' :: [String] -- ^ the names of the elements of the chain
+                  -> [Chain [Double] NegativeBinomial] -- ^ the samples in the chain
+                  -> L.ByteString
+chainAsByteString' varNames chainVals =
+  let header = pack $ intercalate "," ("llhd" : varNames)
+      nbParams cv =
+        case chainTunables cv of
+          Just (NegBinom r p) -> [r, p]
+          Just Zero -> [0, 0]
+          Nothing -> [-1, -1]
+      records =
+        Csv.encode
+          [chainScore cv : (chainPosition cv ++ nbParams cv) | cv <- chainVals]
       linebreak = singleton '\n'
    in mconcat [header, linebreak, records]
