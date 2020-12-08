@@ -10,57 +10,51 @@ green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
 
+SAVE_FIGURES <- FALSE
+
 app_config <- read_json("agg-app-config.json")
 sim_lambda <- app_config$simulationParameters[[1]]
+sim_duration <- app_config$simulationDuration
+
 
 ## =============================================================================
-## Generate a figure looking at the posterior distribution of the prevalence
+## Generate a figure looking at the posterior samples conditioned upon the
+## regular data, i.e., the unscheduled observations.
 ## =============================================================================
-data_paths <- list(
-  "out/final-negative-binomial-est-params-agg-data.csv",
-  "out/final-negative-binomial-est-params-regular-data.csv",
-  "out/final-negative-binomial-true-params-regular-data.csv"
-)
 
-read_nb <- function(filename) {
-  if (file.exists(filename)) {
-    foo <- filename %>%
-      readLines() %>%
-      str_split(pattern = "(,| )") %>%
-      unlist()
+reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
+  extract2(2) %>%
+  extract("icMaybeMCMCConfig") %>%
+  extract2(1) %>%
+  extract2("mcmcOutputCSV")
 
-    percentile_probs <- c(0.025, 0.25, 0.5, 0.75, 0.975)
-    percentile_vals <- qnbinom(
-      p = c(0.025, 0.25, 0.5, 0.75, 0.975),
-      size = as.numeric(foo[3]),
-      prob = 1 - as.numeric(foo[4])
-    )
-    estimate_type <- foo[1]
+reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv) %>%
+  mutate(nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
+         nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
+         nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb))
 
-    data.frame(
-      percentile_prob = percentile_probs,
-      percentile_value = percentile_vals,
-      estimate_name = estimate_type
-    )
-  } else {
-    NULL
-  }
+reg_data_nb_summary <- reg_data_mcmc_df %>% select(starts_with("nb_")) %>% colMeans %>% as.list %>% as.data.frame
+reg_data_nb_summary$absolute_time <- sim_duration
+
+small_mcmc_subset <- if (nrow(reg_data_mcmc_df) > 1000) {
+  sample_n(reg_data_mcmc_df, 1000)
+} else {
+  reg_data_mcmc_df
 }
 
-posterior_plot_df <- map(data_paths, read_nb) %>%
-  keep(compose(not, is_null)) %>%
-  bind_rows()
+if (SAVE_FIGURES) {
+  png("out/regular-data-mcmc-pairs-plot.png")
+  pairs(select(small_mcmc_subset, llhd, lambda, psi, omega))
+  dev.off()
+}
 
-g <- ggplot(posterior_plot_df) +
-  geom_point(mapping = aes(
-    x = estimate_name,
-    y = percentile_value,
-    colour = percentile_prob
-  )) +
-  ylim(c(0, 1.1 * max(posterior_plot_df$percentile_value)))
+reg_data_mcmc <- mcmc(reg_data_mcmc_df)
 
-
-ggsave("out/posterior-prevelance-estimates.png", g)
+if (SAVE_FIGURES) {
+  png("out/regular-data-mcmc-trace.png")
+  plot(reg_data_mcmc)
+  dev.off()
+}
 
 ## =============================================================================
 ## Generate a figure looking at the prevalence through time and the data used in
@@ -154,20 +148,6 @@ agg_occ_df <- aggregated_data %>%
 
 ## -----------------------------------------------------------------------------
 
-sim_duration <- app_config$simulationDuration
-
-tmp_true_regular <- filter(posterior_plot_df, estimate_name == "true_parameters_regular_data") %>% use_series("percentile_value")
-true_regular_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_true_regular), prev_est_mid = median(tmp_true_regular), prev_est_max = max(tmp_true_regular))
-
-tmp_est_regular <- filter(posterior_plot_df, estimate_name == "estimated_parameters_regular_data") %>% use_series("percentile_value")
-est_regular_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_est_regular), prev_est_mid = median(tmp_est_regular), prev_est_max = max(tmp_est_regular))
-
-tmp_est_aggregated <- filter(posterior_plot_df, estimate_name == "estimated_parameters_aggregated_data") %>% use_series("percentile_value")
-est_aggregated_df <- data.frame(absolute_time = sim_duration, prev_est_min = min(tmp_est_aggregated), prev_est_mid = median(tmp_est_aggregated), prev_est_max = max(tmp_est_aggregated))
-
-
-
-
 
 g <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
@@ -177,81 +157,46 @@ g <- ggplot() +
   geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
   geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
   geom_errorbar(
-    data = true_regular_df,
-    mapping = aes(x = absolute_time - 0.1, ymin = prev_est_min, ymax = prev_est_max),
-    colour = green_hex_colour, linetype = "dashed", width = 0.2
-  ) +
-  geom_point(
-    data = true_regular_df,
-    mapping = aes(x = absolute_time - 0.1, y = prev_est_mid),
-    colour = green_hex_colour
-  ) +
-  geom_errorbar(
-    data = est_regular_df,
-    mapping = aes(x = absolute_time, ymin = prev_est_min, ymax = prev_est_max),
+    data = reg_data_nb_summary,
+    mapping = aes(x = absolute_time - 0.1, ymin = nb_min, ymax = nb_max),
     colour = green_hex_colour, linetype = "solid", width = 0.2
   ) +
   geom_point(
-    data = est_regular_df,
-    mapping = aes(x = absolute_time, y = prev_est_mid),
+    data = reg_data_nb_summary,
+    mapping = aes(x = absolute_time - 0.1, y = nb_med),
     colour = green_hex_colour
   ) +
-  geom_errorbar(
-    data = est_aggregated_df,
-    mapping = aes(x = absolute_time + 0.1, ymin = prev_est_min, ymax = prev_est_max),
-    colour = purple_hex_colour, linetype = "solid", width = 0.2
-  ) +
-  geom_point(
-    data = est_aggregated_df,
-    mapping = aes(x = absolute_time + 0.1, y = prev_est_mid),
-    colour = purple_hex_colour
-  ) +
+  ## geom_errorbar(
+  ##   data = est_aggregated_df,
+  ##   mapping = aes(x = absolute_time + 0.1, ymin = prev_est_min, ymax = prev_est_max),
+  ##   colour = purple_hex_colour, linetype = "solid", width = 0.2
+  ## ) +
+  ## geom_point(
+  ##   data = est_aggregated_df,
+  ##   mapping = aes(x = absolute_time + 0.1, y = prev_est_mid),
+  ##   colour = purple_hex_colour
+  ## ) +
   labs(y = NULL, x = "Time since origin") +
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
 
 fig_height <- 10
-ggsave("out/regular-and-aggregated-data.png",
-  g,
-  height = fig_height,
-  width = 1.618 * fig_height,
-  units = "cm"
-)
-ggsave("out/regular-and-aggregated-data.pdf",
-  g,
-  height = fig_height,
-  width = 1.618 * fig_height,
-  units = "cm"
-)
 
-## =============================================================================
-## Generate a figure looking at the posterior samples conditioned upon the
-## regular data, i.e., the unscheduled observations.
-## =============================================================================
-
-reg_data_mcmc_csv <- app_config$inferenceConfigurations %>%
-  extract2(2) %>%
-  extract("icMaybeMCMCConfig") %>%
-  extract2(1) %>%
-  extract2("mcmcOutputCSV")
-
-reg_data_mcmc_df <- read.csv(reg_data_mcmc_csv)
-
-small_mcmc_subset <- if (nrow(reg_data_mcmc_df) > 1000) {
-  sample_n(reg_data_mcmc_df, 1000)
-} else {
-  reg_data_mcmc_df
+if (SAVE_FIGURES) {
+  ggsave("out/regular-and-aggregated-data.png",
+         g,
+         height = fig_height,
+         width = 1.618 * fig_height,
+         units = "cm"
+         )
+  ggsave("out/regular-and-aggregated-data.pdf",
+         g,
+         height = fig_height,
+         width = 1.618 * fig_height,
+         units = "cm"
+         )
 }
-png("out/regular-data-mcmc-pairs-plot.png")
-pairs(small_mcmc_subset)
-dev.off()
 
-
-reg_data_mcmc <- mcmc(reg_data_mcmc_df)
-
-png("out/regular-data-mcmc-trace.png")
-plot(reg_data_mcmc)
-dev.off()
 
 ## =============================================================================
 ## Generate a figure looking at the posterior samples conditioned upon the
@@ -272,13 +217,18 @@ small_mcmc_subset <- if (nrow(agg_data_mcmc_df) > 1000) {
                      } else {
                        agg_data_mcmc_df
                      }
-png("out/aggregated-data-mcmc-pairs-plot.png")
-pairs(small_mcmc_subset)
-dev.off()
 
+
+if (SAVE_FIGURES) {
+  png("out/aggregated-data-mcmc-pairs-plot.png")
+  pairs(select(small_mcmc_subset, llhd, lambda, rho, nu))
+  dev.off()
+}
 
 agg_data_mcmc <- mcmc(agg_data_mcmc_df)
 
-png("out/aggregated-data-mcmc-trace.png")
-plot(agg_data_mcmc)
-dev.off()
+if (SAVE_FIGURES) {
+  png("out/aggregated-data-mcmc-trace.png")
+  plot(agg_data_mcmc)
+  dev.off()
+}
