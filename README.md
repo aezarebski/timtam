@@ -17,5 +17,10 @@ There are a couple of simulation studies; see the following files for details.
 
 ## Evaluation timing
 
-See `examples/timing-evaluation/README.md` for details of a simulation study
+See `examples/timing-evaluation/README.md** for details of a simulation study
 looking at the evaluation speed of the likelihood.
+
+## R environment
+
+R is used for visualisation and some scripting. See the `shell.nix` file to
+recreate the R environment.
