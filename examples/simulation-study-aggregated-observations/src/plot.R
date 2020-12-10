@@ -95,19 +95,24 @@ g1_df <- reg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
 
 g1 <- ggplot() +
-  geom_density(data = g1_df,
-               mapping = aes(x = value, y = ..density..),
-               colour = green_hex_colour,
-               size = 1.2) +
+  geom_density(
+    data = g1_df,
+    mapping = aes(x = value, y = ..density..),
+    colour = green_hex_colour,
+    size = 1.2
+  ) +
   facet_wrap(~parameter,
-             scales = "free",
-             labeller = labeller(parameter = param_labels)) +
+    scales = "free",
+    labeller = labeller(parameter = param_labels)
+  ) +
   labs(y = "Posterior density", x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold", size = 17),
-        axis.text = element_text(size = 15),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold", size = 17))
+  theme(
+    axis.title = element_text(face = "bold", size = 17),
+    axis.text = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 17)
+  )
 
 fig_height <- 10
 
@@ -251,19 +256,24 @@ g3_df <- agg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
 
 g3 <- ggplot() +
-  geom_density(data = g3_df,
-               mapping = aes(x = value, y = ..density..),
-               colour = purple_hex_colour,
-               size = 1.2) +
+  geom_density(
+    data = g3_df,
+    mapping = aes(x = value, y = ..density..),
+    colour = purple_hex_colour,
+    size = 1.2
+  ) +
   facet_wrap(~parameter,
-             scales = "free",
-             labeller = labeller(parameter = param_labels)) +
+    scales = "free",
+    labeller = labeller(parameter = param_labels)
+  ) +
   labs(y = "Posterior density", x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold", size = 17),
-        axis.text = element_text(size = 15),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold", size = 17))
+  theme(
+    axis.title = element_text(face = "bold", size = 17),
+    axis.text = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 17)
+  )
 
 fig_height <- 10
 
