@@ -95,14 +95,24 @@ g1_df <- reg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
 
 g1 <- ggplot() +
-  geom_density(data = g1_df, mapping = aes(x = value, y = ..density..)) +
-  facet_wrap(~parameter, scales = "free", labeller = labeller(parameter = param_labels)) +
+  geom_density(
+    data = g1_df,
+    mapping = aes(x = value, y = ..density..),
+    colour = green_hex_colour,
+    size = 1.2
+  ) +
+  facet_wrap(~parameter,
+    scales = "free",
+    labeller = labeller(parameter = param_labels)
+  ) +
   labs(y = "Posterior density", x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold", size = 17),
-        axis.text = element_text(size = 15),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold", size = 17))
+  theme(
+    axis.title = element_text(face = "bold", size = 17),
+    axis.text = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 17)
+  )
 
 fig_height <- 10
 
@@ -246,14 +256,24 @@ g3_df <- agg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
 
 g3 <- ggplot() +
-  geom_density(data = g3_df, mapping = aes(x = value, y = ..density..)) +
-  facet_wrap(~parameter, scales = "free", labeller = labeller(parameter = param_labels)) +
+  geom_density(
+    data = g3_df,
+    mapping = aes(x = value, y = ..density..),
+    colour = purple_hex_colour,
+    size = 1.2
+  ) +
+  facet_wrap(~parameter,
+    scales = "free",
+    labeller = labeller(parameter = param_labels)
+  ) +
   labs(y = "Posterior density", x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold", size = 17),
-        axis.text = element_text(size = 15),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold", size = 17))
+  theme(
+    axis.title = element_text(face = "bold", size = 17),
+    axis.text = element_text(size = 15),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 17)
+  )
 
 fig_height <- 10
 
@@ -413,7 +433,59 @@ agg_occ_df <- aggregated_data %>%
 ## -----------------------------------------------------------------------------
 
 
-g <- ggplot() +
+## g <- ggplot() +
+##   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
+##   geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
+##   geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
+##   geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
+##   geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
+##   geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
+##   geom_errorbar(
+##     data = reg_data_nb_summary,
+##     mapping = aes(x = absolute_time - 0.1, ymin = nb_min, ymax = nb_max),
+##     colour = green_hex_colour, linetype = "solid", width = 0.2
+##   ) +
+##   geom_point(
+##     data = reg_data_nb_summary,
+##     mapping = aes(x = absolute_time - 0.1, y = nb_med),
+##     colour = green_hex_colour
+##   ) +
+##   geom_errorbar(
+##     data = agg_data_nb_summary,
+##     mapping = aes(x = absolute_time + 0.1, ymin = nb_min, ymax = nb_max),
+##     colour = purple_hex_colour, linetype = "solid", width = 0.2
+##   ) +
+##   geom_point(
+##     data = agg_data_nb_summary,
+##     mapping = aes(x = absolute_time + 0.1, y = nb_med),
+##     colour = purple_hex_colour
+##   ) +
+##   labs(y = NULL, x = "Time since origin") +
+##   coord_cartesian(ylim = c(0, 250)) +
+##   theme_classic() +
+##   theme(axis.title = element_text(face = "bold"))
+##
+## fig_height <- 10
+##
+## if (SAVE_FIGURES) {
+##   ggsave("out/regular-and-aggregated-data.png",
+##          g,
+##          height = fig_height,
+##          width = 1.618 * fig_height,
+##          units = "cm"
+##          )
+##   ggsave("out/regular-and-aggregated-data.pdf",
+##          g,
+##          height = fig_height,
+##          width = 1.618 * fig_height,
+##          units = "cm"
+##          )
+## }
+
+error_bar_width <- 0.4
+error_bar_hnudge <- 0.2
+
+g_base <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
   geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
   geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
@@ -422,41 +494,65 @@ g <- ggplot() +
   geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
   geom_errorbar(
     data = reg_data_nb_summary,
-    mapping = aes(x = absolute_time - 0.1, ymin = nb_min, ymax = nb_max),
-    colour = green_hex_colour, linetype = "solid", width = 0.2
+    mapping = aes(x = absolute_time - error_bar_hnudge, ymin = nb_min, ymax = nb_max),
+    colour = green_hex_colour, linetype = "solid", width = error_bar_width
   ) +
   geom_point(
     data = reg_data_nb_summary,
-    mapping = aes(x = absolute_time - 0.1, y = nb_med),
+    mapping = aes(x = absolute_time - error_bar_hnudge, y = nb_med),
     colour = green_hex_colour
   ) +
   geom_errorbar(
     data = agg_data_nb_summary,
-    mapping = aes(x = absolute_time + 0.1, ymin = nb_min, ymax = nb_max),
-    colour = purple_hex_colour, linetype = "solid", width = 0.2
+    mapping = aes(x = absolute_time + error_bar_hnudge, ymin = nb_min, ymax = nb_max),
+    colour = purple_hex_colour, linetype = "solid", width = error_bar_width
   ) +
   geom_point(
     data = agg_data_nb_summary,
-    mapping = aes(x = absolute_time + 0.1, y = nb_med),
+    mapping = aes(x = absolute_time + error_bar_hnudge, y = nb_med),
     colour = purple_hex_colour
   ) +
   labs(y = NULL, x = "Time since origin") +
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
 
+
+zoom_y_lims <- c(0,200)
+
+g_zoomed <- g_base + coord_cartesian(ylim = zoom_y_lims)
+
+
+rect_df <- data.frame(
+  xmin = -0.1,
+  xmax = sim_duration + 0.1,
+  ymin = zoom_y_lims[1] - 10,
+  ymax = zoom_y_lims[2] + 10
+)
+
+g_annttd <- g_base +
+  geom_rect(data = rect_df,
+            mapping = aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax),
+            fill = NA,
+            colour = "black",
+            linetype = "dashed")
+
+g_with_inset <- ggdraw(g_annttd) +
+   draw_plot((g_zoomed + labs(x = NULL)),
+             scale = 0.6, x = 0.1, y = 0.1, hjust = 0.20, vjust = -0.05)
+
 fig_height <- 10
 
 if (SAVE_FIGURES) {
   ggsave("out/regular-and-aggregated-data.png",
-    g,
-    height = fig_height,
-    width = 1.618 * fig_height,
-    units = "cm"
-  )
+         g_with_inset,
+         height = fig_height,
+         width = 1.618 * fig_height,
+         units = "cm"
+         )
   ggsave("out/regular-and-aggregated-data.pdf",
-    g,
-    height = fig_height,
-    width = 1.618 * fig_height,
-    units = "cm"
-  )
+         g_with_inset,
+         height = fig_height,
+         width = 1.618 * fig_height,
+         units = "cm"
+         )
 }
