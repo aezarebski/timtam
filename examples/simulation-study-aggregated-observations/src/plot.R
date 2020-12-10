@@ -464,8 +464,23 @@ agg_occ_df <- aggregated_data %>%
 ##   coord_cartesian(ylim = c(0, 250)) +
 ##   theme_classic() +
 ##   theme(axis.title = element_text(face = "bold"))
-
-
+##
+## fig_height <- 10
+##
+## if (SAVE_FIGURES) {
+##   ggsave("out/regular-and-aggregated-data.png",
+##          g,
+##          height = fig_height,
+##          width = 1.618 * fig_height,
+##          units = "cm"
+##          )
+##   ggsave("out/regular-and-aggregated-data.pdf",
+##          g,
+##          height = fig_height,
+##          width = 1.618 * fig_height,
+##          units = "cm"
+##          )
+## }
 
 error_bar_width <- 0.4
 error_bar_hnudge <- 0.2
@@ -521,10 +536,7 @@ g_annttd <- g_base +
             colour = "black",
             linetype = "dashed")
 
-
-## g_with_inset <-
-
-ggdraw(g_annttd) +
+g_with_inset <- ggdraw(g_annttd) +
    draw_plot((g_zoomed + labs(x = NULL)),
              scale = 0.6, x = 0.1, y = 0.1, hjust = 0.20, vjust = -0.05)
 
@@ -532,13 +544,13 @@ fig_height <- 10
 
 if (SAVE_FIGURES) {
   ggsave("out/regular-and-aggregated-data.png",
-         g,
+         g_with_inset,
          height = fig_height,
          width = 1.618 * fig_height,
          units = "cm"
          )
   ggsave("out/regular-and-aggregated-data.pdf",
-         g,
+         g_with_inset,
          height = fig_height,
          width = 1.618 * fig_height,
          units = "cm"
