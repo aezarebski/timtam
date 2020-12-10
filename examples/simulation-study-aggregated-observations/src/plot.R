@@ -95,8 +95,13 @@ g1_df <- reg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
 
 g1 <- ggplot() +
-  geom_density(data = g1_df, mapping = aes(x = value, y = ..density..)) +
-  facet_wrap(~parameter, scales = "free", labeller = labeller(parameter = param_labels)) +
+  geom_density(data = g1_df,
+               mapping = aes(x = value, y = ..density..),
+               colour = green_hex_colour,
+               size = 1.2) +
+  facet_wrap(~parameter,
+             scales = "free",
+             labeller = labeller(parameter = param_labels)) +
   labs(y = "Posterior density", x = NULL) +
   theme_classic() +
   theme(axis.title = element_text(face = "bold", size = 17),
@@ -246,8 +251,13 @@ g3_df <- agg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
 
 g3 <- ggplot() +
-  geom_density(data = g3_df, mapping = aes(x = value, y = ..density..)) +
-  facet_wrap(~parameter, scales = "free", labeller = labeller(parameter = param_labels)) +
+  geom_density(data = g3_df,
+               mapping = aes(x = value, y = ..density..),
+               colour = purple_hex_colour,
+               size = 1.2) +
+  facet_wrap(~parameter,
+             scales = "free",
+             labeller = labeller(parameter = param_labels)) +
   labs(y = "Posterior density", x = NULL) +
   theme_classic() +
   theme(axis.title = element_text(face = "bold", size = 17),
