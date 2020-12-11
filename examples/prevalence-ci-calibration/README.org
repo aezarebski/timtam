@@ -6,4 +6,4 @@ with a set of suitable configuration files.
 
 - [X] Write a configuration file to generate a single CI.
 - [X] Visualise the single estimate and the true value in the simulation
-- [ ] Repeat the above two steps multiple times
+- [X] Repeat the above two steps multiple times

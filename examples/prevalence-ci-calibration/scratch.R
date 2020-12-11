@@ -105,52 +105,57 @@ sim_params <- list(
 ## to file so we can iterate over difference seed values here.
 
 
-sim_seed <- 1
 
-output_dir <- sprintf("out/seed-%d", sim_seed)
-config_file <- sprintf("%s/config-%d.json", output_dir, sim_seed)
+make_config_file <- function(sim_seed) {
+  output_dir <- sprintf("out/seed-%d", sim_seed)
+  config_file <- sprintf("%s/config-%d.json", output_dir, sim_seed)
 
-if (not(dir.exists(output_dir))) {
-  message("Making output directory: ", output_dir)
-  dir.create(output_dir)
+  if (not(dir.exists(output_dir))) {
+    message("Making output directory: ", output_dir)
+    dir.create(output_dir)
+  }
+
+
+  result <- list(
+    simulatedEventsOutputCsv = sprintf("%s/all-simulated-events.csv", output_dir),
+    simulationParameters = sim_params,
+    simulationDuration = simulation_duration,
+    simulationSizeBounds = c(3000, 7000),
+    inferenceConfigurations = list(
+      inference_configuration("true-params-regular-data", NULL, NULL, output_dir),
+      inference_configuration(
+        "est-params-regular-data",
+        NULL,
+        mcmc_configuration(
+          sprintf("%s/regular-data-mcmc-samples.csv", output_dir),
+          num_mcmc_samples,
+          1e-2,
+          7 # the mcmc seed
+        ),
+        output_dir
+      ),
+      inference_configuration(
+        "est-params-agg-data",
+        list(
+          seq_agg_times,
+          unseq_agg_times
+        ),
+        NULL,
+        output_dir
+      )
+    ),
+    isVerbose = TRUE,
+    configSimulationSeed = 100 * sim_seed
+  )
+
+  write_json(result,
+    config_file,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    digits = 7
+  )
 }
 
-
-result <- list(
-  simulatedEventsOutputCsv = sprintf("%s/all-simulated-events.csv", output_dir),
-  simulationParameters = sim_params,
-  simulationDuration = simulation_duration,
-  simulationSizeBounds = c(3000, 7000),
-  inferenceConfigurations = list(
-    inference_configuration("true-params-regular-data", NULL, NULL, output_dir),
-    inference_configuration(
-      "est-params-regular-data",
-      NULL,
-      mcmc_configuration(
-        sprintf("%s/regular-data-mcmc-samples.csv", output_dir),
-        num_mcmc_samples,
-        1e-2,
-        7 # the mcmc seed
-      ),
-      output_dir
-    ),
-    inference_configuration(
-      "est-params-agg-data",
-      list(
-        seq_agg_times,
-        unseq_agg_times
-      ),
-      NULL,
-      output_dir
-    )
-  ),
-  isVerbose = TRUE,
-  configSimulationSeed = sim_seed
-)
-
-write_json(result,
-  config_file,
-  pretty = TRUE,
-  auto_unbox = TRUE,
-  digits = 7
-)
+for (sim_seed in 1:10) {
+  make_config_file(sim_seed)
+}
