@@ -4,6 +4,6 @@ This simulation study tests the coverage of the CI under the NB approximation.
 It does this using the application =simulation-study-aggregated-observations=
 with a set of suitable configuration files.
 
-- [ ] Write a configuration file to generate a single CI.
+- [X] Write a configuration file to generate a single CI.
 - [ ] Visualise the single estimate and the true value in the simulation
 - [ ] Repeat the above two steps multiple times
