@@ -88,3 +88,14 @@ run_post_processing <- function(sim_seed) {
 for (sim_seed in 1:10) {
   run_post_processing(sim_seed)
 }
+
+
+
+plot_df <- lapply(1:10, function(sim_seed) read.csv(sprintf("out/seed-%d/summary-seed-%d.csv", sim_seed, sim_seed))) %>% bind_rows
+plot_df <- plot_df[order(plot_df$true_final_prevalence),]
+plot_df$order <- 1:10
+
+
+ggplot() +
+  geom_point(data = plot_df, mapping = aes(x = order, y = true_final_prevalence)) +
+  geom_errorbar(data = plot_df, mapping = aes(x = order, ymin = nb_min, y = nb_med, ymax = nb_max), colour = green_hex_colour)
