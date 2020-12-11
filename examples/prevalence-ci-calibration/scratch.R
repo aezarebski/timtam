@@ -6,7 +6,7 @@ if (not(dir.exists("out"))) {
   stop("Output directory does not exist!!!")
 }
 
-num_mcmc_samples <- 5e4 # the number of MCMC iterations to use.
+num_mcmc_samples <- 1e3 # the number of MCMC iterations to use.
 simulation_duration <- 13.5
 
 
@@ -127,7 +127,7 @@ result <- list(
       "est-params-regular-data",
       NULL,
       mcmc_configuration(
-        "regular-data-mcmc-samples.csv",
+        sprintf("%s/regular-data-mcmc-samples.csv", output_dir),
         num_mcmc_samples,
         1e-2,
         7 # the mcmc seed
