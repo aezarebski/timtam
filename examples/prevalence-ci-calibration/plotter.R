@@ -3,6 +3,7 @@ library(jsonlite)
 library(ggplot2)
 library(purrr)
 library(magrittr)
+library(coda)
 
 green_hex_colour <- "#7fc97f"
 
@@ -94,6 +95,13 @@ run_post_processing <- function(sim_seed) {
     sep = ",",
     row.names = FALSE
   )
+
+  mcmc_obj <- read.csv(mcmc_csv) %>%
+    select(lambda, psi, omega) %>%
+    as.mcmc()
+  png(sprintf("%s/mcmc-trace-%d.png", output_dir, sim_seed))
+  plot(mcmc_obj)
+  dev.off()
 }
 
 
@@ -111,7 +119,7 @@ main <- function(args) {
         sim_seed, sim_seed
       ))
     }
-    plot_df <- lapply(1:num_seeds, ) %>% bind_rows()
+    plot_df <- lapply(1:num_seeds, .read_csv_from_seed) %>% bind_rows()
     plot_df <- plot_df[order(plot_df$true_final_prevalence), ]
     plot_df$order <- 1:num_seeds
 
