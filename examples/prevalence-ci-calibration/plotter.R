@@ -170,9 +170,12 @@ main <- function(args) {
         data = plot_df,
         mapping = aes(x = order, ymin = nb_min, y = nb_med, ymax = nb_max),
         colour = green_hex_colour
-      )
+      ) +
+      labs(x = "Sorted replicate number", y = "Prevalence") +
+      theme_classic()
 
     ggsave("replication-results-prevalence.png", g)
+    ggsave("replication-results-prevalence.pdf", g)
 
 
 
@@ -221,8 +224,11 @@ main <- function(args) {
       dcast(sim_seed ~ statistic)
     g_r_naught <- ggplot(r_naught_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-      geom_hline(yintercept = sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega), linetype = "dashed")
+      geom_hline(yintercept = sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega), linetype = "dashed") +
+      labs(x = "Replicate number", y = "Basic reproduction number") +
+      theme_classic()
     ggsave("replication-results-r-naught.png", g_r_naught)
+    ggsave("replication-results-r-naught.pdf", g_r_naught)
 
 
     ## We want to know that the MCMC has a sufficient sample size so we check
@@ -235,8 +241,11 @@ main <- function(args) {
       melt(id.vars = "sim_seed")
     g_ess <- ggplot(tmp, aes(x = sim_seed, y = value, colour = variable)) +
       geom_point() +
-      geom_hline(yintercept = 200, linetype = "dashed")
+      geom_hline(yintercept = 200, linetype = "dashed") +
+      labs(x = "Replicate number", y = "Effective sample size", colour = "Parameter") +
+      theme_classic()
     ggsave("mcmc-ess.png", g_ess)
+    ggsave("mcmc-ess.pdf", g_ess)
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
