@@ -1,4 +1,5 @@
 library(dplyr)
+library(reshape2)
 library(jsonlite)
 library(ggplot2)
 library(purrr)
@@ -57,6 +58,26 @@ run_post_processing <- function(sim_seed) {
       nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
       nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb)
     )
+
+  sim_params <- app_config$simulationParameters
+  names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
+
+  tmp <- select(mcmc_df, lambda, psi, omega)
+  tmp$r_naught <- tmp$lambda / (sim_params$mu + tmp$psi + tmp$omega)
+  summary_func <- function(x) quantile(x, probs = c(0.025, 0.5, 0.975))
+  tmp <- data.frame(
+    value = c(summary_func(tmp$lambda), summary_func(tmp$psi), summary_func(tmp$omega), summary_func(tmp$r_naught)),
+    param = rep(c("lambda", "psi", "omega", "r_naught"), each = 3),
+    statistic = rep(c("min", "mid", "max"), 4),
+    sim_seed = rep(sim_seed, 12)
+  )
+  write.table(
+    x = tmp,
+    file = sprintf("%s/param-summary-%d.csv", output_dir, sim_seed),
+    sep = ",",
+    row.names = FALSE
+  )
+  rm(tmp, summary_func)
 
   nb_summary <- mcmc_df %>%
     select(starts_with("nb_")) %>%
@@ -135,7 +156,46 @@ main <- function(args) {
         colour = green_hex_colour
       )
 
-    ggsave("replication-results.png", g)
+    ggsave("replication-results-prevalence.png", g)
+
+
+
+    config <- read_json("out/seed-1/config-1.json")
+    sim_params <- config$simulationParameters
+    names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
+
+    .read_csv_param_summary <- function(sim_seed) {
+      read.csv(sprintf("out/seed-%d/param-summary-%d.csv", sim_seed, sim_seed))
+    }
+    params_df <- lapply(1:num_seeds, .read_csv_param_summary) %>% bind_rows()
+
+    lambda_df <- params_df %>% filter(param == "lambda") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    g_lambda <- ggplot(lambda_df) +
+      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+      geom_hline(yintercept = sim_params$lambda, linetype = "dashed")
+    ggsave("replication-results-lambda.png", g_lambda)
+
+
+    psi_df <- params_df %>% filter(param == "psi") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    g_psi <- ggplot(psi_df) +
+      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+      geom_hline(yintercept = sim_params$psi, linetype = "dashed")
+    ggsave("replication-results-psi.png", g_psi)
+
+
+    omega_df <- params_df %>% filter(param == "omega") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    g_omega <- ggplot(omega_df) +
+      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+      geom_hline(yintercept = sim_params$omega, linetype = "dashed")
+    ggsave("replication-results-omega.png", g_omega)
+
+
+    r_naught_df <- params_df %>% filter(param == "r_naught") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    g_r_naught <- ggplot(r_naught_df) +
+      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+      geom_hline(yintercept = sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega), linetype = "dashed")
+    ggsave("replication-results-r-naught.png", g_r_naught)
+
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
