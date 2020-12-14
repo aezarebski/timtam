@@ -169,33 +169,44 @@ main <- function(args) {
     }
     params_df <- lapply(1:num_seeds, .read_csv_param_summary) %>% bind_rows()
 
-    lambda_df <- params_df %>% filter(param == "lambda") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    lambda_df <- params_df %>%
+      filter(param == "lambda") %>%
+      select(value, statistic, sim_seed) %>%
+      dcast(sim_seed ~ statistic)
     g_lambda <- ggplot(lambda_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$lambda, linetype = "dashed")
     ggsave("replication-results-lambda.png", g_lambda)
 
 
-    psi_df <- params_df %>% filter(param == "psi") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    psi_df <- params_df %>%
+      filter(param == "psi") %>%
+      select(value, statistic, sim_seed) %>%
+      dcast(sim_seed ~ statistic)
     g_psi <- ggplot(psi_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$psi, linetype = "dashed")
     ggsave("replication-results-psi.png", g_psi)
 
 
-    omega_df <- params_df %>% filter(param == "omega") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    omega_df <- params_df %>%
+      filter(param == "omega") %>%
+      select(value, statistic, sim_seed) %>%
+      dcast(sim_seed ~ statistic)
     g_omega <- ggplot(omega_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$omega, linetype = "dashed")
     ggsave("replication-results-omega.png", g_omega)
 
 
-    r_naught_df <- params_df %>% filter(param == "r_naught") %>% select(value, statistic, sim_seed) %>% dcast(sim_seed ~ statistic)
+    r_naught_df <- params_df %>%
+      filter(param == "r_naught") %>%
+      select(value, statistic, sim_seed) %>%
+      dcast(sim_seed ~ statistic)
     g_r_naught <- ggplot(r_naught_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega), linetype = "dashed")
     ggsave("replication-results-r-naught.png", g_r_naught)
-
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
