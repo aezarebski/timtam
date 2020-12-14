@@ -12,7 +12,19 @@ with a set of suitable configuration files.
 
 *** Basic reproduction number
 
+Here are the \(95\%\) credible intervals for the basic reproduction number in
+each of the replicates. The dashed line indicates the true value used in the
+simulations.
+
 [[./replication-results-r-naught.png]]
+
+*** ESS as MCMC diagnostic
+
+The following figure shows the ESS for each of the parameters in each replicate
+as calculated by =coda=, the dashed line indicates an effective sample size of
+200 which is a standard threshold used in the phylodynamics literature.
+
+[[./mcmc-ess.png]]
 
 ** Usage
 
