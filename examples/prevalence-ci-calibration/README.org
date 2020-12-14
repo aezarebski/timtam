@@ -4,7 +4,15 @@ This simulation study tests the coverage of the CI under the NB approximation.
 It does this using the application =simulation-study-aggregated-observations=
 with a set of suitable configuration files.
 
-[[./replication-results.png]]
+** Example results
+
+*** Prevalence at present
+
+[[./replication-results-prevalence.png]]
+
+*** Basic reproduction number
+
+[[./replication-results-r-naught.png]]
 
 ** Usage
 
@@ -14,7 +22,7 @@ to remove the results of previous runs.
 #+begin_src sh :tangle run.sh
 # run.sh
 
-NUM_SEEDS=3
+NUM_SEEDS=20
 
 Rscript scratch.R $NUM_SEEDS
 
