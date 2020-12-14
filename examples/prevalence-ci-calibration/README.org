@@ -33,15 +33,21 @@ to remove the results of previous runs.
 
 #+begin_src sh :tangle run.sh
 # run.sh
+#
+# This must be run with bash!!!
 
-NUM_SEEDS=20
+NUM_SEEDS=4
 
 Rscript generate-config-files.R $NUM_SEEDS
 
-for ix in `seq 1 $NUM_SEEDS`;
+pids=()
+
+for ix in $(seq 1 $NUM_SEEDS);
 do
-    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json
+    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
 done
+
+wait "${pids[@]}"
 
 Rscript plotter.R $NUM_SEEDS
 #+end_src
