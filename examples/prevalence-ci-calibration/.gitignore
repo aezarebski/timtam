@@ -1,0 +1,6 @@
+run.sh
+clean.sh
+out/*
+replication-results-lambda.png
+replication-results-omega.png
+replication-results-psi.png
