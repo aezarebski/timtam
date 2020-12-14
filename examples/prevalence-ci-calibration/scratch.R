@@ -156,6 +156,23 @@ make_config_file <- function(sim_seed) {
   )
 }
 
-for (sim_seed in 1:10) {
-  make_config_file(sim_seed)
+
+
+
+
+main <- function(args) {
+  num_seeds <- as.integer(args[1])
+
+  if (and(is.integer(num_seeds), num_seeds > 0)) {
+    for (sim_seed in 1:num_seeds) {
+      make_config_file(sim_seed)
+    }
+  } else {
+    stop("Could not get num_seeds from command line argument.")
+  }
+}
+
+if (!interactive()) {
+  args <- commandArgs(trailingOnly = TRUE)
+  main(args)
 }
