@@ -236,7 +236,7 @@ main <- function(args) {
     .ess <- function(sim_seed) {
       read.csv(sprintf("out/seed-%d/mcmc-effective-size-%d.csv", sim_seed, sim_seed))
     }
-    tmp <- lapply(1:20, .ess) %>%
+    tmp <- lapply(1:num_seeds, .ess) %>%
       bind_rows() %>%
       melt(id.vars = "sim_seed")
     g_ess <- ggplot(tmp, aes(x = sim_seed, y = value, colour = variable)) +
