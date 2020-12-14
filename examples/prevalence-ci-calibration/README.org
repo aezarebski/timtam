@@ -36,7 +36,7 @@ to remove the results of previous runs.
 
 NUM_SEEDS=20
 
-Rscript scratch.R $NUM_SEEDS
+Rscript generate-config-files.R $NUM_SEEDS
 
 for ix in `seq 1 $NUM_SEEDS`;
 do
