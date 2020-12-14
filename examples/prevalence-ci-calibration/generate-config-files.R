@@ -6,7 +6,7 @@ if (not(dir.exists("out"))) {
   stop("Output directory does not exist!!!")
 }
 
-num_mcmc_samples <- 1e4 # the number of MCMC iterations to use.
+num_mcmc_samples <- 3e4 # the number of MCMC iterations to use.
 simulation_duration <- 13.5
 
 
