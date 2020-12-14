@@ -30,26 +30,40 @@ as calculated by =coda=, the dashed line indicates an effective sample size of
 
 There is a script =run.sh= to run the replication study and a script =clean.sh=
 to remove the results of previous runs. Note that =run.sh= needs to be run with
-bash rather than just =sh= for the parallelism to work. Also, this will use all
-available cores so be careful how much you ask it to do.
+bash rather than just =sh= for the parallelism to work. The computation is split
+up into groups of 20 to avoid using up all the resources at once and crashing my
+machine.
 
 #+begin_src sh :tangle run.sh
 # run.sh
 #
 # This must be run with bash!!!
 
-NUM_SEEDS=4
+NUM_SEEDS=40
 
 Rscript generate-config-files.R $NUM_SEEDS
 
+# Run the first 20
 pids=()
 
-for ix in $(seq 1 $NUM_SEEDS);
+for ix in $(seq 1 20);
 do
     stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
 done
 
 wait "${pids[@]}"
+
+
+# Run the second 20
+pids=()
+
+for ix in $(seq 21 40);
+do
+    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
+done
+
+wait "${pids[@]}"
+
 
 Rscript plotter.R $NUM_SEEDS
 #+end_src
