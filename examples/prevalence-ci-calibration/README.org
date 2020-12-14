@@ -4,6 +4,29 @@ This simulation study tests the coverage of the CI under the NB approximation.
 It does this using the application =simulation-study-aggregated-observations=
 with a set of suitable configuration files.
 
-- [X] Write a configuration file to generate a single CI.
-- [X] Visualise the single estimate and the true value in the simulation
-- [X] Repeat the above two steps multiple times
+[[./replication-results.png]]
+
+** Usage
+
+There is a script =run.sh= to run the replication study and a script =clean.sh=
+to remove the results of previous runs.
+
+#+begin_src sh :tangle run.sh
+# run.sh
+
+NUM_SEEDS=3
+
+Rscript scratch.R $NUM_SEEDS
+
+for ix in `seq 1 $NUM_SEEDS`;
+do
+    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json
+done
+
+Rscript plotter.R $NUM_SEEDS
+#+end_src
+
+#+begin_src sh :tangle clean.sh
+rm -r out/*
+rm replication-results.png
+#+end_src
