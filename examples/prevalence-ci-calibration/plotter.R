@@ -117,12 +117,28 @@ run_post_processing <- function(sim_seed) {
     row.names = FALSE
   )
 
+  ## We want to know that the MCMC has behaved sensibly in the computations that
+  ## we have run so we generate some diagnostic output to check this.
   mcmc_obj <- read.csv(mcmc_csv) %>%
     select(lambda, psi, omega) %>%
     as.mcmc()
   png(sprintf("%s/mcmc-trace-%d.png", output_dir, sim_seed))
   plot(mcmc_obj)
   dev.off()
+
+  tmp <- mcmc_obj %>%
+    effectiveSize() %>%
+    as.list() %>%
+    as.data.frame() %>%
+    mutate(sim_seed = sim_seed)
+  write.table(
+    x = tmp,
+    file = sprintf("%s/mcmc-effective-size-%d.csv", output_dir, sim_seed),
+    sep = ",",
+    row.names = FALSE
+  )
+
+  return(NULL)
 }
 
 
@@ -207,6 +223,20 @@ main <- function(args) {
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega), linetype = "dashed")
     ggsave("replication-results-r-naught.png", g_r_naught)
+
+
+    ## We want to know that the MCMC has a sufficient sample size so we check
+    ## the effective sample size for each parameter in each iteration.
+    .ess <- function(sim_seed) {
+      read.csv(sprintf("out/seed-%d/mcmc-effective-size-%d.csv", sim_seed, sim_seed))
+    }
+    tmp <- lapply(1:20, .ess) %>%
+      bind_rows() %>%
+      melt(id.vars = "sim_seed")
+    g_ess <- ggplot(tmp, aes(x = sim_seed, y = value, colour = variable)) +
+      geom_point() +
+      geom_hline(yintercept = 200, linetype = "dashed")
+    ggsave("mcmc-ess.png", g_ess)
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
