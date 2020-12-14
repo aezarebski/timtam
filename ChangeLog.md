@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.3.1
+
+- There is now another example `prevalence-ci-calibration` which looks at the
+  coverage properties of the CI under the approximate likelihood.
+
 ## 0.1.3.0
 
 - The calculation of the likelihood surface cross sections has been replaced by
