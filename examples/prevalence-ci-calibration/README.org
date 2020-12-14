@@ -29,7 +29,9 @@ as calculated by =coda=, the dashed line indicates an effective sample size of
 ** Usage
 
 There is a script =run.sh= to run the replication study and a script =clean.sh=
-to remove the results of previous runs.
+to remove the results of previous runs. Note that =run.sh= needs to be run with
+bash rather than just =sh= for the parallelism to work. Also, this will use all
+available cores so be careful how much you ask it to do.
 
 #+begin_src sh :tangle run.sh
 # run.sh
