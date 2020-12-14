@@ -66,9 +66,20 @@ run_post_processing <- function(sim_seed) {
 
 
   g <- ggplot() +
-    geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
-    geom_errorbar(data = nb_summary, mapping = aes(x = absolute_time, ymin = nb_min, y = nb_med, ymax = nb_max), colour = green_hex_colour) +
-    geom_point(data = nb_summary, mapping = aes(x = absolute_time, ymin = nb_min, y = nb_med, ymax = nb_max), colour = green_hex_colour)
+    geom_step(
+      data = prev_df,
+      mapping = aes(x = absolute_time, y = prevalence)
+    ) +
+    geom_errorbar(
+      data = nb_summary,
+      mapping = aes(x = absolute_time, ymin = nb_min, y = nb_med, ymax = nb_max),
+      colour = green_hex_colour
+    ) +
+    geom_point(
+      data = nb_summary,
+      mapping = aes(x = absolute_time, ymin = nb_min, y = nb_med, ymax = nb_max),
+      colour = green_hex_colour
+    )
 
   ggsave(sprintf("%s/summary-figure-%d.png", output_dir, sim_seed), g)
 
@@ -94,17 +105,29 @@ main <- function(args) {
       run_post_processing(sim_seed)
     }
 
-    plot_df <- lapply(1:num_seeds, function(sim_seed) read.csv(sprintf("out/seed-%d/summary-seed-%d.csv", sim_seed, sim_seed))) %>% bind_rows
-    plot_df <- plot_df[order(plot_df$true_final_prevalence),]
+    .read_csv_from_seed <- function(sim_seed) {
+      read.csv(sprintf(
+        "out/seed-%d/summary-seed-%d.csv",
+        sim_seed, sim_seed
+      ))
+    }
+    plot_df <- lapply(1:num_seeds, ) %>% bind_rows()
+    plot_df <- plot_df[order(plot_df$true_final_prevalence), ]
     plot_df$order <- 1:num_seeds
 
 
     g <- ggplot() +
-      geom_point(data = plot_df, mapping = aes(x = order, y = true_final_prevalence)) +
-      geom_errorbar(data = plot_df, mapping = aes(x = order, ymin = nb_min, y = nb_med, ymax = nb_max), colour = green_hex_colour)
+      geom_point(
+        data = plot_df,
+        mapping = aes(x = order, y = true_final_prevalence)
+      ) +
+      geom_errorbar(
+        data = plot_df,
+        mapping = aes(x = order, ymin = nb_min, y = nb_med, ymax = nb_max),
+        colour = green_hex_colour
+      )
 
     ggsave("replication-results.png", g)
-
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
