@@ -165,30 +165,63 @@ main <- function(args) {
       read.csv(sprintf(
         "out/seed-%d/summary-seed-%d.csv",
         sim_seed, sim_seed
-      ))
+      )) %>% mutate(sim_seed = sim_seed)
     }
-    plot_df <- lapply(successful_sim_seeds, .read_csv_from_seed) %>% bind_rows()
-    plot_df <- plot_df[order(plot_df$true_final_prevalence), ]
-    plot_df$order <- successful_sim_seeds
+    plot_df <- lapply(successful_sim_seeds, .read_csv_from_seed) %>%
+      bind_rows() %>%
+      mutate(contains_truth = nb_min <= true_final_prevalence & true_final_prevalence <= nb_max,
+             point_prop_error = (nb_med - true_final_prevalence) / true_final_prevalence)
+    plot_df <- plot_df[order(plot_df$point_prop_error),]
+    plot_df$ix <- 1:nrow(plot_df)
 
-
-    g <- ggplot() +
+    g_prev <- ggplot() +
       geom_point(
         data = plot_df,
-        mapping = aes(x = order, y = true_final_prevalence)
+        mapping = aes(x = sim_seed, y = true_final_prevalence)
+      ) +
+      geom_point(
+        data = plot_df,
+        mapping = aes(x = sim_seed, y = nb_med),
+        colour = green_hex_colour
       ) +
       geom_errorbar(
         data = plot_df,
-        mapping = aes(x = order, ymin = nb_min, y = nb_med, ymax = nb_max),
+        mapping = aes(x = sim_seed, ymin = nb_min, y = nb_med, ymax = nb_max),
         colour = green_hex_colour
       ) +
       labs(x = "Sorted replicate number", y = "Prevalence") +
       theme_classic()
 
-    ggsave("replication-results-prevalence.png", g)
-    ggsave("replication-results-prevalence.pdf", g)
+    ggsave("replication-results-prevalence.png", g_prev)
+    ggsave("replication-results-prevalence.pdf", g_prev)
 
+    g_prev_bias <- ggplot() +
+      geom_point(
+        data = plot_df,
+        mapping = aes(x = ix,
+                      y = (nb_med - true_final_prevalence) / true_final_prevalence),
+        colour = green_hex_colour
+      ) +
+      geom_errorbar(
+        data = plot_df,
+        mapping = aes(x = ix,
+                      ymin = (nb_min - true_final_prevalence) / true_final_prevalence,
+                      ymax = (nb_max - true_final_prevalence) / true_final_prevalence),
+        colour = green_hex_colour
+      ) +
+      geom_hline(yintercept = 0, linetype = "dashed") +
+      labs(x = "Replicate", y = "Proportional error in prevalence") +
+      ylim(c(c(-1.0, 1.0))) +
+      theme_classic() +
+      theme(axis.text.x = element_blank(),
+            axis.ticks.x = element_blank())
 
+    ggsave("replication-results-prevalence-bias.png", g_prev_bias)
+    ggsave("replication-results-prevalence-bias.pdf", g_prev_bias)
+
+    sink("proportion-prevalence-in-ci.txt")
+    print((table(plot_df$contains_truth)))
+    sink()
 
     config <- read_json("out/seed-1/config-1.json")
     sim_params <- config$simulationParameters
@@ -228,19 +261,28 @@ main <- function(args) {
       geom_hline(yintercept = sim_params$omega, linetype = "dashed")
     ggsave("replication-results-omega.png", g_omega)
 
-
+    simulation_r_naught <- sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega)
     r_naught_df <- params_df %>%
       filter(param == "r_naught") %>%
       select(value, statistic, sim_seed) %>%
       dcast(sim_seed ~ statistic)
+    r_naught_df <- r_naught_df[order(r_naught_df$mid),]
+    r_naught_df$ix <- 1:nrow(r_naught_df)
     g_r_naught <- ggplot(r_naught_df) +
-      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-      geom_hline(yintercept = sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega), linetype = "dashed") +
-      labs(x = "Replicate number", y = "Basic reproduction number") +
-      theme_classic()
+      geom_hline(yintercept = simulation_r_naught, linetype = "dashed") +
+      geom_errorbar(mapping = aes(x = ix, ymin = min, ymax = max), colour = green_hex_colour) +
+      geom_point(mapping = aes(x = ix, y = mid), colour = green_hex_colour) +
+      labs(x = "Replicate", y = "Basic reproduction number") +
+      theme_classic() +
+      theme(axis.text.x = element_blank(),
+            axis.ticks.x = element_blank())
     ggsave("replication-results-r-naught.png", g_r_naught)
     ggsave("replication-results-r-naught.pdf", g_r_naught)
 
+    ci_contains_r_naught <- r_naught_df$min <= simulation_r_naught & simulation_r_naught <= r_naught_df$max
+    sink("r-naught-in-ci.txt")
+    print((table(ci_contains_r_naught)))
+    sink()
 
     ## We want to know that the MCMC has a sufficient sample size so we check
     ## the effective sample size for each parameter in each iteration.
