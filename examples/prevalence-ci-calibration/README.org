@@ -8,7 +8,7 @@ with a set of suitable configuration files.
 
 *** Prevalence at present
 
-[[./replication-results-prevalence.png]]
+[[./replication-results-prevalence-bias.png]]
 
 *** Basic reproduction number
 
