@@ -15,6 +15,8 @@ green_hex_colour <- "#7fc97f"
 
 
 run_post_processing <- function(sim_seed) {
+  cat("Running post-processing for ", sim_seed, "\n")
+
   output_dir <- sprintf("out/seed-%d", sim_seed)
 
   all_events_csv <- sprintf("%s/all-simulated-events.csv", output_dir)
@@ -145,8 +147,17 @@ run_post_processing <- function(sim_seed) {
 main <- function(args) {
   num_seeds <- as.integer(args[1])
 
+  ## include validation that a sensible number of seeds was provided from the
+  ## command line.
   if (and(is.integer(num_seeds), num_seeds > 0)) {
-    for (sim_seed in 1:num_seeds) {
+
+    successful_sim_seeds <- keep(1:num_seeds,
+                                 function(n) {
+                                   fp <- sprintf("out/seed-%d/all-simulated-events.csv", n)
+                                   file.exists(fp)
+                                 })
+
+    for (sim_seed in successful_sim_seeds) {
       run_post_processing(sim_seed)
     }
 
@@ -156,9 +167,9 @@ main <- function(args) {
         sim_seed, sim_seed
       ))
     }
-    plot_df <- lapply(1:num_seeds, .read_csv_from_seed) %>% bind_rows()
+    plot_df <- lapply(successful_sim_seeds, .read_csv_from_seed) %>% bind_rows()
     plot_df <- plot_df[order(plot_df$true_final_prevalence), ]
-    plot_df$order <- 1:num_seeds
+    plot_df$order <- successful_sim_seeds
 
 
     g <- ggplot() +
@@ -186,7 +197,7 @@ main <- function(args) {
     .read_csv_param_summary <- function(sim_seed) {
       read.csv(sprintf("out/seed-%d/param-summary-%d.csv", sim_seed, sim_seed))
     }
-    params_df <- lapply(1:num_seeds, .read_csv_param_summary) %>% bind_rows()
+    params_df <- lapply(successful_sim_seeds, .read_csv_param_summary) %>% bind_rows()
 
     lambda_df <- params_df %>%
       filter(param == "lambda") %>%
@@ -236,7 +247,7 @@ main <- function(args) {
     .ess <- function(sim_seed) {
       read.csv(sprintf("out/seed-%d/mcmc-effective-size-%d.csv", sim_seed, sim_seed))
     }
-    tmp <- lapply(1:num_seeds, .ess) %>%
+    tmp <- lapply(successful_sim_seeds, .ess) %>%
       bind_rows() %>%
       melt(id.vars = "sim_seed")
     g_ess <- ggplot(tmp, aes(x = sim_seed, y = value, colour = variable)) +
