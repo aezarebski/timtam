@@ -39,7 +39,7 @@ machine.
 #
 # This must be run with bash!!!
 
-NUM_SEEDS=40
+NUM_SEEDS=100
 
 Rscript generate-config-files.R $NUM_SEEDS
 
@@ -64,6 +64,38 @@ done
 
 wait "${pids[@]}"
 
+
+# Run the second 20
+pids=()
+
+for ix in $(seq 41 60);
+do
+    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
+done
+
+wait "${pids[@]}"
+
+
+# Run the second 20
+pids=()
+
+for ix in $(seq 61 80);
+do
+    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
+done
+
+wait "${pids[@]}"
+
+
+# Run the second 20
+pids=()
+
+for ix in $(seq 81 100);
+do
+    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
+done
+
+wait "${pids[@]}"
 
 Rscript plotter.R $NUM_SEEDS
 #+end_src
