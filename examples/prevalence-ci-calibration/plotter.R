@@ -106,7 +106,7 @@ run_post_processing <- function(sim_seed) {
     )
 
   ggsave(sprintf("%s/summary-figure-%d.png", output_dir, sim_seed), g)
-
+  ggsave(sprintf("%s/summary-figure-%d-log-scale.png", output_dir, sim_seed), g + scale_y_log10())
 
   result <- nb_summary
   result$true_final_prevalence <- prev_df$prevalence %>% tail(1)
@@ -219,9 +219,13 @@ main <- function(args) {
     ggsave("replication-results-prevalence-bias.png", g_prev_bias)
     ggsave("replication-results-prevalence-bias.pdf", g_prev_bias)
 
-    sink("proportion-prevalence-in-ci.txt")
-    print((table(plot_df$contains_truth)))
-    sink()
+    ## We save a copy of this data frame because it is useful as a way to map
+    ## between the prevalence estimates and the particular simulation seed that
+    ## was used. This helps in debugging.
+    write.table(x = plot_df,
+                file = "proportion-prevalence-in-ci.csv",
+                sep = ",",
+                row.names = FALSE)
 
     config <- read_json("out/seed-1/config-1.json")
     sim_params <- config$simulationParameters
