@@ -2,7 +2,8 @@
 
 This simulation study tests the coverage of the CI under the NB approximation.
 It does this using the application =simulation-study-aggregated-observations=
-with a set of suitable configuration files.
+with a set of suitable configuration files which each live in a subdirectory or
+=out=.
 
 ** Example results
 
