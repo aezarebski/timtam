@@ -14,23 +14,27 @@ if (not(dir.exists("out"))) {
 
 output_file <- "agg-app-config.json"
 
-num_mcmc_samples <- 5e4 # the number of MCMC iterations to use.
+num_mcmc_samples <- 5e5 # the number of MCMC iterations to use.
 
-simulation_duration <- 13.5
+simulation_duration <- 23
 
-birth_rate <- 1.7
-death_rate <- 0.9
-sampling_rate <- 0.05
-occurrence_rate <- 0.25
+## birth_rate <- 0.58
+## death_rate <- 0.14
+## sampling_rate <- 0.00025
+## occurrence_rate <- 0.0025
+birth_rate <- 0.59
+death_rate <- 0.14
+sampling_rate <- 0.0005
+occurrence_rate <- 0.005
 
 disaster_params <- list()
 catastrophe_params <- list()
 
 ## For the aggregation, these are the times at which we carry out the
 ## aggregation.
-time_mesh <- seq(from = 2.5, to = simulation_duration, by = 1)
+time_mesh <- c(10,17,24)
 seq_agg_times <- as.list(time_mesh)
-unseq_agg_times <- as.list(time_mesh - 0.1)
+unseq_agg_times <- as.list(time_mesh - 1)
 
 
 #' Return a list corresponding to the \code{MCMCConfiguration} from \code{Main.hs}
@@ -107,7 +111,7 @@ result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
   simulationDuration = simulation_duration,
-  simulationSizeBounds = c(3000, 7000),
+  simulationSizeBounds = c(100, 20000),
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL, NULL),
     inference_configuration(
@@ -116,7 +120,7 @@ result <- list(
       mcmc_configuration(
         "regular-data-mcmc-samples.csv",
         num_mcmc_samples,
-        1e-2,
+        3e-5,
         7 # the mcmc seed
       )
     ),
@@ -129,13 +133,13 @@ result <- list(
       mcmc_configuration(
         "aggregated-data-mcmc-samples.csv",
         num_mcmc_samples,
-        1e-2,
+        3e-5,
         7 # the mcmc seed
       )
     )
   ),
   isVerbose = TRUE,
-  configSimulationSeed = 92
+  configSimulationSeed = 7
 )
 
 write_json(result,
