@@ -45,7 +45,7 @@ import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
-import Data.ByteString.Lazy.Char8 (pack,singleton)
+import Data.ByteString.Lazy.Char8 (pack, singleton)
 import qualified Data.Csv as Csv
 import Data.List (intercalate)
 import qualified Data.Vector.Unboxed as Unboxed
@@ -57,7 +57,7 @@ import Epidemic.Types.Events
   , maybeReconstructedTree
   )
 import Epidemic.Types.Parameter (Probability, Rate, Time, Timed(..))
-import Epidemic.Types.Population (Person(..))
+import Epidemic.Types.Population (People(..), Person(..), numPeople)
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 import GHC.Word (Word32(..))
@@ -174,18 +174,31 @@ bdscodConfiguration = do
         (Just config) -> return config
     else throwError "Simulation parameters not acceptable for this program..."
 
+-- | Check if the LTT ever returns to 1 after being larger than 1.
+pMultipleOrigins :: [EpidemicEvent] -> Bool
+pMultipleOrigins epiEvents = go 1 epiEvents
+  where
+    numLineage :: People -> NumLineages
+    numLineage = fromIntegral . numPeople
+    go :: NumLineages -> [EpidemicEvent] -> Bool
+    go _ [] = False
+    go n (Removal _ _:ees) = (n < 3) || go (n-1) ees
+    go n (Sampling _ _:ees) = (n < 3) || go (n-1) ees
+    go n (Occurrence _ _:ees) = (n < 3) || go (n-1) ees
+    go n (Catastrophe _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
+    go n (Disaster _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
+    go n (Infection _ _ _:ees) = go (n+1) ees
+
+
 -- | Simulate the actual epidemic making sure that the results are acceptable
--- before returning the results.
---
--- When the simulation fails this attempts to simulate the data set again useing
--- a different seed to avoid getting stuck in a loop.
+-- before returning, otherwise try using a different seed.
 simulateEpidemic seedInt bdscodConfig = do
   ifVerbosePutStrLn "Running simulateEpidemic..."
-  genIO <- liftIO $ initialize (Unboxed.fromList [seedInt])
+  genIO <- liftIO $ prngGen seedInt
   simEvents <-
     liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
-  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
+  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound && (not (pMultipleOrigins simEvents))
     then do
       ifVerbosePutStrLn "simulated an acceptable epidemic..."
       simEventsCsv <- asks simulatedEventsOutputCsv
@@ -195,6 +208,7 @@ simulateEpidemic seedInt bdscodConfig = do
       liftIO $ L.writeFile simEventsCsv (Csv.encode simEvents)
       return simEvents
     else do
+      ifVerbosePutStrLn $ "\tthere where multiple origins: " ++ show (pMultipleOrigins simEvents)
       ifVerbosePutStrLn $ "\trepeating the simulation with seed: " ++ show seedInt
       simulateEpidemic (succ seedInt) bdscodConfig
 
@@ -477,7 +491,7 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
           prngSeed = mcmcSeed mcmcConfig
           maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runUnscheduledObservationMCMC..."
-             genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
+             genIO <- liftIO $ prngGen prngSeed
              chainVals <-
                liftIO $ (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc) genIO
              liftIO $
@@ -513,7 +527,7 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
           prngSeed = mcmcSeed mcmcConfig
           maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
-             genIO <- liftIO $ initialize (Unboxed.fromList [prngSeed])
+             genIO <- liftIO $ prngGen prngSeed
              chainVals <-
                liftIO $ (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc) genIO
              liftIO $
@@ -549,3 +563,6 @@ chainAsByteString' varNames chainVals =
           [chainScore cv : (chainPosition cv ++ nbParams cv) | cv <- chainVals]
       linebreak = singleton '\n'
    in mconcat [header, linebreak, records]
+
+-- | A generator for random numbers from a seed.
+prngGen seed = initialize (Unboxed.fromList [seed])
