@@ -9,6 +9,35 @@ library(coda)
 green_hex_colour <- "#7fc97f"
 
 
+run_mcmc_diagnostics <- function(output_dir, sim_seed, mcmc_csv) {
+
+  if (file.exists(mcmc_csv)) {
+    ## We want to know that the MCMC has behaved sensibly in the computations that
+    ## we have run so we generate some diagnostic output to check this.
+    mcmc_obj <- read.csv(mcmc_csv) %>%
+      select(lambda, psi, omega) %>%
+      as.mcmc()
+    png(sprintf("%s/mcmc-trace-%d.png", output_dir, sim_seed))
+    plot(mcmc_obj)
+    dev.off()
+
+    tmp <- mcmc_obj %>%
+      effectiveSize() %>%
+      as.list() %>%
+      as.data.frame() %>%
+      mutate(sim_seed = sim_seed)
+    write.table(
+      x = tmp,
+      file = sprintf("%s/mcmc-effective-size-%d.csv", output_dir, sim_seed),
+      sep = ",",
+      row.names = FALSE
+    )
+  } else {
+    stop(sprintf("\n\tcannot open file %s: No such file or directory", mcmc_csv))
+  }
+
+  return(NULL)
+}
 
 
 
@@ -18,8 +47,14 @@ run_post_processing <- function(sim_seed) {
   cat("Running post-processing for ", sim_seed, "\n")
 
   output_dir <- sprintf("out/seed-%d", sim_seed)
+  if (not(dir.exists(output_dir))) {
+    stop(sprintf("\n\tcannot find directory %s: No such directory", output_dir))
+  }
 
   all_events_csv <- sprintf("%s/all-simulated-events.csv", output_dir)
+  if (not(file.exists(all_events_csv))) {
+    stop(sprintf("\n\tcannot open file %s: No such file or directory", all_events_csv))
+  }
 
   all_events <- read.csv(all_events_csv,
     header = FALSE,
@@ -111,7 +146,6 @@ run_post_processing <- function(sim_seed) {
   result <- nb_summary
   result$true_final_prevalence <- prev_df$prevalence %>% tail(1)
 
-
   write.table(
     x = result,
     file = sprintf("%s/summary-seed-%d.csv", output_dir, sim_seed),
@@ -119,29 +153,11 @@ run_post_processing <- function(sim_seed) {
     row.names = FALSE
   )
 
-  ## We want to know that the MCMC has behaved sensibly in the computations that
-  ## we have run so we generate some diagnostic output to check this.
-  mcmc_obj <- read.csv(mcmc_csv) %>%
-    select(lambda, psi, omega) %>%
-    as.mcmc()
-  png(sprintf("%s/mcmc-trace-%d.png", output_dir, sim_seed))
-  plot(mcmc_obj)
-  dev.off()
-
-  tmp <- mcmc_obj %>%
-    effectiveSize() %>%
-    as.list() %>%
-    as.data.frame() %>%
-    mutate(sim_seed = sim_seed)
-  write.table(
-    x = tmp,
-    file = sprintf("%s/mcmc-effective-size-%d.csv", output_dir, sim_seed),
-    sep = ",",
-    row.names = FALSE
-  )
+  run_mcmc_diagnostics(output_dir, sim_seed, mcmc_csv)
 
   return(NULL)
 }
+
 
 
 main <- function(args) {
@@ -153,8 +169,10 @@ main <- function(args) {
 
     successful_sim_seeds <- keep(1:num_seeds,
                                  function(n) {
-                                   fp <- sprintf("out/seed-%d/all-simulated-events.csv", n)
-                                   file.exists(fp)
+                                   fp1 <- sprintf("out/seed-%d/all-simulated-events.csv", n)
+                                   fp2 <- sprintf("out/seed-%d/regular-data-mcmc-samples.csv", n)
+                                   and(file.exists(fp1),
+                                       file.exists(fp2))
                                  })
 
     for (sim_seed in successful_sim_seeds) {
