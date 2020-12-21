@@ -2,7 +2,8 @@
 
 This simulation study tests the coverage of the CI under the NB approximation.
 It does this using the application =simulation-study-aggregated-observations=
-with a set of suitable configuration files.
+with a set of suitable configuration files which each live in a subdirectory or
+=out=.
 
 ** Example results
 
@@ -31,8 +32,9 @@ as calculated by =coda=, the dashed line indicates an effective sample size of
 There is a script =run.sh= to run the replication study and a script =clean.sh=
 to remove the results of previous runs. Note that =run.sh= needs to be run with
 bash rather than just =sh= for the parallelism to work. The computation is split
-up into groups of 20 to avoid using up all the resources at once and crashing my
-machine.
+up into groups of 10 to avoid using up all the resources at once and crashing my
+machine. You will need to manually adjust this to have the correct loops if you
+want to change the settings.
 
 #+begin_src sh :tangle run.sh
 # run.sh
@@ -43,59 +45,18 @@ NUM_SEEDS=100
 
 Rscript generate-config-files.R $NUM_SEEDS
 
-# Run the first 20
-pids=()
-
-for ix in $(seq 1 20);
+for ix in 00 10 20 30 40 50 60 70 80 90;
 do
-    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
+    pids=()
+
+    for jx in {1..10};
+    do
+        kx=$(($ix + $jx))
+        stack exec -- simulation-study-aggregated-observations out/seed-$kx/config-$kx.json && echo "Finished $kx" & pids+=($!)
+    done
+
+    wait "${pids[@]}"
 done
-
-wait "${pids[@]}"
-
-
-# Run the second 20
-pids=()
-
-for ix in $(seq 21 40);
-do
-    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
-done
-
-wait "${pids[@]}"
-
-
-# Run the second 20
-pids=()
-
-for ix in $(seq 41 60);
-do
-    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
-done
-
-wait "${pids[@]}"
-
-
-# Run the second 20
-pids=()
-
-for ix in $(seq 61 80);
-do
-    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
-done
-
-wait "${pids[@]}"
-
-
-# Run the second 20
-pids=()
-
-for ix in $(seq 81 100);
-do
-    stack exec -- simulation-study-aggregated-observations out/seed-$ix/config-$ix.json && echo "Finished $ix" & pids+=($!)
-done
-
-wait "${pids[@]}"
 
 Rscript plotter.R $NUM_SEEDS
 #+end_src

@@ -9,6 +9,34 @@ library(coda)
 green_hex_colour <- "#7fc97f"
 
 
+run_mcmc_diagnostics <- function(output_dir, sim_seed, mcmc_csv) {
+  if (file.exists(mcmc_csv)) {
+    ## We want to know that the MCMC has behaved sensibly in the computations that
+    ## we have run so we generate some diagnostic output to check this.
+    mcmc_obj <- read.csv(mcmc_csv) %>%
+      select(lambda, psi, omega) %>%
+      as.mcmc()
+    png(sprintf("%s/mcmc-trace-%d.png", output_dir, sim_seed))
+    plot(mcmc_obj)
+    dev.off()
+
+    tmp <- mcmc_obj %>%
+      effectiveSize() %>%
+      as.list() %>%
+      as.data.frame() %>%
+      mutate(sim_seed = sim_seed)
+    write.table(
+      x = tmp,
+      file = sprintf("%s/mcmc-effective-size-%d.csv", output_dir, sim_seed),
+      sep = ",",
+      row.names = FALSE
+    )
+  } else {
+    stop(sprintf("\n\tcannot open file %s: No such file or directory", mcmc_csv))
+  }
+
+  return(NULL)
+}
 
 
 
@@ -18,8 +46,14 @@ run_post_processing <- function(sim_seed) {
   cat("Running post-processing for ", sim_seed, "\n")
 
   output_dir <- sprintf("out/seed-%d", sim_seed)
+  if (not(dir.exists(output_dir))) {
+    stop(sprintf("\n\tcannot find directory %s: No such directory", output_dir))
+  }
 
   all_events_csv <- sprintf("%s/all-simulated-events.csv", output_dir)
+  if (not(file.exists(all_events_csv))) {
+    stop(sprintf("\n\tcannot open file %s: No such file or directory", all_events_csv))
+  }
 
   all_events <- read.csv(all_events_csv,
     header = FALSE,
@@ -106,11 +140,10 @@ run_post_processing <- function(sim_seed) {
     )
 
   ggsave(sprintf("%s/summary-figure-%d.png", output_dir, sim_seed), g)
-
+  ggsave(sprintf("%s/summary-figure-%d-log-scale.png", output_dir, sim_seed), g + scale_y_log10())
 
   result <- nb_summary
   result$true_final_prevalence <- prev_df$prevalence %>% tail(1)
-
 
   write.table(
     x = result,
@@ -119,29 +152,11 @@ run_post_processing <- function(sim_seed) {
     row.names = FALSE
   )
 
-  ## We want to know that the MCMC has behaved sensibly in the computations that
-  ## we have run so we generate some diagnostic output to check this.
-  mcmc_obj <- read.csv(mcmc_csv) %>%
-    select(lambda, psi, omega) %>%
-    as.mcmc()
-  png(sprintf("%s/mcmc-trace-%d.png", output_dir, sim_seed))
-  plot(mcmc_obj)
-  dev.off()
-
-  tmp <- mcmc_obj %>%
-    effectiveSize() %>%
-    as.list() %>%
-    as.data.frame() %>%
-    mutate(sim_seed = sim_seed)
-  write.table(
-    x = tmp,
-    file = sprintf("%s/mcmc-effective-size-%d.csv", output_dir, sim_seed),
-    sep = ",",
-    row.names = FALSE
-  )
+  run_mcmc_diagnostics(output_dir, sim_seed, mcmc_csv)
 
   return(NULL)
 }
+
 
 
 main <- function(args) {
@@ -150,12 +165,17 @@ main <- function(args) {
   ## include validation that a sensible number of seeds was provided from the
   ## command line.
   if (and(is.integer(num_seeds), num_seeds > 0)) {
-
-    successful_sim_seeds <- keep(1:num_seeds,
-                                 function(n) {
-                                   fp <- sprintf("out/seed-%d/all-simulated-events.csv", n)
-                                   file.exists(fp)
-                                 })
+    successful_sim_seeds <- keep(
+      1:num_seeds,
+      function(n) {
+        fp1 <- sprintf("out/seed-%d/all-simulated-events.csv", n)
+        fp2 <- sprintf("out/seed-%d/regular-data-mcmc-samples.csv", n)
+        and(
+          file.exists(fp1),
+          file.exists(fp2)
+        )
+      }
+    )
 
     for (sim_seed in successful_sim_seeds) {
       run_post_processing(sim_seed)
@@ -169,9 +189,11 @@ main <- function(args) {
     }
     plot_df <- lapply(successful_sim_seeds, .read_csv_from_seed) %>%
       bind_rows() %>%
-      mutate(contains_truth = nb_min <= true_final_prevalence & true_final_prevalence <= nb_max,
-             point_prop_error = (nb_med - true_final_prevalence) / true_final_prevalence)
-    plot_df <- plot_df[order(plot_df$point_prop_error),]
+      mutate(
+        contains_truth = nb_min <= true_final_prevalence & true_final_prevalence <= nb_max,
+        point_prop_error = (nb_med - true_final_prevalence) / true_final_prevalence
+      )
+    plot_df <- plot_df[order(plot_df$point_prop_error), ]
     plot_df$ix <- 1:nrow(plot_df)
 
     g_prev <- ggplot() +
@@ -198,30 +220,42 @@ main <- function(args) {
     g_prev_bias <- ggplot() +
       geom_point(
         data = plot_df,
-        mapping = aes(x = ix,
-                      y = (nb_med - true_final_prevalence) / true_final_prevalence),
+        mapping = aes(
+          x = ix,
+          y = (nb_med - true_final_prevalence) / true_final_prevalence
+        ),
         colour = green_hex_colour
       ) +
       geom_errorbar(
         data = plot_df,
-        mapping = aes(x = ix,
-                      ymin = (nb_min - true_final_prevalence) / true_final_prevalence,
-                      ymax = (nb_max - true_final_prevalence) / true_final_prevalence),
+        mapping = aes(
+          x = ix,
+          ymin = (nb_min - true_final_prevalence) / true_final_prevalence,
+          ymax = (nb_max - true_final_prevalence) / true_final_prevalence
+        ),
         colour = green_hex_colour
       ) +
       geom_hline(yintercept = 0, linetype = "dashed") +
       labs(x = "Replicate", y = "Proportional error in prevalence") +
       ylim(c(c(-1.0, 1.0))) +
       theme_classic() +
-      theme(axis.text.x = element_blank(),
-            axis.ticks.x = element_blank())
+      theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()
+      )
 
     ggsave("replication-results-prevalence-bias.png", g_prev_bias)
     ggsave("replication-results-prevalence-bias.pdf", g_prev_bias)
 
-    sink("proportion-prevalence-in-ci.txt")
-    print((table(plot_df$contains_truth)))
-    sink()
+    ## We save a copy of this data frame because it is useful as a way to map
+    ## between the prevalence estimates and the particular simulation seed that
+    ## was used. This helps in debugging.
+    write.table(
+      x = plot_df,
+      file = "proportion-prevalence-in-ci.csv",
+      sep = ",",
+      row.names = FALSE
+    )
 
     config <- read_json("out/seed-1/config-1.json")
     sim_params <- config$simulationParameters
@@ -266,7 +300,7 @@ main <- function(args) {
       filter(param == "r_naught") %>%
       select(value, statistic, sim_seed) %>%
       dcast(sim_seed ~ statistic)
-    r_naught_df <- r_naught_df[order(r_naught_df$mid),]
+    r_naught_df <- r_naught_df[order(r_naught_df$mid), ]
     r_naught_df$ix <- 1:nrow(r_naught_df)
     g_r_naught <- ggplot(r_naught_df) +
       geom_hline(yintercept = simulation_r_naught, linetype = "dashed") +
@@ -274,8 +308,10 @@ main <- function(args) {
       geom_point(mapping = aes(x = ix, y = mid), colour = green_hex_colour) +
       labs(x = "Replicate", y = "Basic reproduction number") +
       theme_classic() +
-      theme(axis.text.x = element_blank(),
-            axis.ticks.x = element_blank())
+      theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()
+      )
     ggsave("replication-results-r-naught.png", g_r_naught)
     ggsave("replication-results-r-naught.pdf", g_r_naught)
 
