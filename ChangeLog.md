@@ -1,5 +1,43 @@
 # ChangeLog
 
+## 0.1.3.1
+
+- The application `simulation-study-aggregated-observations` now conditions the
+  simulations to avoid the LTT going back down to 1 after it has been larger
+  than 1 to avoid potential issues with multiple origin times, and that the MCMC
+  has been able to actually generate some output.
+- There is now another example `prevalence-ci-calibration` which looks at the
+  coverage properties of the CI under the approximate likelihood.
+
+## 0.1.3.0
+
+- The calculation of the likelihood surface cross sections has been replaced by
+  a proper MCMC analysis in the aggregated data simulation study. This
+  introduces a dependency upon `might-metropolis`.
+- The aggregation simulation study now accepts a random seed from the
+  configuration file and assumes there will be a positive rate for unscheduled
+  unsequenced sampling.
+- **Important** The aggregation simulation study now ignores any occurrence
+  events that occur after the last unscheduled sequenced sample.
+- **Important** Change the behaviour of the aggregation functions to remove any
+  unscheduled events that occur after the last aggregation time.
+- Rewrite the aggregation functionality and use QuickCheck to make sure that
+  this works as expected.
+- Change the constructor for `AggregationTimes` to include the type of event
+  that is being aggregated at that point in time.
+
+## 0.1.2.16
+
+- Do the likelihood calculation in log-space now where possible and introduce
+  `logSumExp` to assist with this. This has been checked with QuickCheck which
+  is now a dependency.
+- Use a fixed seed in the aggregated observations simulation study to make this
+  easier to debug and include a regularisation term in the MLE computation to
+  prevent some numerical errors from parameters wandering off.
+- Move `logit` and `invLogit` into the `Utility` module out of the applications
+- Include the `Aggregation` module for working with aggregated unscheduled
+  observations.
+
 ## 0.1.2.15
 
 - Fix the seed used when simulating the data to ensure that the results are

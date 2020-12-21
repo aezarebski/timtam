@@ -16,7 +16,7 @@ observations =
   , (1.0, OOccurrence)
   , (1.0, OBirth)
   , (1.0, OBirth)
-  , (1.0, OSample)
+  , (1.0, ObsUnscheduledSequenced)
   , (1.0, OOccurrence)
   , (1.0, OCatastrophe 3)
   ]

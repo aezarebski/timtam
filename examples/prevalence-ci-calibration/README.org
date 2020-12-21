@@ -1,0 +1,71 @@
+* Prevalence CI Calibration
+
+This simulation study tests the coverage of the CI under the NB approximation.
+It does this using the application =simulation-study-aggregated-observations=
+with a set of suitable configuration files which each live in a subdirectory or
+=out=.
+
+** Example results
+
+*** Prevalence at present
+
+[[./replication-results-prevalence-bias.png]]
+
+*** Basic reproduction number
+
+Here are the \(95\%\) credible intervals for the basic reproduction number in
+each of the replicates. The dashed line indicates the true value used in the
+simulations.
+
+[[./replication-results-r-naught.png]]
+
+*** ESS as MCMC diagnostic
+
+The following figure shows the ESS for each of the parameters in each replicate
+as calculated by =coda=, the dashed line indicates an effective sample size of
+200 which is a standard threshold used in the phylodynamics literature.
+
+[[./mcmc-ess.png]]
+
+** Usage
+
+There is a script =run.sh= to run the replication study and a script =clean.sh=
+to remove the results of previous runs. Note that =run.sh= needs to be run with
+bash rather than just =sh= for the parallelism to work. The computation is split
+up into groups of 10 to avoid using up all the resources at once and crashing my
+machine. You will need to manually adjust this to have the correct loops if you
+want to change the settings.
+
+#+begin_src sh :tangle run.sh
+# run.sh
+#
+# This must be run with bash!!!
+
+NUM_SEEDS=100
+
+Rscript generate-config-files.R $NUM_SEEDS
+
+for ix in 00 10 20 30 40 50 60 70 80 90;
+do
+    pids=()
+
+    for jx in {1..10};
+    do
+        kx=$(($ix + $jx))
+        stack exec -- simulation-study-aggregated-observations out/seed-$kx/config-$kx.json && echo "Finished $kx" & pids+=($!)
+    done
+
+    wait "${pids[@]}"
+done
+
+Rscript plotter.R $NUM_SEEDS
+#+end_src
+
+#+begin_src sh :tangle clean.sh
+rm -r out/*
+rm replication-results-lambda.png
+rm replication-results-omega.png
+rm replication-results-prevalence.png
+rm replication-results-psi.png
+rm replication-results-r-naught.png
+#+end_src

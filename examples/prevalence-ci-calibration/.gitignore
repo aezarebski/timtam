@@ -1,0 +1,12 @@
+run.sh
+clean.sh
+out/*
+replication-results-lambda.png
+replication-results-omega.png
+replication-results-psi.png
+mcmc-ess.pdf
+proportion-prevalence-in-ci.txt
+r-naught-in-ci.txt
+replication-results-prevalence-bias.pdf
+replication-results-prevalence.pdf
+replication-results-r-naught.pdf
