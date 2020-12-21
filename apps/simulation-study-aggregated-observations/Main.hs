@@ -56,8 +56,9 @@ import Epidemic.Types.Events
   , maybeEpidemicTree
   , maybeReconstructedTree
   )
-import Epidemic.Types.Parameter (Probability, Rate, Time, Timed(..))
-import Epidemic.Types.Population (People(..), Person(..), numPeople)
+import Epidemic.Types.Parameter (Probability, Rate, AbsoluteTime(..), TimeDelta(..), Timed(..))
+import Epidemic.Types.Population (People(..), Person(..), numPeople, Identifier(..))
+import Epidemic.Utility
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 import GHC.Word (Word32(..))
@@ -68,14 +69,15 @@ import Numeric.MCMC.Metropolis
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
 
+
 -- | Alias for the type used to seed the MWC PRNG.
 type MWCSeed = Word32
 
 -- | Record of the scheduled observation times.
 data ScheduledTimes =
   ScheduledTimes
-    { stRhoTimes :: [Time]
-    , stNuTimes :: [Time]
+    { stRhoTimes :: [AbsoluteTime]
+    , stNuTimes :: [AbsoluteTime]
     }
   deriving (Show)
 
@@ -92,7 +94,7 @@ data InferenceConfiguration =
     , llhdOutputCsv :: FilePath
     , pointEstimatesCsv :: FilePath
     , maybePointEstimate :: Maybe Parameters
-    , icMaybeTimesForAgg :: Maybe ([Time], [Time])
+    , icMaybeTimesForAgg :: Maybe ([AbsoluteTime], [AbsoluteTime])
     , icMaybeMCMCConfig :: Maybe MCMCConfiguration
     }
   deriving (Show, Generic)
@@ -126,7 +128,7 @@ data Configuration =
   Configuration
     { simulatedEventsOutputCsv :: FilePath
     , simulationParameters :: Parameters
-    , simulationDuration :: Time
+    , simulationDuration :: TimeDelta
     , simulationSizeBounds :: (Int, Int)
     , inferenceConfigurations :: ( InferenceConfiguration
                                  , InferenceConfiguration
@@ -166,9 +168,9 @@ bdscodConfiguration = do
     asks simulationParameters
   if pLambda > 0 && pMu > 0 && pPsi > 0 && pOmega > 0 && null pRhos && null pNus
     then do
-      simDur <- asks simulationDuration
+      (TimeDelta simDur) <- asks simulationDuration
       let bdscodConfig =
-            SimBDSCOD.configuration simDur (unpackParameters simParams)
+            SimBDSCOD.configuration (AbsoluteTime simDur) (unpackParameters simParams)
       case bdscodConfig of
         Nothing -> throwError "Could not construct BDSCOD configuration"
         (Just config) -> return config
@@ -246,7 +248,7 @@ observeEpidemicThrice simEvents' = do
       (reconNewickTxt, reconNewickCsv) =
         reconstructedTreeOutputFiles regInfConfig
       maybeNewickData =
-        asNewickString (0, Person 1) =<<
+        asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<<
         maybeReconstructedTree =<< maybeEpidemicTree simEvents
   case maybeNewickData of
     Just (newickBuilder, newickMetaData) -> do

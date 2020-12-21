@@ -10,20 +10,20 @@ import Data.List (intercalate)
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
 
-observations :: [(Time, ObservedEvent)]
+observations :: [(TimeDelta, ObservedEvent)]
 observations =
-  [ (1.0, OBirth)
-  , (1.0, OOccurrence)
-  , (1.0, OBirth)
-  , (1.0, OBirth)
-  , (1.0, ObsUnscheduledSequenced)
-  , (1.0, OOccurrence)
-  , (1.0, OCatastrophe 3)
+  [ (TimeDelta 1.0, OBirth)
+  , (TimeDelta 1.0, OOccurrence)
+  , (TimeDelta 1.0, OBirth)
+  , (TimeDelta 1.0, OBirth)
+  , (TimeDelta 1.0, ObsUnscheduledSequenced)
+  , (TimeDelta 1.0, OOccurrence)
+  , (TimeDelta 1.0, OCatastrophe 3)
   ]
 
 parameters :: [Parameters]
 parameters =
-  [ (Parameters (lam, 1.0, 0.3, Timed [(7,0.5)], 0.6, Timed []))
+  [ (Parameters (lam, 1.0, 0.3, Timed [(AbsoluteTime 7,0.5)], 0.6, Timed []))
   | lam <- [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
   ]
 

@@ -27,7 +27,8 @@ import Text.Printf (printf)
 
 -- | This is the parameters of the likelihood function and the duration of the
 -- simulation.
-data ModelParameters = ModelParameters Parameters Time
+data ModelParameters = ModelParameters {mpParameters :: Parameters,
+                                        mpDuration :: AbsoluteTime }
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 -- | The record of a computation including the size of the data set processed,
@@ -65,8 +66,8 @@ recordSimulationOutput (ModelParameters params _) sim@(obs,simNum) =
 -- | Generate a random simulation of the observations and return it along with
 -- an identification integer.
 getObservations :: ModelParameters -> Int -> IO Simulation
-getObservations (ModelParameters params simDuration) simId =
-  let simConfig = BDSCOD.configuration simDuration (unpackParameters params)
+getObservations ModelParameters{..} simId =
+  let simConfig = BDSCOD.configuration mpDuration (unpackParameters mpParameters)
     in if isJust simConfig
        then do simEvents <- simulationWithSystemRandom True (fromJust simConfig) BDSCOD.allEvents
                let maybeObs = eventsAsObservations <$> BDSCOD.observedEvents simEvents
@@ -102,7 +103,7 @@ observationsJsonFilePath = printf "out/simulated-observations-%05d.json"
 -- The application will look for a file it can read this from.
 data AppConfig =
   AppConfig
-    { acDuration :: Time
+    { acDuration :: TimeDelta
     , acSimParams :: ModelParameters
     , acNumSims :: Int
     , acBinWidth :: Int

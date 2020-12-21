@@ -5,16 +5,16 @@
 
 packages:
 - completed:
-    size: 21182
-    url: https://hackage.haskell.org/package/epi-sim-0.2.2.0/epi-sim-0.2.2.0.tar.gz
     name: epi-sim
-    version: 0.2.2.0
-    sha256: 6a78e4cac775cf7cf62d653480b33d0305c279179b3ea6a089bf74ebdd89f99e
+    version: 0.3.0.0
+    git: https://github.com/aezarebski/epi-sim.git
     pantry-tree:
-      size: 1200
-      sha256: 2c260a13c1f2c43abad9607ff62f7008e28944fbb182ce64a0e5cd530cac4336
+      size: 1213
+      sha256: 1809f70efb384b3d2e0f1d8f4d2e660b1548b2bb063e2d37913b7d46fee03651
+    commit: b4496e1ca529c702939429a2a757c3a9581a4323
   original:
-    url: https://hackage.haskell.org/package/epi-sim-0.2.2.0/epi-sim-0.2.2.0.tar.gz
+    git: https://github.com/aezarebski/epi-sim.git
+    commit: b4496e1ca529c702939429a2a757c3a9581a4323
 snapshots:
 - completed:
     size: 532386

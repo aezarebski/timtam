@@ -45,6 +45,10 @@ import Data.List (intersperse)
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
 
+-- | TODO Give this orphan a home in @epi-sim@.
+instance Ord TimeDelta where
+  (TimeDelta a) <= (TimeDelta b) = a <= b
+
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
 -- removal rate, the sampling rate, the timing and probability of catastrophic
 -- removal, the occurrence rate, and the timing the probability of removal due
@@ -103,7 +107,7 @@ getNus :: Parameters -> Timed Probability
 getNus (Parameters (_, _, _, _, _, tns)) = tns
 
 type UnpackedParameters
-   = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+   = (Rate, Rate, Rate, [(AbsoluteTime, Probability)], Rate, [(AbsoluteTime, Probability)])
 
 unpackParameters :: Parameters -> UnpackedParameters
 unpackParameters (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) =
@@ -115,7 +119,7 @@ packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
 
 
 -- | Return the times of scheduled events: catastrophes and disasters.
-scheduledTimes :: Parameters -> ([Time],[Time])
+scheduledTimes :: Parameters -> ([AbsoluteTime],[AbsoluteTime])
 scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
   let times = map fst
   in (times pRhos, times pNus)
@@ -166,10 +170,10 @@ instance Csv.ToField ObservedEvent where
 -- which has holds the absolute time of the event. This is used because the
 -- likelihood is defined in terms of intervals of time between events rather
 -- than their abolute times.
-type Observation = (Time, ObservedEvent)
+type Observation = (TimeDelta, ObservedEvent)
 
 -- | A setter function to return a new observation with a different delay.
-updateDelay :: Observation -> Time -> Observation
+updateDelay :: Observation -> TimeDelta -> Observation
 updateDelay (_, oEvent) delay = (delay, oEvent)
 
 -- | Predicate for the observation referring to a birth.
@@ -234,5 +238,5 @@ type LogLikelihood = Double
 type LlhdAndNB = (LogLikelihood,NegativeBinomial)
 
 type LlhdCalcState = (LlhdAndNB
-                     ,Time
+                     ,AbsoluteTime
                      ,NumLineages)
