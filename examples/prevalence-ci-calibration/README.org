@@ -33,7 +33,8 @@ There is a script =run.sh= to run the replication study and a script =clean.sh=
 to remove the results of previous runs. Note that =run.sh= needs to be run with
 bash rather than just =sh= for the parallelism to work. The computation is split
 up into groups of 10 to avoid using up all the resources at once and crashing my
-machine.
+machine. You will need to manually adjust this to have the correct loops if you
+want to change the settings.
 
 #+begin_src sh :tangle run.sh
 # run.sh
