@@ -4,7 +4,8 @@
 
 - The application `simulation-study-aggregated-observations` now conditions the
   simulations to avoid the LTT going back down to 1 after it has been larger
-  than 1 to avoid potential issues with multiple origin times.
+  than 1 to avoid potential issues with multiple origin times, and that the MCMC
+  has been able to actually generate some output.
 - There is now another example `prevalence-ci-calibration` which looks at the
   coverage properties of the CI under the approximate likelihood.
 
