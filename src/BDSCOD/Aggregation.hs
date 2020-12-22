@@ -23,14 +23,16 @@ import Epidemic.Types.Parameter
 -- whether the aggregation refers to the aggregation of sequenced or unsequenced
 -- samples.
 newtype AggregationTimes =
-  AggregationTimes_ [(Time,ObservedEvent)]
+  AggregationTimes_ [(AbsoluteTime,ObservedEvent)]
   deriving (Show, Eq, Generic)
 
 -- | A smart constructor which only creates an `AggregationTimes` if the
 -- provided `Time`s are sorted and non-negative, since these represent absolute
 -- times. If the given list of times is empty, then this returns an empty list
 -- of `AggregationTimes`.
-maybeAggregationTimes :: [Time] -> [Time] -> Maybe AggregationTimes
+maybeAggregationTimes :: [AbsoluteTime] -- ^ aggregation times for sequenced samples
+                      -> [AbsoluteTime] -- ^ aggregation times for unsequenced samples
+                      -> Maybe AggregationTimes
 maybeAggregationTimes seqAggTimes unseqAggTimes
   | null seqAggTimes && null unseqAggTimes = Just (AggregationTimes_ [])
   | null seqAggTimes && validAggTimes unseqAggTimes = Just (AggregationTimes_ (pairUpUnseq unseqAggTimes))
@@ -38,7 +40,7 @@ maybeAggregationTimes seqAggTimes unseqAggTimes
   | validAggTimes seqAggTimes && validAggTimes unseqAggTimes = Just (AggregationTimes_ (pairUpBoth seqAggTimes unseqAggTimes))
   | otherwise = Nothing
   where
-    validAggTimes aggTimes = sort aggTimes == aggTimes && minimum aggTimes >= 0
+    validAggTimes aggTimes = sort aggTimes == aggTimes && minimum aggTimes >= (AbsoluteTime 0)
     pairUp oe ats  = [(t,oe) | t <- ats]
     pairUpUnseq = pairUp OOccurrence
     pairUpSeq = pairUp ObsUnscheduledSequenced
@@ -46,7 +48,7 @@ maybeAggregationTimes seqAggTimes unseqAggTimes
 
 -- | Use a pattern so we can force the construction via 'maybeAggregationTimes'
 -- so that we can assume that they have sorted and non-negative times.
-pattern AggTimes :: [(Time,ObservedEvent)] -> AggregationTimes
+pattern AggTimes :: [(AbsoluteTime,ObservedEvent)] -> AggregationTimes
 pattern AggTimes ts <- AggregationTimes_ ts
 
 -- | Aggregated observations which contains aggregation times and the
@@ -61,7 +63,7 @@ data AggregatedObservations =
 -- | The absolute time and the observation at that time. Recall that
 -- `Observation` pairs only contain the time delay since the previous observable
 -- event, not their absolute time.
-type AnnotatedObservation = (Time, Observation)
+type AnnotatedObservation = (AbsoluteTime, Observation)
 
 -- | Based on the abosulte time annotations re-compute the delays for the
 -- observations and return the observations without the absolute time
@@ -71,10 +73,10 @@ type AnnotatedObservation = (Time, Observation)
 -- annotated observations.
 obsWithoutAnnotations :: [AnnotatedObservation] -> [Observation]
 obsWithoutAnnotations annObs =
-  let absTimes = map fst annObs
-      obs = map snd annObs
-      collectDelay (currTime, _) newTime = (newTime, newTime - currTime)
-      delays = map snd . tail . scanl collectDelay (0, 0) $ absTimes
+  let (absTimes,obs) = unzip annObs
+      collectDelay :: (AbsoluteTime,TimeDelta) -> AbsoluteTime -> (AbsoluteTime,TimeDelta)
+      collectDelay (currTime, _) newTime = (newTime, timeDelta currTime newTime)
+      delays = map snd . tail . scanl collectDelay (AbsoluteTime 0, TimeDelta 0) $ absTimes
    in zipWith updateDelay obs delays
 
 -- | Add the absolute time of each observation as an annotation to the
@@ -83,7 +85,7 @@ obsWithoutAnnotations annObs =
 obsWithAnnotations :: [Observation] -> [AnnotatedObservation]
 obsWithAnnotations obs =
   let delayVals = map fst obs
-      absTimes = (tail . scanl (+) 0) delayVals
+      absTimes = (tail . scanl timeAfterDelta (AbsoluteTime 0)) delayVals
    in zip absTimes obs
 
 -- | The observations where unscheduled observations have been rounded up to the
@@ -123,7 +125,7 @@ aggregatedObs (AggregationTimes_ []) annObs = annObs
 aggregatedObs (AggregationTimes_ ((aggTime,obsType):aTs)) annObs =
   let earlierAnnObs = filter (\(absT,(_,o)) -> absT < aggTime && o /= obsType) annObs
       numAggregated = fromIntegral . length $ filter (\(absT,(_,o)) -> absT < aggTime && o == obsType) annObs
-      bogusDelay = -1/0
+      bogusDelay = TimeDelta (-1/0)
       aggAnnObs
         | obsType == ObsUnscheduledSequenced = (aggTime,(bogusDelay,OCatastrophe numAggregated))
         | obsType == OOccurrence = (aggTime,(bogusDelay,ODisaster numAggregated))

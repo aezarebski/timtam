@@ -40,8 +40,8 @@ x1and2 params@(Parameters (lam, _, _, _, _, _)) =
       sqrtDisc = sqrt $ discriminant params
    in ((gam - sqrtDisc) / (2 * lam), (gam + sqrtDisc) / (2 * lam))
 
-odeHelpers :: Parameters -> Time -> (Double,Double,Double,Double)
-odeHelpers params delay = (x1,x2,disc,expFact)
+odeHelpers :: Parameters -> TimeDelta -> (Double,Double,Double,Double)
+odeHelpers params (TimeDelta delay) = (x1,x2,disc,expFact)
   where
     (x1,x2) = x1and2 params
     disc = discriminant params
@@ -52,7 +52,7 @@ odeHelpers params delay = (x1,x2,disc,expFact)
 
 
 -- | The partial derivative of @p0@ with respect to its final argument @z@.
-p0' :: Parameters -> Time -> Probability -> Double
+p0' :: Parameters -> TimeDelta -> Probability -> Double
 p0' params delay z =
   (expFact * x2 - x1) / (x2 - expFact * (x1 - z) - z) -
   ((expFact - 1) * (x1 * (x2 - z) - expFact * x2 * (x1 - z))) /
@@ -62,7 +62,7 @@ p0' params delay z =
 
 -- | The second partial derivative of @p0@ with respect to its final argument
 -- @z@.
-p0'' :: Parameters -> Time -> Probability -> Double
+p0'' :: Parameters -> TimeDelta -> Probability -> Double
 p0'' params delay z =
   (2 * (expFact - 1) ** 2.0 * (x1 * (x2 - z) -
   expFact * x2 * (x1 - z))) /
@@ -72,14 +72,14 @@ p0'' params delay z =
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
-rr' :: Parameters -> Time -> Probability -> Double
+rr' :: Parameters -> TimeDelta -> Probability -> Double
 rr' params@(Parameters (lam, _, _, _, _, _)) delay z =
   (2 * (1 - expFact) * expFact * disc) /
   (lam ** 2.0 * (x2 - expFact * (x1 - z) - z) ** 3.0)
   where
     (x1, x2, disc, expFact) = odeHelpers params delay
 
-rr'' :: Parameters -> Time -> Probability -> Double
+rr'' :: Parameters -> TimeDelta -> Probability -> Double
 rr'' params@(Parameters (lam, _, _, _, _, _)) delay z =
   (6 * (expFact - 1) ** 2.0 * expFact * disc) /
   (lam ** 2.0 * (x2 - expFact * (x1 - z) - z) ** 4.0)
@@ -94,7 +94,7 @@ rr'' params@(Parameters (lam, _, _, _, _, _)) delay z =
 -- \(\omega\) sampled observation during a period of time of length @duration@
 -- nor are \(\rho\) sampled at the end of this period which happens with
 -- probability @1-z@.
-p0 :: Parameters -> Time -> Probability -> Probability
+p0 :: Parameters -> TimeDelta -> Probability -> Probability
 p0 params delay z =
   (x1 * (x2 - z) - x2 * (x1 - z) * expFact) /
   ((x2 - z) - (x1 - z) * expFact)
@@ -104,7 +104,7 @@ p0 params delay z =
 -- | The probability an individual has one extant lineage at present /given/
 -- there is a \(\rho\) sampling at present and it does not get sampled at this
 -- instant. In Zarebski /et al/ (2020) this is the function \(R(u,z)\).
-rr :: Parameters -> Time -> Probability -> Probability
+rr :: Parameters -> TimeDelta -> Probability -> Probability
 rr params@(Parameters (lam, _, _, _, _, _)) delay z =
   disc * expFact /
   ((lam ** 2.0) * (((x2 - z) - (x1 - z) * expFact) ** 2.0))
@@ -120,7 +120,7 @@ rr params@(Parameters (lam, _, _, _, _, _)) delay z =
 -- __WARNING__ It is easy to get infinite values so try to use the @logPdeGF@
 -- function instead if possible.
 --
-pdeGF :: Parameters -> Time -> PDESolution -> Double -> Double
+pdeGF :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 pdeGF params delay (PDESol Zero 1) z = rz
   where
     rz = rr params delay z
@@ -132,7 +132,7 @@ pdeGF params delay (PDESol nb k) z =
     rz = rr params delay z
 
 -- | The log of the generating function solution to the PDE.
-logPdeGF :: Parameters -> Time -> PDESolution -> Double -> Double
+logPdeGF :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 logPdeGF params delay (PDESol Zero 1) z = log rz
   where
     rz = rr params delay z
@@ -148,7 +148,7 @@ logPdeGF params delay (PDESol nb k) z =
 -- __WARNING__ It is easy to get infinite values so try to use the @logPdeGF'@
 -- function instead if possible.
 --
-pdeGF' :: Parameters -> Time -> PDESolution -> Double -> Double
+pdeGF' :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 pdeGF' params delay (PDESol Zero 1) z = rdashz
   where
     rdashz = rr' params delay z
@@ -165,7 +165,7 @@ pdeGF' params delay (PDESol nb k) z =
 
 -- | The log of the partial derivative of the generating function solution to
 -- the PDE.
-logPdeGF' :: Parameters -> Time -> PDESolution -> Double -> Double
+logPdeGF' :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 logPdeGF' params delay (PDESol Zero 1) z = log rdashz
   where
     rdashz = rr' params delay z
@@ -190,7 +190,7 @@ logPdeGF' params delay (PDESol nb k) z =
 -- __WARNING__ It is easy to get infinite values so try to use the @logPdeGF''@
 -- function instead if possible.
 --
-pdeGF'' :: Parameters -> Time -> PDESolution -> Double -> Double
+pdeGF'' :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 pdeGF'' params delay (PDESol Zero 1) z = rdashdashz
   where
     rdashdashz = rr'' params delay z
@@ -213,7 +213,7 @@ pdeGF'' params delay (PDESol nb k) z =
 
 -- | The log of the second partial derivative of the generating function solution to
 -- the PDE.
-logPdeGF'' :: Parameters -> Time -> PDESolution -> Double -> Double
+logPdeGF'' :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 logPdeGF'' params delay (PDESol Zero 1) z = log rdashdashz
   where
     rdashdashz = rr'' params delay z
@@ -246,7 +246,7 @@ logPdeGF'' params delay (PDESol nb k) z =
 -- @logPdeStatistics@ function instead if possible.
 --
 pdeStatistics :: Parameters
-              -> Time
+              -> TimeDelta
               -> PDESolution
               -> (Probability, Double, Double)
 pdeStatistics params delay pdeSol@PDESol{}
@@ -262,7 +262,7 @@ pdeStatistics params delay pdeSol@PDESol{}
 
 -- | The logarithm of the PDE statistics
 logPdeStatistics :: Parameters
-              -> Time
+              -> TimeDelta
               -> PDESolution
               -> (Probability, Double, Double)
 logPdeStatistics params delay pdeSol@PDESol{} =
@@ -281,7 +281,7 @@ logPdeStatistics params delay pdeSol@PDESol{} =
 
 
 intervalLlhd :: Parameters
-             -> Double
+             -> TimeDelta
              -> Double
              -> NegativeBinomial
              -> (Probability, NegativeBinomial)
@@ -294,7 +294,7 @@ intervalLlhd params delay k nb =
 
 
 
-eventLlhd :: Time -- ^ Absolute time used to look up the parameter in the case of a scheduled event
+eventLlhd :: AbsoluteTime -- ^ Absolute time used to look up the parameter in the case of a scheduled event
           -> Parameters
           -> ObservedEvent
           -> NumLineages -- ^ The number of lineages in the reconstructed tree prior to the event
@@ -329,7 +329,7 @@ eventLlhd _ (Parameters (_, _, _, _, _, _)) (OCatastrophe _) _ Zero = undefined
 -- | This is the state of the likelihood calculation: llhd, time, LTT, NB of
 -- hidden lineages
 initLlhdState :: LlhdCalcState
-initLlhdState = ((0,Zero),0,1)
+initLlhdState = ((0, Zero), AbsoluteTime 0, 1)
 
 -- | The log-likelihood and the distribution of prevalence.
 llhdAndNB :: [Observation]  -- ^ The observed events
@@ -358,7 +358,7 @@ updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
   then ((l+l'+l'',nb''),t',k'')
   else error $ "bad k in updatedLlhdCalcState: k = " ++ show k
   where
-    t' = t + delay
+    t' = timeAfterDelta t delay
     (l',nb') = intervalLlhd params delay k nb
     (l'',k'',nb'') = eventLlhd t' params event k nb'
 

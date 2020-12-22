@@ -2,11 +2,17 @@ module BDSCOD.Utility where
 
 import qualified Data.Vector as V
 
+import qualified Data.Csv as Csv
 import Epidemic.Types.Parameter
 import Epidemic.Types.Events
 import Epidemic.Types.Population
 import BDSCOD.Types
 -- import BDSCOD.Llhd --
+
+
+instance Csv.ToField TimeDelta where
+  toField (TimeDelta td) = Csv.toField td
+
 
 -- | Convert simulation events to observation events, this assumes that the
 -- epidemic events have already been filtered by to only include the observable
@@ -14,18 +20,18 @@ import BDSCOD.Types
 -- provided to do this.
 eventsAsObservations :: [EpidemicEvent] -> [Observation]
 eventsAsObservations epiSimEvents =
-  drop 1 . map fst $ scanl processEvent' ((0, OBirth), 0) epiSimEvents
+  drop 1 . map fst $ scanl processEvent' ((TimeDelta 0, OBirth), AbsoluteTime 0) epiSimEvents
 
-processEvent' :: (Observation, Time) -> EpidemicEvent -> (Observation, Time)
+processEvent' :: (Observation, AbsoluteTime) -> EpidemicEvent -> (Observation, AbsoluteTime)
 processEvent' (_, currTime) epiSimEvent =
   case epiSimEvent of
     (Infection absTime _ _) ->
-      ((absTime - currTime, OBirth), absTime)
-    (Sampling absTime _) -> ((absTime - currTime, ObsUnscheduledSequenced), absTime)
-    (Catastrophe absTime (People persons)) -> ((absTime - currTime, OCatastrophe . fromIntegral $ V.length persons), absTime)
+      ((timeDelta currTime absTime, OBirth), absTime)
+    (Sampling absTime _) -> ((timeDelta currTime absTime, ObsUnscheduledSequenced), absTime)
+    (Catastrophe absTime (People persons)) -> ((timeDelta currTime absTime, OCatastrophe . fromIntegral $ V.length persons), absTime)
     (Occurrence absTime _) ->
-      ((absTime - currTime, OOccurrence), absTime)
-    (Disaster absTime (People persons)) -> ((absTime - currTime, ODisaster . fromIntegral $ V.length persons), absTime)
+      ((timeDelta currTime absTime, OOccurrence), absTime)
+    (Disaster absTime (People persons)) -> ((timeDelta currTime absTime, ODisaster . fromIntegral $ V.length persons), absTime)
     (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
 
 nbFromMAndV :: (Double, Double) -> NegativeBinomial
