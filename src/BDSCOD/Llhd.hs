@@ -326,8 +326,8 @@ eventLlhd _ (Parameters (_, _, _, _, _, _)) (OCatastrophe _) _ Zero = undefined
 
 
 
--- | This is the state of the likelihood calculation: llhd, time, LTT, NB of
--- hidden lineages
+-- | This is the state of the likelihood calculation: llhd and NB of hidden
+-- lineages, absolute time, and the LTT of the reconstructed tree
 initLlhdState :: LlhdCalcState
 initLlhdState = ((0, Zero), AbsoluteTime 0, 1)
 
