@@ -46,7 +46,7 @@ prngGen seed = initialize (Unboxed.fromList [seed])
 
 -- | Either an error message of a simulation configuration.
 simulationConfiguration =
-  case configuration (AbsoluteTime 5.0) (2.0, 0.5, 0.5, [], 0.5, []) of
+  case configuration (AbsoluteTime 11.0) (2.0, 0.5, 0.3, [], 0.5, []) of
     Just config -> Right config
     Nothing -> Left "configuration failed to construct simulation configuration"
 
@@ -57,10 +57,16 @@ main = do
       (Right obsFromTmrca) =
         restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
       llhdFun = llhdFunc obsFromTmrca
-  print obsFromTmrca
-  print $ llhdFun [10, 20, 3.4] -- mean, variance, lambda
+  print $ llhdFun [5, 10, 3.4] -- mean, variance, lambda
+  print $ llhdFun [5, 10, 2.0]
+  print $ llhdFun [5, 10, 1.6]
+  print "------------"
+  print $ llhdFun [1, 2, 2.0]
+  print $ llhdFun [3, 7, 2.0]
+  print $ llhdFun [5, 7, 2.0]
   print $ llhdFun [10, 20, 2.0]
-  print $ llhdFun [10, 20, 1.6]
+  print $ llhdFun [20, 80, 2.0]
+  print $ llhdFun [40, 320, 2.0]
 
 -- | Simulate an epidemic and return all the events.
 simulateEpidemic :: IO (Result [EpidemicEvent])
@@ -123,6 +129,6 @@ restartObservationsAtTmrca originTime obs = do
 -- observations which start from the TMRCA of the reconstructed tree.
 llhdFunc :: [Observation] -> [Double] -> LogLikelihood
 llhdFunc obsFromTmrca [m, v, l] =
-  let params = Parameters (l, 0.5, 0.5, Timed [], 0.5, Timed [])
+  let params = Parameters (l, 0.5, 0.3, Timed [], 0.5, Timed [])
       llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
    in fst $ llhdAndNB obsFromTmrca params llhdState
