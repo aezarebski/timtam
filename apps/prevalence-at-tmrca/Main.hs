@@ -1,7 +1,15 @@
 module Main where
 
-import BDSCOD.Types (Observation(..), ObservedEvent(..))
-import BDSCOD.Utility (eventsAsObservations)
+import BDSCOD.Llhd (llhdAndNB)
+import BDSCOD.Types
+  ( LlhdCalcState
+  , LogLikelihood
+  , NegativeBinomial(..)
+  , Observation(..)
+  , ObservedEvent(..)
+  , Parameters(..)
+  )
+import BDSCOD.Utility (eventsAsObservations, nbFromMAndV)
 import qualified Data.Vector.Unboxed as Unboxed
 import Epidemic.BDSCOD (allEvents, configuration, observedEvents)
 import Epidemic.Types.Events
@@ -38,7 +46,7 @@ prngGen seed = initialize (Unboxed.fromList [seed])
 
 -- | Either an error message of a simulation configuration.
 simulationConfiguration =
-  case configuration (AbsoluteTime 0.8) (2.0, 0.5, 0.5, [], 0.5, []) of
+  case configuration (AbsoluteTime 5.0) (2.0, 0.5, 0.5, [], 0.5, []) of
     Just config -> Right config
     Nothing -> Left "configuration failed to construct simulation configuration"
 
@@ -46,8 +54,13 @@ main :: IO ()
 main = do
   x <- simulateEpidemic
   let allObs = observationsOfEpidemic =<< x
-      obsFromTmrca = restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
+      (Right obsFromTmrca) =
+        restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
+      llhdFun = llhdFunc obsFromTmrca
   print obsFromTmrca
+  print $ llhdFun [10, 20, 3.4] -- mean, variance, lambda
+  print $ llhdFun [10, 20, 2.0]
+  print $ llhdFun [10, 20, 1.6]
 
 -- | Simulate an epidemic and return all the events.
 simulateEpidemic :: IO (Result [EpidemicEvent])
@@ -105,3 +118,11 @@ restartObservationsAtTmrca originTime obs = do
       case os of
         [] -> []
         (_, e):oss -> (TimeDelta 0, e) : oss
+
+-- | The likelihood of the parameters having given rise to the given
+-- observations which start from the TMRCA of the reconstructed tree.
+llhdFunc :: [Observation] -> [Double] -> LogLikelihood
+llhdFunc obsFromTmrca [m, v, l] =
+  let params = Parameters (l, 0.5, 0.5, Timed [], 0.5, Timed [])
+      llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
+   in fst $ llhdAndNB obsFromTmrca params llhdState
