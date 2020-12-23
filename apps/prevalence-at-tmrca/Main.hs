@@ -1,15 +1,20 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Main where
 
 import BDSCOD.Llhd (llhdAndNB)
 import BDSCOD.Types
   ( LlhdCalcState
   , LogLikelihood
+  , MCMCConfiguration(..)
   , NegativeBinomial(..)
   , Observation(..)
   , ObservedEvent(..)
   , Parameters(..)
   )
 import BDSCOD.Utility (eventsAsObservations, nbFromMAndV)
+import qualified Data.Aeson as Json
+import qualified Data.ByteString.Lazy as L
 import qualified Data.Vector.Unboxed as Unboxed
 import Epidemic.BDSCOD (allEvents, configuration, observedEvents)
 import Epidemic.Types.Events
@@ -33,7 +38,24 @@ import Epidemic.Types.Population
   , numPeople
   )
 import Epidemic.Utility (simulation')
+import GHC.Generics (Generic)
+import System.Environment (getArgs)
 import System.Random.MWC (initialize)
+
+-- | Configuration of the @prevalence-at-tmrca@ program. This information is to
+-- be specified by a file supplied at the command line.
+data AppConfiguration =
+  AppConfiguration
+      -- | Filepath for the CSV output of the whole epidemic simulation
+    { acEpiEventsCsv :: FilePath
+      -- | Filepath for the CSV output of the observed data
+    , acObservationsCsv :: FilePath
+      -- | The configuration of the MCMC
+    , acMCMCConfig :: MCMCConfiguration
+    }
+  deriving (Show, Generic)
+
+instance Json.FromJSON AppConfiguration
 
 -- | An informative error message
 type ErrorMessage = String
@@ -41,6 +63,31 @@ type ErrorMessage = String
 -- | A result or an error message if the computation failed.
 type Result a = Either ErrorMessage a
 
+main :: IO ()
+main = do
+  configFilePath <- head <$> getArgs
+  maybeConfig <-
+    Json.decode <$> L.readFile configFilePath :: IO (Maybe AppConfiguration)
+  print configFilePath
+  print maybeConfig
+
+-- main :: IO ()
+-- main = do
+--   x <- simulateEpidemic
+--   let allObs = observationsOfEpidemic =<< x
+--       (Right obsFromTmrca) =
+--         restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
+--       llhdFun = llhdFunc obsFromTmrca
+--   print $ llhdFun [5, 10, 3.4] -- mean, variance, lambda
+--   print $ llhdFun [5, 10, 2.0]
+--   print $ llhdFun [5, 10, 1.6]
+--   print "------------"
+--   print $ llhdFun [1, 2, 2.0]
+--   print $ llhdFun [3, 7, 2.0]
+--   print $ llhdFun [5, 7, 2.0]
+--   print $ llhdFun [10, 20, 2.0]
+--   print $ llhdFun [20, 80, 2.0]
+--   print $ llhdFun [40, 320, 2.0]
 -- | A generator for random numbers from a seed.
 prngGen seed = initialize (Unboxed.fromList [seed])
 
@@ -49,24 +96,6 @@ simulationConfiguration =
   case configuration (AbsoluteTime 11.0) (2.0, 0.5, 0.3, [], 0.5, []) of
     Just config -> Right config
     Nothing -> Left "configuration failed to construct simulation configuration"
-
-main :: IO ()
-main = do
-  x <- simulateEpidemic
-  let allObs = observationsOfEpidemic =<< x
-      (Right obsFromTmrca) =
-        restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
-      llhdFun = llhdFunc obsFromTmrca
-  print $ llhdFun [5, 10, 3.4] -- mean, variance, lambda
-  print $ llhdFun [5, 10, 2.0]
-  print $ llhdFun [5, 10, 1.6]
-  print "------------"
-  print $ llhdFun [1, 2, 2.0]
-  print $ llhdFun [3, 7, 2.0]
-  print $ llhdFun [5, 7, 2.0]
-  print $ llhdFun [10, 20, 2.0]
-  print $ llhdFun [20, 80, 2.0]
-  print $ llhdFun [40, 320, 2.0]
 
 -- | Simulate an epidemic and return all the events.
 simulateEpidemic :: IO (Result [EpidemicEvent])
