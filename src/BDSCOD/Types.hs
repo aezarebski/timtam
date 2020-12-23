@@ -33,7 +33,8 @@ module BDSCOD.Types
   , PDESolution(..)
   , LogLikelihood
   , LlhdAndNB
-  , LlhdCalcState) where
+  , LlhdCalcState
+  ) where
 
 import Control.DeepSeq
 import Data.Aeson
@@ -107,7 +108,12 @@ getNus :: Parameters -> Timed Probability
 getNus (Parameters (_, _, _, _, _, tns)) = tns
 
 type UnpackedParameters
-   = (Rate, Rate, Rate, [(AbsoluteTime, Probability)], Rate, [(AbsoluteTime, Probability)])
+   = ( Rate
+     , Rate
+     , Rate
+     , [(AbsoluteTime, Probability)]
+     , Rate
+     , [(AbsoluteTime, Probability)])
 
 unpackParameters :: Parameters -> UnpackedParameters
 unpackParameters (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) =
@@ -117,12 +123,11 @@ packParameters :: UnpackedParameters -> Parameters
 packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
-
 -- | Return the times of scheduled events: catastrophes and disasters.
-scheduledTimes :: Parameters -> ([AbsoluteTime],[AbsoluteTime])
+scheduledTimes :: Parameters -> ([AbsoluteTime], [AbsoluteTime])
 scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
   let times = map fst
-  in (times pRhos, times pNus)
+   in (times pRhos, times pNus)
 
 -- | The number of lineages that exist in a phylogeny
 type NumLineages = Double
@@ -178,34 +183,36 @@ updateDelay (_, oEvent) delay = (delay, oEvent)
 
 -- | Predicate for the observation referring to a birth.
 isBirth :: Observation -> Bool
-isBirth = (==OBirth) . snd
+isBirth = (== OBirth) . snd
 
 -- | Predicate for the observation referring to an unscheduled and sequenced
 -- observation.
 isUnscheduledSequenced :: Observation -> Bool
-isUnscheduledSequenced = (==ObsUnscheduledSequenced) . snd
+isUnscheduledSequenced = (== ObsUnscheduledSequenced) . snd
 
 -- | Predicate for the observation referring to an occurrence.
 isOccurrence :: Observation -> Bool
-isOccurrence = (==OOccurrence) . snd
+isOccurrence = (== OOccurrence) . snd
 
 -- | The number of /unsequenced/ lineages that were observed.
 numUnsequenced :: Observation -> NumLineages
-numUnsequenced obs = case snd obs of
-  OBirth -> 0
-  ObsUnscheduledSequenced -> 0
-  OOccurrence -> 1
-  (OCatastrophe _) -> 0
-  (ODisaster n) -> n
+numUnsequenced obs =
+  case snd obs of
+    OBirth -> 0
+    ObsUnscheduledSequenced -> 0
+    OOccurrence -> 1
+    (OCatastrophe _) -> 0
+    (ODisaster n) -> n
 
 -- | The number of /sequenced/ lineages that were observed.
 numSequenced :: Observation -> NumLineages
-numSequenced obs = case snd obs of
-  OBirth -> 0
-  ObsUnscheduledSequenced -> 1
-  OOccurrence -> 0
-  (OCatastrophe n) -> n
-  (ODisaster _) -> 0
+numSequenced obs =
+  case snd obs of
+    OBirth -> 0
+    ObsUnscheduledSequenced -> 1
+    OOccurrence -> 0
+    (OCatastrophe n) -> n
+    (ODisaster _) -> 0
 
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
@@ -231,12 +238,11 @@ instance Csv.ToField NegativeBinomial where
 
 instance Csv.ToRecord NegativeBinomial
 
-data PDESolution = PDESol NegativeBinomial NumLineages
+data PDESolution =
+  PDESol NegativeBinomial NumLineages
 
 type LogLikelihood = Double
 
-type LlhdAndNB = (LogLikelihood,NegativeBinomial)
+type LlhdAndNB = (LogLikelihood, NegativeBinomial)
 
-type LlhdCalcState = (LlhdAndNB
-                     ,AbsoluteTime
-                     ,NumLineages)
+type LlhdCalcState = (LlhdAndNB, AbsoluteTime, NumLineages)
