@@ -28,6 +28,8 @@ import BDSCOD.Types
   , ObservedEvent(..)
   , PDESolution(..)
   , Parameters(..)
+  , MCMCConfiguration(..)
+  , MWCSeed
   , packParameters
   , putLambda
   , putMu
@@ -61,7 +63,6 @@ import Epidemic.Types.Population (People(..), Person(..), numPeople, Identifier(
 import Epidemic.Utility
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
-import GHC.Word (Word32(..))
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra (dot)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
@@ -69,9 +70,6 @@ import Numeric.MCMC.Metropolis
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
 
-
--- | Alias for the type used to seed the MWC PRNG.
-type MWCSeed = Word32
 
 -- | Record of the scheduled observation times.
 data ScheduledTimes =
@@ -101,16 +99,6 @@ data InferenceConfiguration =
 
 instance Json.FromJSON InferenceConfiguration
 
--- | These objects configure an MCMC run.
-data MCMCConfiguration =
-  MCMCConfiguration
-  { mcmcOutputCSV :: FilePath
-  , mcmcNumIters :: Int
-  , mcmcStepSD :: Double
-  , mcmcSeed :: MWCSeed
-  } deriving (Show, Generic)
-
-instance Json.FromJSON MCMCConfiguration
 
 -- | This object configures the whole evaluation of this program and is to be
 -- read in from a suitable JSON file.

@@ -34,10 +34,13 @@ module BDSCOD.Types
   , LogLikelihood
   , LlhdAndNB
   , LlhdCalcState
+  , MCMCConfiguration(..)
+  , MWCSeed
   ) where
 
 import Control.DeepSeq
 import Data.Aeson
+import qualified Data.Aeson as Json
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as BL
@@ -45,10 +48,31 @@ import qualified Data.Csv as Csv
 import Data.List (intersperse)
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
+import GHC.Word (Word32(..))
 
--- | TODO Give this orphan a home in @epi-sim@.
+-- | TODO Remove this once the version of @epi-sim@ has been updated to the
+-- latest one on github.
 instance Ord TimeDelta where
   (TimeDelta a) <= (TimeDelta b) = a <= b
+
+-- | Alias for the type used to seed the MWC PRNG.
+type MWCSeed = Word32
+
+-- | These objects configure an MCMC run.
+data MCMCConfiguration =
+  MCMCConfiguration
+    { -- | Where to write MCMC samples
+      mcmcOutputCSV :: FilePath
+      -- | The number of samples to generate
+    , mcmcNumIters :: Int
+      -- | The standard deviation of the step size
+    , mcmcStepSD :: Double
+      -- | The seed for the PRNG
+    , mcmcSeed :: MWCSeed
+    }
+  deriving (Show, Generic)
+
+instance Json.FromJSON MCMCConfiguration
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
 -- removal rate, the sampling rate, the timing and probability of catastrophic
