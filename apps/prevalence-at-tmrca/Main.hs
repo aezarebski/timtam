@@ -15,6 +15,9 @@ import BDSCOD.Types
 import BDSCOD.Utility (eventsAsObservations, nbFromMAndV)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as L
+import Data.ByteString.Lazy.Char8 (pack, singleton)
+import qualified Data.Csv as Csv
+import Data.List (intercalate)
 import qualified Data.Vector.Unboxed as Unboxed
 import Epidemic.BDSCOD (allEvents, configuration, observedEvents)
 import Epidemic.Types.Events
@@ -39,15 +42,18 @@ import Epidemic.Types.Population
   )
 import Epidemic.Utility (simulation')
 import GHC.Generics (Generic)
+import Numeric.MCMC.Metropolis (Chain(..), chain)
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
+import Text.Printf (printf)
+
 
 -- | Configuration of the @prevalence-at-tmrca@ program. This information is to
 -- be specified by a file supplied at the command line.
 data AppConfiguration =
   AppConfiguration
-      -- | Filepath for the CSV output of the whole epidemic simulation
-    { acEpiEventsCsv :: FilePath
+    { -- | Filepath for the CSV output of the whole epidemic simulation
+      acEpiEventsCsv :: FilePath
       -- | Filepath for the CSV output of the observed data
     , acObservationsCsv :: FilePath
       -- | The configuration of the MCMC
@@ -68,26 +74,40 @@ main = do
   configFilePath <- head <$> getArgs
   maybeConfig <-
     Json.decode <$> L.readFile configFilePath :: IO (Maybe AppConfiguration)
-  print configFilePath
-  print maybeConfig
+  case maybeConfig of
+    Nothing ->
+      printf
+        "Could not read the application configuration from %s\n"
+        configFilePath
+    (Just appConfig) -> do
+      printf "Successfully read configuration file: %s\n" configFilePath
+      epidemicEvents <- simulateEpidemic
+      let allObs = observationsOfEpidemic =<< epidemicEvents
+          (Right obsFromTmrca) =
+            restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
+          llhdFun = llhdFunc obsFromTmrca
+          mcmcConfig = acMCMCConfig appConfig
+          numMcmcIters = mcmcNumIters mcmcConfig
+          stepSd = mcmcStepSD mcmcConfig
+          mcmcOutputCsv = mcmcOutputCSV mcmcConfig
+          variableNames = ["nbMean", "nbVar", "lambda"]
+        in do
+          genIO <- prngGen (mcmcSeed mcmcConfig)
+          chainVals <- chain numMcmcIters stepSd [5.0, 7.0, 2.0] llhdFun genIO
+          printf "Writing MCMC samples to %s\n" mcmcOutputCsv
+          L.writeFile mcmcOutputCsv (chainAsByteString variableNames chainVals)
 
--- main :: IO ()
--- main = do
---   x <- simulateEpidemic
---   let allObs = observationsOfEpidemic =<< x
---       (Right obsFromTmrca) =
---         restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
---       llhdFun = llhdFunc obsFromTmrca
---   print $ llhdFun [5, 10, 3.4] -- mean, variance, lambda
---   print $ llhdFun [5, 10, 2.0]
---   print $ llhdFun [5, 10, 1.6]
---   print "------------"
---   print $ llhdFun [1, 2, 2.0]
---   print $ llhdFun [3, 7, 2.0]
---   print $ llhdFun [5, 7, 2.0]
---   print $ llhdFun [10, 20, 2.0]
---   print $ llhdFun [20, 80, 2.0]
---   print $ llhdFun [40, 320, 2.0]
+-- | A bytestring representation of the MCMC samples.
+chainAsByteString ::
+     [String] -- ^ the names of the elements of the chain
+  -> [Chain [Double] b] -- ^ the samples in the chain
+  -> L.ByteString
+chainAsByteString varNames chainVals =
+  let header = pack $ intercalate "," ("llhd" : varNames)
+      records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
+      linebreak = singleton '\n'
+   in mconcat [header, linebreak, records]
+
 -- | A generator for random numbers from a seed.
 prngGen seed = initialize (Unboxed.fromList [seed])
 
