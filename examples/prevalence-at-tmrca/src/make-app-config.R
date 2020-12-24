@@ -18,6 +18,7 @@ mcmc_config <- list(
 app_config <- list(
   acEpiEventsCsv = "demoA.csv",
   acObservationsCsv = "demoB.csv",
+  acAdditionalJson = "demoD.json",
   acMCMCConfig = mcmc_config
 )
 

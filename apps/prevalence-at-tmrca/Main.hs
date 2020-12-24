@@ -56,12 +56,22 @@ data AppConfiguration =
       acEpiEventsCsv :: FilePath
       -- | Filepath for the CSV output of the observed data
     , acObservationsCsv :: FilePath
+      -- | Filepath for the JSON output of additional values
+    , acAdditionalJson :: FilePath
       -- | The configuration of the MCMC
     , acMCMCConfig :: MCMCConfiguration
     }
   deriving (Show, Generic)
 
 instance Json.FromJSON AppConfiguration
+
+newtype AdditionalValues =
+  AdditionalValues
+  { -- | The TMRCA of the observations after the origin time at zero.
+    avTmrcaFromZero :: AbsoluteTime
+  } deriving (Generic)
+
+instance Json.ToJSON AdditionalValues
 
 -- | An informative error message
 type ErrorMessage = String
@@ -88,6 +98,7 @@ main = do
           printf "Writing epidemic events to %s\n" epiEventsCsv
           L.writeFile epiEventsCsv (Csv.encode epiEvents)
           let allObs = observationsOfEpidemic =<< epidemicEvents
+              (Right tmrca) = tmrcaOfObservations (AbsoluteTime 0) =<< allObs
               (Right obsFromTmrca) =
                 restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
               llhdFun = llhdFunc obsFromTmrca
@@ -97,6 +108,8 @@ main = do
               mcmcOutputCsv = mcmcOutputCSV mcmcConfig
               variableNames = ["nbMean", "nbVar", "lambda"]
               obsCsv = acObservationsCsv appConfig
+              additionalJson = acAdditionalJson appConfig
+              additionalValues = AdditionalValues tmrca
            in do printf "Writing observations to %s\n" obsCsv
                  L.writeFile obsCsv (Csv.encode obsFromTmrca)
                  genIO <- prngGen (mcmcSeed mcmcConfig)
@@ -106,6 +119,8 @@ main = do
                  L.writeFile
                    mcmcOutputCsv
                    (chainAsByteString variableNames chainVals)
+                 printf "Writing additional data to %s\n" additionalJson
+                 L.writeFile additionalJson (Json.encode additionalValues)
         (Left errMessage) -> putStrLn errMessage
 
 -- | A bytestring representation of the MCMC samples.
