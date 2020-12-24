@@ -82,20 +82,31 @@ main = do
     (Just appConfig) -> do
       printf "Successfully read configuration file: %s\n" configFilePath
       epidemicEvents <- simulateEpidemic
-      let allObs = observationsOfEpidemic =<< epidemicEvents
-          (Right obsFromTmrca) =
-            restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
-          llhdFun = llhdFunc obsFromTmrca
-          mcmcConfig = acMCMCConfig appConfig
-          numMcmcIters = mcmcNumIters mcmcConfig
-          stepSd = mcmcStepSD mcmcConfig
-          mcmcOutputCsv = mcmcOutputCSV mcmcConfig
-          variableNames = ["nbMean", "nbVar", "lambda"]
-        in do
-          genIO <- prngGen (mcmcSeed mcmcConfig)
-          chainVals <- chain numMcmcIters stepSd [5.0, 7.0, 2.0] llhdFun genIO
-          printf "Writing MCMC samples to %s\n" mcmcOutputCsv
-          L.writeFile mcmcOutputCsv (chainAsByteString variableNames chainVals)
+      case epidemicEvents of
+        (Right epiEvents) -> do
+          let epiEventsCsv = acEpiEventsCsv appConfig
+          printf "Writing epidemic events to %s\n" epiEventsCsv
+          L.writeFile epiEventsCsv (Csv.encode epiEvents)
+          let allObs = observationsOfEpidemic =<< epidemicEvents
+              (Right obsFromTmrca) =
+                restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
+              llhdFun = llhdFunc obsFromTmrca
+              mcmcConfig = acMCMCConfig appConfig
+              numMcmcIters = mcmcNumIters mcmcConfig
+              stepSd = mcmcStepSD mcmcConfig
+              mcmcOutputCsv = mcmcOutputCSV mcmcConfig
+              variableNames = ["nbMean", "nbVar", "lambda"]
+              obsCsv = acObservationsCsv appConfig
+           in do printf "Writing observations to %s\n" obsCsv
+                 L.writeFile obsCsv (Csv.encode obsFromTmrca)
+                 genIO <- prngGen (mcmcSeed mcmcConfig)
+                 chainVals <-
+                   chain numMcmcIters stepSd [5.0, 7.0, 2.0] llhdFun genIO
+                 printf "Writing MCMC samples to %s\n" mcmcOutputCsv
+                 L.writeFile
+                   mcmcOutputCsv
+                   (chainAsByteString variableNames chainVals)
+        (Left errMessage) -> putStrLn errMessage
 
 -- | A bytestring representation of the MCMC samples.
 chainAsByteString ::
