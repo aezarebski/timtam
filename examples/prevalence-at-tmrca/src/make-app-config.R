@@ -9,16 +9,16 @@ library(jsonlite)
 
 
 mcmc_config <- list(
-  mcmcOutputCSV = "demoC.csv",
+  mcmcOutputCSV = "out/demoC.csv",
   mcmcNumIters = 100,
   mcmcStepSD = 0.1,
   mcmcSeed = 7
 )
 
 app_config <- list(
-  acEpiEventsCsv = "demoA.csv",
-  acObservationsCsv = "demoB.csv",
-  acAdditionalJson = "demoD.json",
+  acEpiEventsCsv = "out/demoA.csv",
+  acObservationsCsv = "out/demoB.csv",
+  acAdditionalJson = "out/demoD.json",
   acMCMCConfig = mcmc_config
 )
 
