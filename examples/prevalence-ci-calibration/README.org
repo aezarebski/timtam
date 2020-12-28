@@ -41,11 +41,11 @@ want to change the settings.
 #
 # This must be run with bash!!!
 
-NUM_SEEDS=100
+NUM_SEEDS=20
 
-Rscript generate-config-files.R $NUM_SEEDS
+Rscript src/generate-config-files.R $NUM_SEEDS
 
-for ix in 00 10 20 30 40 50 60 70 80 90;
+for ix in 00 10;
 do
     pids=()
 
@@ -58,7 +58,7 @@ do
     wait "${pids[@]}"
 done
 
-Rscript plotter.R $NUM_SEEDS
+Rscript src/plotter.R $NUM_SEEDS
 #+end_src
 
 #+begin_src sh :tangle clean.sh
