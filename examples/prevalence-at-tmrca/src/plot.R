@@ -7,6 +7,8 @@ library(reshape2)
 library(jsonlite)
 library(coda)
 
+GREEN_HEX_COLOUR <- "#7fc97f"
+
 #' Return a ggplot figure showing the estimates of the prevalence. This is a
 #' pure function.
 prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
@@ -47,13 +49,17 @@ prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
     ) +
     geom_errorbar(
       data = tmrca_prev_df,
-      mapping = aes(x = tmrca, ymin = nbLower95, ymax = nbUpper95)
+      mapping = aes(x = tmrca, ymin = nbLower95, ymax = nbUpper95),
+      colour = GREEN_HEX_COLOUR
     ) +
     geom_point(
       data = tmrca_prev_df,
-      mapping = aes(x = tmrca, y = nbMid)
+      mapping = aes(x = tmrca, y = nbMid),
+      colour = GREEN_HEX_COLOUR
     ) +
     scale_y_log10() +
+    labs(x = "Time since origin",
+         y = "Prevalence: LTT of transmission tree") +
     theme_classic()
 }
 
