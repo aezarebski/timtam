@@ -18,6 +18,8 @@ mcmc_config <- list(
 app_config <- list(
   acEpiEventsCsv = "out/demoA.csv",
   acObservationsCsv = "out/demoB.csv",
+  acStoppingTime = 11.0,
+  acSimulationRates = list(2.0, 0.5, 0.3, 0.5), # lambda, mu, psi, omega.
   acAdditionalJson = "out/demoD.json",
   acMCMCConfig = mcmc_config
 )

@@ -56,6 +56,10 @@ data AppConfiguration =
       acEpiEventsCsv :: FilePath
       -- | Filepath for the CSV output of the observed data
     , acObservationsCsv :: FilePath
+      -- | The stopping time for the simulation
+    , acStoppingTime :: AbsoluteTime
+      -- | The birth, death, sequencing and occurrence rates
+    , acSimulationRates :: (Rate, Rate, Rate, Rate)
       -- | Filepath for the JSON output of additional values
     , acAdditionalJson :: FilePath
       -- | The configuration of the MCMC
@@ -91,7 +95,9 @@ main = do
         configFilePath
     (Just appConfig) -> do
       printf "Successfully read configuration file: %s\n" configFilePath
-      epidemicEvents <- simulateEpidemic
+      let simDur = acStoppingTime appConfig
+          simRates = acSimulationRates appConfig
+      epidemicEvents <- simulateEpidemic simDur simRates
       case epidemicEvents of
         (Right epiEvents) -> do
           let epiEventsCsv = acEpiEventsCsv appConfig
@@ -149,15 +155,18 @@ chainAsByteString varNames chainVals =
 prngGen seed = initialize (Unboxed.fromList [seed])
 
 -- | Either an error message of a simulation configuration.
-simulationConfiguration =
-  case configuration (AbsoluteTime 11.0) (2.0, 0.5, 0.3, [], 0.5, []) of
+simulationConfiguration stopTime (simLambda, simMu, simPsi, simOmega) =
+  case configuration stopTime (simLambda, simMu, simPsi, [], simOmega, []) of
     Just config -> Right config
     Nothing -> Left "configuration failed to construct simulation configuration"
 
 -- | Simulate an epidemic and return all the events.
-simulateEpidemic :: IO (Result [EpidemicEvent])
-simulateEpidemic =
-  let eitherSimConfig = simulationConfiguration
+simulateEpidemic ::
+     AbsoluteTime -- ^ stopping time assuming it starts at time zero
+  -> (Rate, Rate, Rate, Rate) -- ^ (lambda,mu,psi,omega)
+  -> IO (Result [EpidemicEvent])
+simulateEpidemic stopTime simRates =
+  let eitherSimConfig = simulationConfiguration stopTime simRates
    in do genIO <- prngGen 7
          case eitherSimConfig of
            Right simConfig -> do
