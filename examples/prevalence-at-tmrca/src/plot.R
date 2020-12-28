@@ -136,10 +136,10 @@ main <- function(args) {
   input_file <- args[1]
   if (file.exists(input_file)) {
     cat(sprintf("Reading configuration from file: %s\n", input_file))
-    input_file <- "app-config.json" # delete when finished!!!!!
-    simulation_lambda_val <- 2.0 # TODO fix this!!!!!
-    sim_duration <- 11.0
+    ## input_file <- "app-config.json" # delete when finished!!!!!
     app_config <- read_json(input_file)
+    simulation_lambda_val <- app_config$acSimulationRates[[1]]
+    sim_duration <- app_config$acStoppingTime
     epi_events_csv <- app_config$acEpiEventsCsv
     additional_vals <- read_json(app_config$acAdditionalJson)
     tmrca <- additional_vals$avTmrcaFromZero
