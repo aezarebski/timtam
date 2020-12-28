@@ -42,7 +42,7 @@ import Epidemic.Types.Population
   )
 import Epidemic.Utility (simulation')
 import GHC.Generics (Generic)
-import Numeric.MCMC.Metropolis (Chain(..), chain)
+import Numeric.MCMC.Metropolis (Chain(..), chain')
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
 import Text.Printf (printf)
@@ -101,12 +101,12 @@ main = do
               (Right tmrca) = tmrcaOfObservations (AbsoluteTime 0) =<< allObs
               (Right obsFromTmrca) =
                 restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
-              llhdFun = llhdFunc obsFromTmrca
+              (llhdFun, mGenQuantityFun) = llhdFunc obsFromTmrca
               mcmcConfig = acMCMCConfig appConfig
               numMcmcIters = mcmcNumIters mcmcConfig
               stepSd = mcmcStepSD mcmcConfig
               mcmcOutputCsv = mcmcOutputCSV mcmcConfig
-              variableNames = ["nbMean", "nbVar", "lambda"]
+              variableNames = ["nbMean", "nbVar", "lambda", "presentNb"]
               obsCsv = acObservationsCsv appConfig
               additionalJson = acAdditionalJson appConfig
               additionalValues = AdditionalValues tmrca
@@ -114,7 +114,13 @@ main = do
                  L.writeFile obsCsv (Csv.encode obsFromTmrca)
                  genIO <- prngGen (mcmcSeed mcmcConfig)
                  chainVals <-
-                   chain numMcmcIters stepSd [5.0, 7.0, 2.0] llhdFun genIO
+                   chain'
+                     numMcmcIters
+                     stepSd
+                     [5.0, 7.0, 2.0]
+                     llhdFun
+                     mGenQuantityFun
+                     genIO
                  printf "Writing MCMC samples to %s\n" mcmcOutputCsv
                  L.writeFile
                    mcmcOutputCsv
@@ -126,11 +132,16 @@ main = do
 -- | A bytestring representation of the MCMC samples.
 chainAsByteString ::
      [String] -- ^ the names of the elements of the chain
-  -> [Chain [Double] b] -- ^ the samples in the chain
+  -> [Chain [Double] NegativeBinomial] -- ^ the samples in the chain
   -> L.ByteString
 chainAsByteString varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
-      records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
+      records =
+        Csv.encode
+          [ let [m, v, l] = chainPosition cv
+             in (chainScore cv, m, v, l, chainTunables cv)
+          | cv <- chainVals
+          ]
       linebreak = singleton '\n'
    in mconcat [header, linebreak, records]
 
@@ -202,8 +213,15 @@ restartObservationsAtTmrca originTime obs = do
 
 -- | The likelihood of the parameters having given rise to the given
 -- observations which start from the TMRCA of the reconstructed tree.
-llhdFunc :: [Observation] -> [Double] -> LogLikelihood
-llhdFunc obsFromTmrca [m, v, l] =
-  let params = Parameters (l, 0.5, 0.3, Timed [], 0.5, Timed [])
-      llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
-   in fst $ llhdAndNB obsFromTmrca params llhdState
+llhdFunc ::
+     [Observation]
+  -> ([Double] -> LogLikelihood, Maybe ([Double] -> NegativeBinomial))
+llhdFunc obsFromTmrca =
+  ( \[m, v, l] ->
+      let params = Parameters (l, 0.5, 0.3, Timed [], 0.5, Timed [])
+          llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
+       in fst $ llhdAndNB obsFromTmrca params llhdState
+  , Just $ \[m, v, l] ->
+      let params = Parameters (l, 0.5, 0.3, Timed [], 0.5, Timed [])
+          llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
+       in snd $ llhdAndNB obsFromTmrca params llhdState)
