@@ -9,6 +9,18 @@ library(coda)
 
 GREEN_HEX_COLOUR <- "#7fc97f"
 
+lambda_posterior_figure <- function(lambda_samples_df, simulation_lambda_val) {
+  ggplot() +
+    geom_density(
+      data = lambda_samples_df,
+      mapping = aes(x = lambda, y = ..density..),
+      colour = GREEN_HEX_COLOUR
+    ) +
+    geom_vline(xintercept = simulation_lambda_val, linetype = "dashed") +
+    theme_classic() +
+    labs(x = "Birth rate: lambda", y = "Density")
+}
+
 #' Return a ggplot figure showing the estimates of the prevalence. This is a
 #' pure function.
 prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
@@ -58,8 +70,10 @@ prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
       colour = GREEN_HEX_COLOUR
     ) +
     scale_y_log10() +
-    labs(x = "Time since origin",
-         y = "Prevalence: LTT of transmission tree") +
+    labs(
+      x = "Time since origin",
+      y = "Prevalence: LTT of transmission tree"
+    ) +
     theme_classic()
 }
 
@@ -88,11 +102,13 @@ run_mcmc_diagnostics <- function(mcmc_df) {
   return(0)
 }
 
+
 main <- function(args) {
   input_file <- args[1]
   if (file.exists(input_file)) {
     cat(sprintf("Reading configuration from file: %s\n", input_file))
-    input_file <- "app-config.json"
+    input_file <- "app-config.json" # delete when finished!!!!!
+    simulation_lambda_val <- 2.0 # TODO fix this!!!!!
     app_config <- read_json(input_file)
     epi_events_csv <- app_config$acEpiEventsCsv
     additional_vals <- read_json(app_config$acAdditionalJson)
@@ -108,6 +124,9 @@ main <- function(args) {
 
     g <- prevalence_estimate_figure(epi_events_df, mcmc_df, tmrca)
     ggsave("out/prevalence-estimates.png", g)
+
+    lam_post_ggplot <- lambda_posterior_figure(select(mcmc_df, lambda), simulation_lambda_val)
+    ggsave("out/lambda-posterior.png", lam_post_ggplot)
   } else {
     stop(sprintf("Cannot find configuration file: %s", input_file))
   }
