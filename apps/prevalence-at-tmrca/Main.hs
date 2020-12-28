@@ -96,7 +96,7 @@ main = do
     (Just appConfig) -> do
       printf "Successfully read configuration file: %s\n" configFilePath
       let simDur = acStoppingTime appConfig
-          simRates = acSimulationRates appConfig
+          simRates@(_, simMu, simPsi, simRho) = acSimulationRates appConfig
       epidemicEvents <- simulateEpidemic simDur simRates
       case epidemicEvents of
         (Right epiEvents) -> do
@@ -107,7 +107,8 @@ main = do
               (Right tmrca) = tmrcaOfObservations (AbsoluteTime 0) =<< allObs
               (Right obsFromTmrca) =
                 restartObservationsAtTmrca (AbsoluteTime 0) =<< allObs
-              (llhdFun, mGenQuantityFun) = llhdFunc obsFromTmrca
+              (llhdFun, mGenQuantityFun) =
+                llhdFunc (simMu, simPsi, simRho) obsFromTmrca
               mcmcConfig = acMCMCConfig appConfig
               numMcmcIters = mcmcNumIters mcmcConfig
               stepSd = mcmcStepSD mcmcConfig
@@ -223,14 +224,17 @@ restartObservationsAtTmrca originTime obs = do
 -- | The likelihood of the parameters having given rise to the given
 -- observations which start from the TMRCA of the reconstructed tree.
 llhdFunc ::
-     [Observation]
+     (Rate, Rate, Rate)
+  -> [Observation]
   -> ([Double] -> LogLikelihood, Maybe ([Double] -> NegativeBinomial))
-llhdFunc obsFromTmrca =
+llhdFunc (rateMu, ratePsi, rateOmega) obsFromTmrca =
   ( \[m, v, l] ->
-      let params = Parameters (l, 0.5, 0.3, Timed [], 0.5, Timed [])
+      let params =
+            Parameters (l, rateMu, ratePsi, Timed [], rateOmega, Timed [])
           llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
        in fst $ llhdAndNB obsFromTmrca params llhdState
   , Just $ \[m, v, l] ->
-      let params = Parameters (l, 0.5, 0.3, Timed [], 0.5, Timed [])
+      let params =
+            Parameters (l, rateMu, ratePsi, Timed [], rateOmega, Timed [])
           llhdState = ((0, nbFromMAndV (m, v)), AbsoluteTime 0, 2)
        in snd $ llhdAndNB obsFromTmrca params llhdState)
