@@ -10,16 +10,16 @@ library(jsonlite)
 
 mcmc_config <- list(
   mcmcOutputCSV = "out/demoC.csv",
-  mcmcNumIters = 100,
+  mcmcNumIters = 500,
   mcmcStepSD = 0.1,
-  mcmcSeed = 7
+  mcmcSeed = 9
 )
 
 app_config <- list(
   acEpiEventsCsv = "out/demoA.csv",
   acObservationsCsv = "out/demoB.csv",
-  acStoppingTime = 11.0,
-  acSimulationRates = list(2.0, 0.5, 0.3, 0.5), # lambda, mu, psi, omega.
+  acStoppingTime = 13.0,
+  acSimulationRates = list(2.0, 0.9, 0.01, 0.39), # lambda, mu, psi, omega.
   acAdditionalJson = "out/demoD.json",
   acMCMCConfig = mcmc_config
 )
