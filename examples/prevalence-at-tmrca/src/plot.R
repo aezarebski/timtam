@@ -27,7 +27,7 @@ lambda_posterior_figure <- function(lambda_samples_df, simulation_lambda_val) {
 
 #' Return a ggplot figure showing the estimates of the prevalence. This is a
 #' pure function.
-prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
+prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca, sim_duration) {
   update_prev <- function(prev, event) {
     switch(EXPR = as.character(event),
       infection = prev + 1,
@@ -58,6 +58,21 @@ prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
     as.list() %>%
     as.data.frame()
 
+  present_prev_df <- mcmc_df %>%
+    select(present_nb_r, present_nb_p) %>%
+    mutate(
+      nbProb = 1 - present_nb_p,
+      nbSize = present_nb_r,
+      nbUpper95 = qnbinom(p = 0.975, size = nbSize, prob = nbProb),
+      nbMid = qnbinom(p = 0.5, size = nbSize, prob = nbProb),
+      nbLower95 = qnbinom(p = 0.025, size = nbSize, prob = nbProb),
+      present = sim_duration
+    ) %>%
+    colMeans() %>%
+    as.list() %>%
+    as.data.frame()
+
+
   ggplot() +
     geom_step(
       data = prev_df,
@@ -71,6 +86,16 @@ prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
     geom_point(
       data = tmrca_prev_df,
       mapping = aes(x = tmrca, y = nbMid),
+      colour = GREEN_HEX_COLOUR
+    ) +
+    geom_errorbar(
+      data = present_prev_df,
+      mapping = aes(x = present, ymin = nbLower95, ymax = nbUpper95),
+      colour = GREEN_HEX_COLOUR
+    ) +
+    geom_point(
+      data = present_prev_df,
+      mapping = aes(x = present, y = nbMid),
       colour = GREEN_HEX_COLOUR
     ) +
     scale_y_log10() +
@@ -113,21 +138,34 @@ main <- function(args) {
     cat(sprintf("Reading configuration from file: %s\n", input_file))
     input_file <- "app-config.json" # delete when finished!!!!!
     simulation_lambda_val <- 2.0 # TODO fix this!!!!!
+    sim_duration <- 11.0
     app_config <- read_json(input_file)
     epi_events_csv <- app_config$acEpiEventsCsv
     additional_vals <- read_json(app_config$acAdditionalJson)
     tmrca <- additional_vals$avTmrcaFromZero
     mcmc_csv <- app_config$acMCMCConfig$mcmcOutputCSV
+    ## we need to parse the present NB estimate out of the string representation
+    ## in the CSV.
     mcmc_df <- read.csv(mcmc_csv)
+    present_nb_params <- mcmc_df$presentNb %>%
+      str_split(" ") %>%
+      map(function(x) {
+        as.numeric(x[c(2, 3)])
+      }) %>%
+      transpose() %>%
+      map(unlist)
+    mcmc_df <- select(mcmc_df, llhd, nbMean, nbVar, lambda)
+    mcmc_df$present_nb_r <- present_nb_params[[1]]
+    mcmc_df$present_nb_p <- present_nb_params[[2]]
 
     epi_events_df <- read.csv(epi_events_csv, header = FALSE) %>%
       select(V1, V2) %>%
       set_names(c("event", "abs_time"))
 
-    run_mcmc_diagnostics(mcmc_df)
+    run_mcmc_diagnostics(select(mcmc_df, llhd, nbMean, nbVar, lambda))
     ## generate a figure of the LTT with the prevalence at tmrca estimate
     ## displayed since this is the novelty of this simulation study
-    g <- prevalence_estimate_figure(epi_events_df, mcmc_df, tmrca)
+    g <- prevalence_estimate_figure(epi_events_df, mcmc_df, tmrca, sim_duration)
     ggsave("out/prevalence-estimates.png", g)
     ## generate a figure of the posterior of lambda because this is important
     lam_post_ggplot <- lambda_posterior_figure(select(mcmc_df, lambda), simulation_lambda_val)
