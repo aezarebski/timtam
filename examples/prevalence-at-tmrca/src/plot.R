@@ -7,8 +7,12 @@ library(reshape2)
 library(jsonlite)
 library(coda)
 
+#' Make it easy for all of the figures to reference the correct colour hex code
+#' for estimated values.
 GREEN_HEX_COLOUR <- "#7fc97f"
 
+#' Return a ggplot figure showing the posterior distribution of the birth rate,
+#' lambda. This is a pure function.
 lambda_posterior_figure <- function(lambda_samples_df, simulation_lambda_val) {
   ggplot() +
     geom_density(
@@ -121,10 +125,11 @@ main <- function(args) {
       set_names(c("event", "abs_time"))
 
     run_mcmc_diagnostics(mcmc_df)
-
+    ## generate a figure of the LTT with the prevalence at tmrca estimate
+    ## displayed since this is the novelty of this simulation study
     g <- prevalence_estimate_figure(epi_events_df, mcmc_df, tmrca)
     ggsave("out/prevalence-estimates.png", g)
-
+    ## generate a figure of the posterior of lambda because this is important
     lam_post_ggplot <- lambda_posterior_figure(select(mcmc_df, lambda), simulation_lambda_val)
     ggsave("out/lambda-posterior.png", lam_post_ggplot)
   } else {
