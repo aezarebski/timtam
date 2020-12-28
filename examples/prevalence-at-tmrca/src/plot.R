@@ -7,7 +7,8 @@ library(reshape2)
 library(jsonlite)
 library(coda)
 
-#' Return a ggplot figure showing the estimates of the prevalence.
+#' Return a ggplot figure showing the estimates of the prevalence. This is a
+#' pure function.
 prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
   update_prev <- function(prev, event) {
     switch(EXPR = as.character(event),
@@ -57,7 +58,9 @@ prevalence_estimate_figure <- function(epi_events_df, mcmc_df, tmrca) {
 }
 
 
-#' Run some basic diagnostics over the MCMC samples and save the results.
+#' Run some basic diagnostics over the MCMC samples and save the results. This
+#' is not a pure function because this makes is much simpler to save the
+#' figures.
 run_mcmc_diagnostics <- function(mcmc_df) {
   mcmc_obj <- as.mcmc(mcmc_df)
 
