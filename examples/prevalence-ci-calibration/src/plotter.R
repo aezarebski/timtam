@@ -214,8 +214,8 @@ main <- function(args) {
       labs(x = "Sorted replicate number", y = "Prevalence") +
       theme_classic()
 
-    ggsave("replication-results-prevalence.png", g_prev)
-    ggsave("replication-results-prevalence.pdf", g_prev)
+    ggsave("out/replication-results-prevalence.png", g_prev)
+    ggsave("out/replication-results-prevalence.pdf", g_prev)
 
     g_prev_bias <- ggplot() +
       geom_point(
@@ -244,15 +244,15 @@ main <- function(args) {
         axis.ticks.x = element_blank()
       )
 
-    ggsave("replication-results-prevalence-bias.png", g_prev_bias)
-    ggsave("replication-results-prevalence-bias.pdf", g_prev_bias)
+    ggsave("out/replication-results-prevalence-bias.png", g_prev_bias)
+    ggsave("out/replication-results-prevalence-bias.pdf", g_prev_bias)
 
     ## We save a copy of this data frame because it is useful as a way to map
     ## between the prevalence estimates and the particular simulation seed that
     ## was used. This helps in debugging.
     write.table(
       x = plot_df,
-      file = "proportion-prevalence-in-ci.csv",
+      file = "out/proportion-prevalence-in-ci.csv",
       sep = ",",
       row.names = FALSE
     )
@@ -273,7 +273,7 @@ main <- function(args) {
     g_lambda <- ggplot(lambda_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$lambda, linetype = "dashed")
-    ggsave("replication-results-lambda.png", g_lambda)
+    ggsave("out/replication-results-lambda.png", g_lambda)
 
 
     psi_df <- params_df %>%
@@ -283,7 +283,7 @@ main <- function(args) {
     g_psi <- ggplot(psi_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$psi, linetype = "dashed")
-    ggsave("replication-results-psi.png", g_psi)
+    ggsave("out/replication-results-psi.png", g_psi)
 
 
     omega_df <- params_df %>%
@@ -293,7 +293,7 @@ main <- function(args) {
     g_omega <- ggplot(omega_df) +
       geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_hline(yintercept = sim_params$omega, linetype = "dashed")
-    ggsave("replication-results-omega.png", g_omega)
+    ggsave("out/replication-results-omega.png", g_omega)
 
     simulation_r_naught <- sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega)
     r_naught_df <- params_df %>%
@@ -312,11 +312,11 @@ main <- function(args) {
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()
       )
-    ggsave("replication-results-r-naught.png", g_r_naught)
-    ggsave("replication-results-r-naught.pdf", g_r_naught)
+    ggsave("out/replication-results-r-naught.png", g_r_naught)
+    ggsave("out/replication-results-r-naught.pdf", g_r_naught)
 
     ci_contains_r_naught <- r_naught_df$min <= simulation_r_naught & simulation_r_naught <= r_naught_df$max
-    sink("r-naught-in-ci.txt")
+    sink("out/r-naught-in-ci.txt")
     print((table(ci_contains_r_naught)))
     sink()
 
@@ -333,8 +333,8 @@ main <- function(args) {
       geom_hline(yintercept = 200, linetype = "dashed") +
       labs(x = "Replicate number", y = "Effective sample size", colour = "Parameter") +
       theme_classic()
-    ggsave("mcmc-ess.png", g_ess)
-    ggsave("mcmc-ess.pdf", g_ess)
+    ggsave("out/mcmc-ess.png", g_ess)
+    ggsave("out/mcmc-ess.pdf", g_ess)
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
