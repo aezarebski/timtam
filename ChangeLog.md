@@ -2,6 +2,10 @@
 
 ## 0.1.4.0
 
+- Replace `manceau-comparison` with an example looking at using data which
+  starts from the TMRCA rather than the origin.
+- Move the `MCMCConfiguration` type into `BDSCOD.Types` so it can be used in
+  multiple applications.
 - Add some orphan instances of useful typeclasses which are missing from the
   current version of `epi-sim`.
 - Update to `epi-sim-0.3.0.0` which is on github and remove the `Condition`

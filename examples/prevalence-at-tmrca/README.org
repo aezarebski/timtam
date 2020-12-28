@@ -1,0 +1,15 @@
+#+title: Prevalence at the TMRCA
+
+* Usage
+
+#+begin_src sh :tangle run.sh
+APP_CONFIG=app-config.json
+
+Rscript src/make-app-config.R $APP_CONFIG
+
+stack build
+stack exec -- prevalence-at-tmrca $APP_CONFIG
+
+Rscript src/plot.R $APP_CONFIG
+#+end_src
+
