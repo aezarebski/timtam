@@ -896,28 +896,36 @@ testIntervalLlhd =
               logmGF' = logPdeGF' params delay pdeSol
               logmTerm = logmGF' 1
           in not $ isNaN logmTerm
-        propertyPositiveDerivativeSoft (params, delay, k, nb) =
-          let z = 1
-              p0z = p0 params delay z
-              p0dashz = p0' params delay z
-           in p0dashz >= (-1e-10)
-        propertyPositiveDerivativeHard (params, delay, k, nb) =
-          let z = 1
-              p0z = p0 params delay z
-              p0dashz = p0' params delay z
-           in p0dashz >= (-1e-20)
         propertyOdeHelperNotNaN (params, delay, _, _) =
           let (x1,x2,disc,expFact) = odeHelpers params delay
               notNaN = not . isNaN
           in notNaN x1 && notNaN x2 && 0 < disc && 1 > expFact && x2 > x1
     it "resulting odeHelpers are not NaN" $ forAll qcIntervalLlhdArgs propertyOdeHelperNotNaN
-    it "resulting p0' is > -1e-10" $ forAll qcIntervalLlhdArgs propertyPositiveDerivativeSoft
-    it "resulting p0' is > -1e-20" $ forAll qcIntervalLlhdArgs propertyPositiveDerivativeHard
     it "resulting logmTerm from logPdeGF' is not NAN" $ forAll qcIntervalLlhdArgs propertyLogmTermNotNaN
     it "resulting logC from logPdeGF is not NAN" $ forAll qcIntervalLlhdArgs propertyLogCNotNaN
     it "resulting log(mean) from logPdeStatistics is not NAN" $ forAll qcIntervalLlhdArgs propertyPDEStatsNonNaN
     it "resulting NB is not NAN" $ forAll qcIntervalLlhdArgs propertyNBNotNaN
 
+testLogP0Dash :: SpecWith ()
+testLogP0Dash =
+  describe "Testing the logP0' function" $ do
+  let absTimeZero = AbsoluteTime 0
+      qcP0Args :: Gen (Parameters, TimeDelta, Probability)
+      qcP0Args = do
+        totalDuration <- qcRandomTimeDelta
+        params_ <- qcRandomParameters absTimeZero totalDuration
+        delay_ <- qcRandomSmallTimeDelta
+        z_ <- qcRandomProbability
+        return (params_, delay_, z_)
+      propertyLogValNotNaN (params_, delay_, z_) =
+        let logValue = logP0' params_ delay_ z_
+        in not $ isNaN logValue
+      propertyApproximateEquality (params, delay, z) =
+        let linearValue = p0' params delay z
+            logValue = logP0' params delay z
+        in withinDeltaOf 1e-10 (exp logValue) linearValue -- fails for smaller delta :)
+  it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
+  it "approximate equality to p0'" $ forAll qcP0Args propertyApproximateEquality
 
 main :: IO ()
 main = hspec $ do
@@ -946,3 +954,5 @@ main = hspec $ do
   testLogPdeStatistics
   testAggregation
   testIntervalLlhd
+  testLogP0Dash
+
