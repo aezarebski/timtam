@@ -27,6 +27,7 @@ module BDSCOD.Types
   , isBirth
   , isUnscheduledSequenced
   , isOccurrence
+  , nbMV2SP
   , numUnsequenced
   , numSequenced
   , NegativeBinomial(..)
@@ -43,6 +44,7 @@ import Data.Aeson
 import qualified Data.Aeson as Json
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as BBuilder
+import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
 import Data.List (intersperse)
@@ -248,19 +250,41 @@ numSequenced obs =
 data NegativeBinomial
   = Zero -- ^ A point mass at zero
   | NegBinomSizeProb Double Probability
+  | NegBinomMeanVar Double Double
   deriving (Show, Generic)
 
-instance Csv.ToField NegativeBinomial where
-  toField Zero = "Zero"
-  toField (NegBinomSizeProb r p) =
-    strictByteString . BBuilder.toLazyByteString . mconcat $
-    intersperse
-      del
-      [BBuilder.stringUtf8 "NB", BBuilder.doubleDec r, BBuilder.doubleDec p]
-    where
-      del = BBuilder.charUtf8 ' '
+-- | Being able to convert the mean and variance parameterisation into the
+-- standard size and probability parameterisation is useful but this is a
+-- partial function so we reserve the option of an error string.
+nbMV2SP :: NegativeBinomial -> Either String NegativeBinomial
+nbMV2SP nb =
+  case nb of
+    (NegBinomMeanVar 0 _) -> Right Zero
+    (NegBinomMeanVar m v) ->
+      if m > 0 && v >= m
+        then Right $ NegBinomSizeProb r p
+        else Left $ "nbMV2SP received bad input data: " ++ show (m, v)
+      where r = (m ** 2) / (v - m)
+            p = (v - m) / v
+    _ -> Right nb
 
-instance Csv.ToRecord NegativeBinomial
+instance Csv.ToField NegativeBinomial where
+  toField nb =
+    case nb of
+      Zero -> "Zero"
+      (NegBinomSizeProb r p) ->
+        strictByteString . BBuilder.toLazyByteString . mconcat $
+        intersperse
+          del
+          [ BBuilder.stringUtf8 "NBSizeProb"
+          , BBuilder.doubleDec r
+          , BBuilder.doubleDec p
+          ]
+        where del = BBuilder.charUtf8 ' '
+      (NegBinomMeanVar _ _) ->
+        case nbMV2SP nb of
+          Right negbinom -> Csv.toField negbinom
+          Left errMssg -> pack errMssg
 
 data PDESolution =
   PDESol NegativeBinomial NumLineages
