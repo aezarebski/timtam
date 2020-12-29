@@ -52,6 +52,8 @@ odeHelpers params (TimeDelta delay) = (x1,x2,disc,expFact)
 
 
 -- | The partial derivative of @p0@ with respect to its final argument @z@.
+--
+-- NOTE __do not__ use this function use @logP0'@ instead
 p0' :: Parameters -> TimeDelta -> Probability -> Double
 p0' params delay z =
   (expFact * x2 - x1) / (x2 - expFact * (x1 - z) - z) -
@@ -59,6 +61,18 @@ p0' params delay z =
   (x2 - expFact * (x1 - z) - z) ** 2.0
   where
     (x1, x2, _, expFact) = odeHelpers params delay
+
+-- | The log of the partial derivative of @p0@ with respect to @z@.
+--
+-- NOTE that this should avoid the numerical problems with @p0'@
+logP0' :: Parameters -> TimeDelta -> Probability -> Double
+logP0' params delay z =
+  log (cc * aa + x1 * x2 * (bb ** 2.0)) - 2 * log (aa - bb * z)
+  where
+    (x1, x2, _, expFact) = odeHelpers params delay
+    aa = x2 - x1 * expFact
+    bb = 1 - expFact
+    cc = x2 * expFact - x1
 
 -- | The second partial derivative of @p0@ with respect to its final argument
 -- @z@.
@@ -173,11 +187,11 @@ logPdeGF' params delay (PDESol nb k) z =
   logSumExp [firstTerm,secondTerm]
   where
     p0z = p0 params delay z
-    p0dashz = p0' params delay z
+    logP0DashZ = logP0' params delay z
     rz = rr params delay z
     rdashz = rr' params delay z
     firstTerm = logNbPGF' nb p0z +
-      log p0dashz +
+      logP0DashZ +
       k * log rz
     secondTerm = log k +
       (k-1) * log rz +
@@ -224,14 +238,14 @@ logPdeGF'' params delay (PDESol nb k) z =
     -- fdash = nbPGF' nb
     -- fdashdash = nbPGF'' nb
     p0z = p0 params delay z
-    p0dashz = p0' params delay z
+    logP0DashZ = logP0' params delay z
     p0dashdashz = p0'' params delay z
     rz = rr params delay z
     rdashz = rr' params delay z
     rdashdashz = rr'' params delay z
-    term1 = logNbPGF'' nb p0z + 2 * log p0dashz + k * log rz
+    term1 = logNbPGF'' nb p0z + 2 * logP0DashZ + k * log rz
     term2 = logNbPGF' nb p0z + log p0dashdashz + k * log rz
-    term3 = log 2 + logNbPGF' nb p0z + log p0dashz + log k + (k-1) * log rz + log rdashz
+    term3 = log 2 + logNbPGF' nb p0z + logP0DashZ + log k + (k-1) * log rz + log rdashz
     term4 = logNbPGF nb p0z + log k + log (k-1) + (k-2) * log rz + 2 * log rdashz
     term5 = logNbPGF nb p0z + log k + (k-1) * log rz + log rdashdashz
 
