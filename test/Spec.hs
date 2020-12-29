@@ -623,7 +623,7 @@ qcRandomNumLineages = do
 
 -- | Generate a random @Rate@
 qcRandomRate :: Gen Rate
-qcRandomRate = choose (1e-3, 1e2)
+qcRandomRate = choose (1e-3, 1e1)
 
 -- | Generate a random @Probability@
 qcRandomProbability :: Gen Probability
@@ -641,6 +641,12 @@ qcRandomNegBinomSizeProb = do
 qcRandomTimeDelta :: Gen TimeDelta
 qcRandomTimeDelta = do
   td <- qcRandomRate
+  return $ TimeDelta td
+
+-- | Generate a random __small__ @TimeDelta@
+qcRandomSmallTimeDelta :: Gen TimeDelta
+qcRandomSmallTimeDelta = do
+  td <- choose (1e-3,2)
   return $ TimeDelta td
 
 -- | Generate a list of absolute times that occur after the origin within the
@@ -662,11 +668,13 @@ qcRandomTimedX originTime duration x = do
 -- | Generate a random @Parameters@
 qcRandomParameters :: AbsoluteTime -> TimeDelta -> Gen Parameters
 qcRandomParameters originTime duration = do
-  randLambda <- qcRandomRate
+  -- randLambda <- qcRandomRate
   randMu <- qcRandomRate
   randPsi <- qcRandomRate
   randRho <- qcRandomProbability
   randOmega <- qcRandomRate
+  tmp <- choose (0.5,1.0)
+  let randLambda = (randMu + randPsi + randOmega) / tmp
   randNu <- qcRandomProbability
   randTimedRho <- qcRandomTimedX originTime duration randRho
   randTimedNu <- qcRandomTimedX originTime duration randNu
@@ -871,10 +879,43 @@ testIntervalLlhd =
         qcIntervalLlhdArgs = do
           totalDuration <- qcRandomTimeDelta
           params <- qcRandomParameters absTimeZero totalDuration
-          delay <- qcRandomTimeDelta
+          delay <- qcRandomSmallTimeDelta
           k <- qcRandomNumLineages
           nb <- qcRandomNegBinomSizeProb
           return (params, delay, k, nb)
+        propertyPDEStatsNonNaN (params, delay, k, nb) =
+          let (_,logm,_) = logPdeStatistics params delay (PDESol nb k)
+          in not $ isNaN logm
+        propertyLogCNotNaN (params, delay, k, nb) =
+          let pdeSol = PDESol nb k
+              logmGF = logPdeGF params delay pdeSol
+              logC = logmGF 1
+          in not $ isNaN logC
+        propertyLogmTermNotNaN (params, delay, k, nb) =
+          let pdeSol = PDESol nb k
+              logmGF' = logPdeGF' params delay pdeSol
+              logmTerm = logmGF' 1
+          in not $ isNaN logmTerm
+        propertyPositiveDerivativeSoft (params, delay, k, nb) =
+          let z = 1
+              p0z = p0 params delay z
+              p0dashz = p0' params delay z
+           in p0dashz >= (-1e-10)
+        propertyPositiveDerivativeHard (params, delay, k, nb) =
+          let z = 1
+              p0z = p0 params delay z
+              p0dashz = p0' params delay z
+           in p0dashz >= (-1e-20)
+        propertyOdeHelperNotNaN (params, delay, _, _) =
+          let (x1,x2,disc,expFact) = odeHelpers params delay
+              notNaN = not . isNaN
+          in notNaN x1 && notNaN x2 && 0 < disc && 1 > expFact && x2 > x1
+    it "resulting odeHelpers are not NaN" $ forAll qcIntervalLlhdArgs propertyOdeHelperNotNaN
+    it "resulting p0' is > -1e-10" $ forAll qcIntervalLlhdArgs propertyPositiveDerivativeSoft
+    it "resulting p0' is > -1e-20" $ forAll qcIntervalLlhdArgs propertyPositiveDerivativeHard
+    it "resulting logmTerm from logPdeGF' is not NAN" $ forAll qcIntervalLlhdArgs propertyLogmTermNotNaN
+    it "resulting logC from logPdeGF is not NAN" $ forAll qcIntervalLlhdArgs propertyLogCNotNaN
+    it "resulting log(mean) from logPdeStatistics is not NAN" $ forAll qcIntervalLlhdArgs propertyPDEStatsNonNaN
     it "resulting NB is not NAN" $ forAll qcIntervalLlhdArgs propertyNBNotNaN
 
 
