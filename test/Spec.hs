@@ -618,12 +618,12 @@ testMWCSeeding = do
 -- | Generate a random @NumLineages@
 qcRandomNumLineages :: Gen NumLineages
 qcRandomNumLineages = do
-  kDouble <- choose (1 + 1e-6, 1e3 :: Double)
+  kDouble <- choose (1 + 1e-6, 1e2 :: Double)
   return . fromIntegral $ round kDouble
 
 -- | Generate a random @Rate@
 qcRandomRate :: Gen Rate
-qcRandomRate = choose (1e-6, 1e6)
+qcRandomRate = choose (1e-3, 1e2)
 
 -- | Generate a random @Probability@
 qcRandomProbability :: Gen Probability
