@@ -247,12 +247,12 @@ numSequenced obs =
 -- but not the same as the one used by R which uses /1-p/ as the probability.
 data NegativeBinomial
   = Zero -- ^ A point mass at zero
-  | NegBinom Double Probability
+  | NegBinomSizeProb Double Probability
   deriving (Show, Generic)
 
 instance Csv.ToField NegativeBinomial where
   toField Zero = "Zero"
-  toField (NegBinom r p) =
+  toField (NegBinomSizeProb r p) =
     strictByteString . BBuilder.toLazyByteString . mconcat $
     intersperse
       del

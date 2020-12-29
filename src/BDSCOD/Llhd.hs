@@ -302,23 +302,23 @@ eventLlhd :: AbsoluteTime -- ^ Absolute time used to look up the parameter in th
           -> (LogLikelihood, NumLineages, NegativeBinomial)
 eventLlhd _ (Parameters (lam, _, _, _, _, _)) OBirth k nb = (log lam, k + 1, nb)
 eventLlhd _ (Parameters (_, _, psi, _, _, _)) ObsUnscheduledSequenced k nb = (log psi, k - 1, nb)
-eventLlhd _ (Parameters (_, _, _, _, om, _)) OOccurrence k nb@(NegBinom r p) =
-  (log om + logNbPGF' nb 1, k, NegBinom (r + 1) p)
-eventLlhd t (Parameters (_, _, _, Timed rhs, _, _)) (OCatastrophe n) k nb@(NegBinom r p) =
+eventLlhd _ (Parameters (_, _, _, _, om, _)) OOccurrence k nb@(NegBinomSizeProb r p) =
+  (log om + logNbPGF' nb 1, k, NegBinomSizeProb (r + 1) p)
+eventLlhd t (Parameters (_, _, _, Timed rhs, _, _)) (OCatastrophe n) k nb@(NegBinomSizeProb r p) =
   let maybeTRh = find ((== t) . fst) rhs
    in case maybeTRh of
         (Just (_,rh)) -> let logL = n * log rh + logNbPGF nb (1 - rh) + (k - n) * log (1 - rh)
                              in if isInfinite logL
                                 then error "numerical error: infinite logL in eventLlhd function while processing catastrophe"
-                                else (logL, k - n, NegBinom r ((1 - rh) * p))
+                                else (logL, k - n, NegBinomSizeProb r ((1 - rh) * p))
         Nothing -> error ("could not find a scheduled sequenced observation at time: " ++ show t)
-eventLlhd t (Parameters (_, _, _, _, _, Timed nus)) (ODisaster n) k nb@(NegBinom r p) =
+eventLlhd t (Parameters (_, _, _, _, _, Timed nus)) (ODisaster n) k nb@(NegBinomSizeProb r p) =
   let maybeTNu = find ((== t) . fst) nus
    in case maybeTNu of
         (Just (_,nu)) -> let logL = n * log nu + logNbPGFdash n nb (1 - nu) + k * log (1 - nu)
                          in if isInfinite logL
                             then error "numerical error: infinite logL in eventLlhd function while processing disaster"
-                            else (logL, k, NegBinom (r + n) ((1 - nu) * p))
+                            else (logL, k, NegBinomSizeProb (r + n) ((1 - nu) * p))
         Nothing -> error ("could not find a scheduled unsequenced observation at time: " ++ show t)
 eventLlhd _ (Parameters (_, _, _, _, _, _)) OOccurrence k Zero = (log 0, k, Zero)
 eventLlhd _ (Parameters (_, _, _, _, _, _)) (ODisaster _) k Zero = (log 0, k, Zero)

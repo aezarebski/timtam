@@ -94,31 +94,31 @@ testNbPGF = do
       nbPGF Zero 1.0 `shouldBe` 1
 
     it "known value of PGF is correct 4" $
-      nbPGF (NegBinom 1 0.5) 0.0 `shouldBe` 0.5
+      nbPGF (NegBinomSizeProb 1 0.5) 0.0 `shouldBe` 0.5
 
     it "known value of PGF is correct 5" $
-      nbPGF (NegBinom 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-6 (2.0 / 3.0))
+      nbPGF (NegBinomSizeProb 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-6 (2.0 / 3.0))
 
     it "known value of PGF is correct 5" $
-      nbPGF (NegBinom 1 0.5) 1.0 `shouldBe` 1.0
+      nbPGF (NegBinomSizeProb 1 0.5) 1.0 `shouldBe` 1.0
 
     it "PGF partial derivative seems correct 1" $
-      nbPGF' (NegBinom 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinom 1 0.5) x) 1.0))
+      nbPGF' (NegBinomSizeProb 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinomSizeProb 1 0.5) x) 1.0))
 
     it "PGF partial derivative seems correct 2" $
-      nbPGF' (NegBinom 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinom 1 0.5) x) 0.5))
+      nbPGF' (NegBinomSizeProb 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinomSizeProb 1 0.5) x) 0.5))
 
     it "PGF partial derivative seems correct 3" $
-      nbPGF' (NegBinom 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinom 1 0.5) x) 0.0))
+      nbPGF' (NegBinomSizeProb 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinomSizeProb 1 0.5) x) 0.0))
 
     it "PGF second partial derivative seems correct 1" $
-      nbPGF'' (NegBinom 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF' (NegBinom 1 0.5) x) 1.0))
+      nbPGF'' (NegBinomSizeProb 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF' (NegBinomSizeProb 1 0.5) x) 1.0))
 
     it "PGF second partial derivative seems correct 2" $
-      nbPGF'' (NegBinom 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinom 1 0.5) x) 0.5))
+      nbPGF'' (NegBinomSizeProb 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinomSizeProb 1 0.5) x) 0.5))
 
     it "PGF second partial derivative seems correct 3" $
-      nbPGF'' (NegBinom 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinom 1 0.5) x) 0.0))
+      nbPGF'' (NegBinomSizeProb 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinomSizeProb 1 0.5) x) 0.0))
 
   describe "Test nbPGF: 2" $ do
     it "test pochhammer and logPochhammer" $ do
@@ -128,19 +128,19 @@ testNbPGF = do
       all pochhammersWorking [(a+0.1,b) | a <- [1..10], b <- [1..10], a <= b] `shouldBe` True
 
     it "test nbPGFdash and logNbPGFdash" $ do
-      let nbPGFdashWorking (j,r,p,z) = withinDeltaOf 1e-5 (log $ nbPGFdash j (NegBinom r p) z) (logNbPGFdash j (NegBinom r p) z)
+      let nbPGFdashWorking (j,r,p,z) = withinDeltaOf 1e-5 (log $ nbPGFdash j (NegBinomSizeProb r p) z) (logNbPGFdash j (NegBinomSizeProb r p) z)
       all nbPGFdashWorking [(j,r,p,z) | j <- [2..50], r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
     it "test nbPGF and logNbPGF" $ do
-      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF (NegBinom r p) z) (logNbPGF (NegBinom r p) z)
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF (NegBinomSizeProb r p) z) (logNbPGF (NegBinomSizeProb r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
     it "test nbPGF' and logNbPGF'" $ do
-      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF' (NegBinom r p) z) (logNbPGF' (NegBinom r p) z)
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF' (NegBinomSizeProb r p) z) (logNbPGF' (NegBinomSizeProb r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
     it "test nbPGF'' and logNbPGF''" $ do
-      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF'' (NegBinom r p) z) (logNbPGF'' (NegBinom r p) z)
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF'' (NegBinomSizeProb r p) z) (logNbPGF'' (NegBinomSizeProb r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
 testLogPdeGF1 = do
@@ -414,7 +414,7 @@ testPdeStatistics = do
         m'' < v'' `shouldBe` True
 
     it "Properties 3" $
-      let (c,m,v) = pdeStatistics (Parameters (2.0,1.0,0.5, Timed [(AbsoluteTime 1000,0.5)],0.4,Timed [])) (TimeDelta 2.0) (PDESol (NegBinom 3.9 0.5) 1.0)
+      let (c,m,v) = pdeStatistics (Parameters (2.0,1.0,0.5, Timed [(AbsoluteTime 1000,0.5)],0.4,Timed [])) (TimeDelta 2.0) (PDESol (NegBinomSizeProb 3.9 0.5) 1.0)
        in do
         c > 0 `shouldBe` True
         m > 0 `shouldBe` True

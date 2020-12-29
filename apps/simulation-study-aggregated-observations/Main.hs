@@ -545,7 +545,7 @@ chainAsByteString' varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
       nbParams cv =
         case chainTunables cv of
-          Just (NegBinom r p) -> [r, p]
+          Just (NegBinomSizeProb r p) -> [r, p]
           Just Zero -> [0, 0]
           Nothing -> [-1, -1]
       records =
