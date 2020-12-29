@@ -617,34 +617,47 @@ testMWCSeeding = do
 
 -- | Generate a random @NumLineages@
 qcRandomNumLineages :: Gen NumLineages
-qcRandomNumLineages = undefined
+qcRandomNumLineages = do
+  kDouble <- choose (1 + 1e-6, 1e3 :: Double)
+  return . fromIntegral $ round kDouble
 
 -- | Generate a random @Rate@
 qcRandomRate :: Gen Rate
-qcRandomRate = undefined
+qcRandomRate = choose (1e-6, 1e6)
 
 -- | Generate a random @Probability@
 qcRandomProbability :: Gen Probability
-qcRandomProbability = undefined
+qcRandomProbability = choose (0, 1)
 
 -- | Generate a random @NegativeBinomial@ using @NegBinomSizeProb@ /not/ any
 -- other constructor.
 qcRandomNegBinomSizeProb :: Gen NegativeBinomial
-qcRandomNegBinomSizeProb = undefined
+qcRandomNegBinomSizeProb = do
+  r <- qcRandomRate
+  p <- qcRandomProbability
+  return $ NegBinomSizeProb r p
 
 -- | Generate a random @TimeDelta@
 qcRandomTimeDelta :: Gen TimeDelta
-qcRandomTimeDelta = undefined
+qcRandomTimeDelta = do
+  td <- qcRandomRate
+  return $ TimeDelta td
 
 -- | Generate a list of absolute times that occur after the origin within the
 -- duration.
-qcRandomAbsoluteTimes :: AbsoluteTime -> TimeDelta -> Gen [AbsoluteTime]
-qcRandomAbsoluteTimes originTime duration = undefined
+qcRandomOrderedAbsTimes :: AbsoluteTime -> TimeDelta -> Gen [AbsoluteTime]
+qcRandomOrderedAbsTimes (AbsoluteTime a) (TimeDelta d) = do
+  times <- listOf1 $ choose (a, a + d)
+  return [AbsoluteTime t | t <- sort times]
 
 -- | Generate a random @Timed x@ from the start time and the duration and the
 -- constant value to store at each time.
-qcRandomTimedX :: AbsoluteTime -> TimeDelta -> x -> Gen (Timed x)
-qcRandomTimedX originTime duration = undefined
+qcRandomTimedX :: Num x => AbsoluteTime -> TimeDelta -> x -> Gen (Timed x)
+qcRandomTimedX originTime duration x = do
+  absTimes <- qcRandomOrderedAbsTimes originTime duration
+  case asTimed (zip absTimes (repeat x)) of
+    Just timedVals -> return timedVals
+    Nothing -> qcRandomTimedX originTime duration x
 
 -- | Generate a random @Parameters@
 qcRandomParameters :: AbsoluteTime -> TimeDelta -> Gen Parameters
@@ -657,29 +670,31 @@ qcRandomParameters originTime duration = do
   randNu <- qcRandomProbability
   randTimedRho <- qcRandomTimedX originTime duration randRho
   randTimedNu <- qcRandomTimedX originTime duration randNu
-  return $ Parameters (randLambda, randMu, randPsi, randTimedRho, randOmega, randTimedNu)
+  return $
+    Parameters
+      (randLambda, randMu, randPsi, randTimedRho, randOmega, randTimedNu)
 
 -- | Generate a random @ObservedEvent@
 qcRandomObservedEvent :: Gen ObservedEvent
 qcRandomObservedEvent = do
   isUnscheduled <- chooseAny
   if isUnscheduled
-    then elements [OBirth,ObsUnscheduledSequenced,OOccurrence]
-    else do isSequenced <- chooseAny
-            numLineages <- suchThat chooseAny (>0)
-            if isSequenced
-              then return (OCatastrophe numLineages)
-              else return (ODisaster numLineages)
-
+    then elements [OBirth, ObsUnscheduledSequenced, OOccurrence]
+    else do
+      isSequenced <- chooseAny
+      numLineages <- suchThat chooseAny (> 0)
+      if isSequenced
+        then return (OCatastrophe numLineages)
+        else return (ODisaster numLineages)
 
 -- | Generate a random list of @observation@ values
 qcRandomObservations :: Gen [Observation]
 qcRandomObservations = do
-  durationDouble <- suchThat chooseAny (>0) :: Gen Double
-  eventAbsTimesDoubles <- listOf1 (choose (0,durationDouble))
+  durationDouble <- suchThat chooseAny (> 0) :: Gen Double
+  eventAbsTimesDoubles <- listOf1 (choose (0, durationDouble))
   let duration = TimeDelta durationDouble
       eventAbsTimes = [AbsoluteTime t | t <- eventAbsTimesDoubles]
-  let eats = sort ((AbsoluteTime 0):eventAbsTimes)
+  let eats = sort ((AbsoluteTime 0) : eventAbsTimes)
       timeDeltas = [timeDelta a b | (a, b) <- zip (init eats) (tail eats)]
       numEvents = length eventAbsTimes
   eventTypes <- vectorOf numEvents qcRandomObservedEvent
@@ -850,11 +865,18 @@ testIntervalLlhd =
           let (_, nb') = intervalLlhd params delay k nb
               (m, _) = mAndVFromNb nb'
            in not $ isNaN m
+        absTimeZero = AbsoluteTime 0
         qcIntervalLlhdArgs ::
              Gen (Parameters, TimeDelta, NumLineages, NegativeBinomial)
-        qcIntervalLlhdArgs = undefined
+        qcIntervalLlhdArgs = do
+          totalDuration <- qcRandomTimeDelta
+          params <- qcRandomParameters absTimeZero totalDuration
+          delay <- qcRandomTimeDelta
+          k <- qcRandomNumLineages
+          nb <- qcRandomNegBinomSizeProb
+          return (params, delay, k, nb)
     it "resulting NB is not NAN" $ forAll qcIntervalLlhdArgs propertyNBNotNaN
-  
+
 
 main :: IO ()
 main = hspec $ do
