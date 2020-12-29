@@ -282,9 +282,9 @@ logPdeStatistics params delay pdeSol@PDESol{} =
 
 intervalLlhd :: Parameters
              -> TimeDelta
-             -> Double
+             -> NumLineages
              -> NegativeBinomial
-             -> (Probability, NegativeBinomial)
+             -> (LogLikelihood, NegativeBinomial)
 intervalLlhd params delay k nb =
   let (logC, logm, logV) = logPdeStatistics params delay (PDESol nb k)
       nb' = nbFromMAndV (exp logm, exp logV)
