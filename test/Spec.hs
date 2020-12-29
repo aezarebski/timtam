@@ -907,25 +907,43 @@ testIntervalLlhd =
     it "resulting NB is not NAN" $ forAll qcIntervalLlhdArgs propertyNBNotNaN
 
 testLogP0Dash :: SpecWith ()
-testLogP0Dash =
+testLogP0Dash = do
   describe "Testing the logP0' function" $ do
-  let absTimeZero = AbsoluteTime 0
-      qcP0Args :: Gen (Parameters, TimeDelta, Probability)
-      qcP0Args = do
-        totalDuration <- qcRandomTimeDelta
-        params_ <- qcRandomParameters absTimeZero totalDuration
-        delay_ <- qcRandomSmallTimeDelta
-        z_ <- qcRandomProbability
-        return (params_, delay_, z_)
-      propertyLogValNotNaN (params_, delay_, z_) =
-        let logValue = logP0' params_ delay_ z_
-        in not $ isNaN logValue
-      propertyApproximateEquality (params, delay, z) =
-        let linearValue = p0' params delay z
-            logValue = logP0' params delay z
-        in withinDeltaOf 1e-10 (exp logValue) linearValue -- fails for smaller delta :)
-  it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
-  it "approximate equality to p0'" $ forAll qcP0Args propertyApproximateEquality
+    let absTimeZero = AbsoluteTime 0
+        qcP0Args :: Gen (Parameters, TimeDelta, Probability)
+        qcP0Args = do
+          totalDuration <- qcRandomTimeDelta
+          params_ <- qcRandomParameters absTimeZero totalDuration
+          delay_ <- qcRandomSmallTimeDelta
+          z_ <- qcRandomProbability
+          return (params_, delay_, z_)
+        propertyLogValNotNaN (params_, delay_, z_) =
+          let logValue = logP0' params_ delay_ z_
+          in not $ isNaN logValue
+        propertyApproximateEquality (params, delay, z) =
+          let linearValue = p0' params delay z
+              logValue = logP0' params delay z
+          in withinDeltaOf 1e-10 (exp logValue) linearValue -- fails for smaller delta :)
+    it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
+    it "approximate equality to p0'" $ forAll qcP0Args propertyApproximateEquality
+  describe "Testing the logP0'' function" $ do
+    let absTimeZero = AbsoluteTime 0
+        qcP0Args :: Gen (Parameters, TimeDelta, Probability)
+        qcP0Args = do
+          totalDuration <- qcRandomTimeDelta
+          params_ <- qcRandomParameters absTimeZero totalDuration
+          delay_ <- qcRandomSmallTimeDelta
+          z_ <- qcRandomProbability
+          return (params_, delay_, z_)
+        propertyLogValNotNaN (params_, delay_, z_) =
+          let logValue = logP0'' params_ delay_ z_
+          in not $ isNaN logValue
+        propertyApproximateEquality (params, delay, z) =
+          let linearValue = p0'' params delay z
+              logValue = logP0'' params delay z
+          in withinDeltaOf 1e-10 (exp logValue) linearValue
+    it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
+    it "approximate equality to p0''" $ forAll qcP0Args propertyApproximateEquality
 
 main :: IO ()
 main = hspec $ do
