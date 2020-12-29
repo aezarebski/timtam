@@ -560,48 +560,6 @@ tmpIsSampling e = case e of
   Sampling{} -> True
   _ -> False
 
--- | Simulate from the birth-death-sampling process multiple times and use this
--- to estimate the CI of probability the process is unobserved then check that
--- this matches the function which computes this probability.
-
--- bdsSimulations :: (Rate, Rate, Rate) -> TimeDelta -> IO Bool 
--- bdsSimulations simRates simDuration@(TimeDelta sdDouble) =
---   let simConfig = EpiBDS.configuration simDuration simRates
---       probUnobservedVals =
---         map
---           (\x -> probabilityUnobserved simRates (TimeDelta (sdDouble + x)))
---           [-0.1, 0.0, 0.1]
---       probUnobserved = probUnobservedVals !! 1
---       numReplicates = 1000
---       numObservations = length . filter tmpIsSampling
---       phat ns =
---         (fromIntegral . length $ filter (> 0) ns) / (fromIntegral (length ns))
---       probCI ns = (ph - d, ph + d)
---         where
---           ph = phat ns
---           n = fromIntegral $ length ns
---           d = 3 * sqrt (ph * (1 - ph) / n)
---    in do sims <-
---            replicateM
---              numReplicates
---              (EpiUtil.simulationWithSystemRandom
---                 False
---                 simConfig
---                 EpiBDS.allEvents)
---          (a, b) <- pure . probCI $ map numObservations sims
---          return $ a < (1 - probUnobserved) && (1 - probUnobserved) < b
-
--- testConditioningProbability :: SpecWith ()
--- testConditioningProbability =
---   describe "Test probability of going unobserved is correct" $ do
---     it "Test empirical estimate has CI containing value" $ do
---       x <- bdsSimulations (2.0,0.4,0.1) 0.7
---       x `shouldBe` True
---       x' <- bdsSimulations (2.0,0.1,0.4) 0.7
---       x' `shouldBe` True
---       x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
---       x'' `shouldBe` True
-
 testHmatrixUsage :: SpecWith ()
 testHmatrixUsage =
   describe "Testing hmatrix-gsl usage" $
@@ -657,6 +615,49 @@ testMWCSeeding = do
       (z1 /= w1) `shouldBe` True
 
 
+-- | Generate a random @NumLineages@
+qcRandomNumLineages :: Gen NumLineages
+qcRandomNumLineages = undefined
+
+-- | Generate a random @Rate@
+qcRandomRate :: Gen Rate
+qcRandomRate = undefined
+
+-- | Generate a random @Probability@
+qcRandomProbability :: Gen Probability
+qcRandomProbability = undefined
+
+-- | Generate a random @NegativeBinomial@ using @NegBinomSizeProb@ /not/ any
+-- other constructor.
+qcRandomNegBinomSizeProb :: Gen NegativeBinomial
+qcRandomNegBinomSizeProb = undefined
+
+-- | Generate a random @TimeDelta@
+qcRandomTimeDelta :: Gen TimeDelta
+qcRandomTimeDelta = undefined
+
+-- | Generate a list of absolute times that occur after the origin within the
+-- duration.
+qcRandomAbsoluteTimes :: AbsoluteTime -> TimeDelta -> Gen [AbsoluteTime]
+qcRandomAbsoluteTimes originTime duration = undefined
+
+-- | Generate a random @Timed x@ from the start time and the duration and the
+-- constant value to store at each time.
+qcRandomTimedX :: AbsoluteTime -> TimeDelta -> x -> Gen (Timed x)
+qcRandomTimedX originTime duration = undefined
+
+-- | Generate a random @Parameters@
+qcRandomParameters :: AbsoluteTime -> TimeDelta -> Gen Parameters
+qcRandomParameters originTime duration = do
+  randLambda <- qcRandomRate
+  randMu <- qcRandomRate
+  randPsi <- qcRandomRate
+  randRho <- qcRandomProbability
+  randOmega <- qcRandomRate
+  randNu <- qcRandomProbability
+  randTimedRho <- qcRandomTimedX originTime duration randRho
+  randTimedNu <- qcRandomTimedX originTime duration randNu
+  return $ Parameters (randLambda, randMu, randPsi, randTimedRho, randOmega, randTimedNu)
 
 -- | Generate a random @ObservedEvent@
 qcRandomObservedEvent :: Gen ObservedEvent
@@ -746,57 +747,120 @@ allWithinDeltaOfObs _ _ _ = False
 
 
 testAggregation :: SpecWith ()
-testAggregation = do
+testAggregation =
   describe "Testing Aggregation" $ do
     let smallDelta = 1e-4
         tinyDelta = TimeDelta 1e-6
         duration obs = AbsoluteTime $ sum [t | (TimeDelta t, _) <- obs]
         multiplyAbsTime a (AbsoluteTime x) = AbsoluteTime (a * x)
-        propertyRemoveSeq obs = let dur = duration obs
-                                    ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] []
-                                    (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                in  not $ any isUnscheduledSequenced obs'
-        propertyRemoveUnseq obs = let dur = duration obs
-                                      ats = fromJust $ maybeAggregationTimes [] [timeAfterDelta dur tinyDelta]
-                                      (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                  in  not $ any isOccurrence obs'
-        propertyRemoveUnsched1 obs = let dur = duration obs
-                                         ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] [timeAfterDelta (timeAfterDelta dur tinyDelta) (TimeDelta 1.0)]
-                                         (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                     in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
-        propertyRemoveUnsched2 obs = let dur = duration obs
-                                         ats = fromJust $ maybeAggregationTimes [multiplyAbsTime 0.4 dur] [multiplyAbsTime 0.5 dur]
-                                         (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                     in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
-        propertyBirthsRemain obs = let dur = duration obs
-                                       numBs = length $ filter isBirth obs
-                                       ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] [timeAfterDelta (timeAfterDelta dur tinyDelta) (TimeDelta 1.0)]
-                                       (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                       numBs' = length $ filter isBirth obs'
-                                   in numBs == numBs'
-        propertyLineagesConst os = let dur = duration os
-                                       numSeq = sum $ map numSequenced os
-                                       numUnseq = sum $ map numUnsequenced os
-                                       ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] [timeAfterDelta (timeAfterDelta dur tinyDelta) (TimeDelta 1.0)]
-                                       (AggregatedObservations _ os') = aggregateUnscheduledObservations ats os
-                                       numSeq' = sum $ map numSequenced os'
-                                       numUnseq' = sum $ map numUnsequenced os'
-                                   in withinDeltaOf smallDelta numSeq numSeq' && withinDeltaOf smallDelta numUnseq numUnseq'
-    it "sequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveSeq
-    it "unsequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveUnseq
-    it "aggregating both removes all relevent observations 1" $ forAll qcRandomObservations propertyRemoveUnsched1
-    it "aggregating both removes all relevent observations 2" $ forAll qcRandomObservations propertyRemoveUnsched2
-    it "aggregating leaves birth observations unchanged" $ forAll qcRandomObservations propertyBirthsRemain
-    it "aggregating leaves the number of observed lineages unchanged" $ forAll qcRandomObservations propertyLineagesConst
+        propertyRemoveSeq obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes [timeAfterDelta dur tinyDelta] []
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not $ any isUnscheduledSequenced obs'
+        propertyRemoveUnseq obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes [] [timeAfterDelta dur tinyDelta]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not $ any isOccurrence obs'
+        propertyRemoveUnsched1 obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [timeAfterDelta dur tinyDelta]
+                  [ timeAfterDelta
+                      (timeAfterDelta dur tinyDelta)
+                      (TimeDelta 1.0)
+                  ]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not (any isOccurrence obs') &&
+              not (any isUnscheduledSequenced obs')
+        propertyRemoveUnsched2 obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [multiplyAbsTime 0.4 dur]
+                  [multiplyAbsTime 0.5 dur]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not (any isOccurrence obs') &&
+              not (any isUnscheduledSequenced obs')
+        propertyBirthsRemain obs =
+          let dur = duration obs
+              numBs = length $ filter isBirth obs
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [timeAfterDelta dur tinyDelta]
+                  [ timeAfterDelta
+                      (timeAfterDelta dur tinyDelta)
+                      (TimeDelta 1.0)
+                  ]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+              numBs' = length $ filter isBirth obs'
+           in numBs == numBs'
+        propertyLineagesConst os =
+          let dur = duration os
+              numSeq = sum $ map numSequenced os
+              numUnseq = sum $ map numUnsequenced os
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [timeAfterDelta dur tinyDelta]
+                  [ timeAfterDelta
+                      (timeAfterDelta dur tinyDelta)
+                      (TimeDelta 1.0)
+                  ]
+              (AggregatedObservations _ os') =
+                aggregateUnscheduledObservations ats os
+              numSeq' = sum $ map numSequenced os'
+              numUnseq' = sum $ map numUnsequenced os'
+           in withinDeltaOf smallDelta numSeq numSeq' &&
+              withinDeltaOf smallDelta numUnseq numUnseq'
+    it "sequenced aggregation removes all such unscheduled observations" $
+      forAll qcRandomObservations propertyRemoveSeq
+    it "unsequenced aggregation removes all such unscheduled observations" $
+      forAll qcRandomObservations propertyRemoveUnseq
+    it "aggregating both removes all relevent observations 1" $
+      forAll qcRandomObservations propertyRemoveUnsched1
+    it "aggregating both removes all relevent observations 2" $
+      forAll qcRandomObservations propertyRemoveUnsched2
+    it "aggregating leaves birth observations unchanged" $
+      forAll qcRandomObservations propertyBirthsRemain
+    it "aggregating leaves the number of observed lineages unchanged" $
+      forAll qcRandomObservations propertyLineagesConst
 
 
+
+
+testIntervalLlhd :: SpecWith ()
+testIntervalLlhd =
+  describe "Testing the intervalLlhd function" $ do
+    let propertyNBNotNaN (params, delay, k, nb) =
+          let (_, nb') = intervalLlhd params delay k nb
+              (m, _) = mAndVFromNb nb'
+           in not $ isNaN m
+        qcIntervalLlhdArgs ::
+             Gen (Parameters, TimeDelta, NumLineages, NegativeBinomial)
+        qcIntervalLlhdArgs = undefined
+    it "resulting NB is not NAN" $ forAll qcIntervalLlhdArgs propertyNBNotNaN
+  
 
 main :: IO ()
 main = hspec $ do
   -- ** slow tests **
-  testNbPGF
-  testHmatrixUsage
-  -- testConditioningProbability
+  -- testNbPGF
+  -- testHmatrixUsage
   -- ** fast tests **
   testTestingHelpers
   testPdeStatistics
@@ -809,12 +873,13 @@ main = hspec $ do
   testInhomBDSLlhd
   testParameterUpdate
   testMWCSeeding
-  testLogPdeGF1
-  testLogPdeGF2
-  testLogPdeGFDash1
-  testLogPdeGFDash2
-  testLogPdeGFDashDash1
-  testLogPdeGFDashDash2
-  testLogSumExp
+  -- testLogPdeGF1
+  -- testLogPdeGF2
+  -- testLogPdeGFDash1
+  -- testLogPdeGFDash2
+  -- testLogPdeGFDashDash1
+  -- testLogPdeGFDashDash2
+  -- testLogSumExp
   testLogPdeStatistics
   testAggregation
+  testIntervalLlhd
