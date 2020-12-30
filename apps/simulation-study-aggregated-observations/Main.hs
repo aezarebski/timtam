@@ -512,8 +512,10 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
               , [(rt, p1) | rt <- stRhoTimes]
               , 0
               , [(nt, p2) | nt <- stNuTimes])
-          -- logPost x@([r1,p1,p2]) = llhd - lnNotExtinct where llhd = fst $ llhdAndNB obs (listAsParams x) initLlhdState; lnNotExtinct = log (r1 - (p1 + p2 + deathRate)) - log r1
-          logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
+          logPost :: [Double] -> Double
+          logPost x@[r1, p1, p2] = if r1 > 0 && 0 < p1 && p1 < 1 && 0 < p2 && p2 < 1
+                                   then fst $ llhdAndNB obs (listAsParams x) initLlhdState
+                                   else (-1/0)
           prngSeed = mcmcSeed mcmcConfig
           maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
