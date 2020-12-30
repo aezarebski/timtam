@@ -52,6 +52,8 @@ odeHelpers params (TimeDelta delay) = (x1,x2,disc,expFact)
 
 
 -- | The partial derivative of @p0@ with respect to its final argument @z@.
+--
+-- NOTE __do not__ use this function use @logP0'@ instead
 p0' :: Parameters -> TimeDelta -> Probability -> Double
 p0' params delay z =
   (expFact * x2 - x1) / (x2 - expFact * (x1 - z) - z) -
@@ -60,8 +62,22 @@ p0' params delay z =
   where
     (x1, x2, _, expFact) = odeHelpers params delay
 
+-- | The log of the partial derivative of @p0@ with respect to @z@.
+--
+-- NOTE that this should avoid the numerical problems with @p0'@
+logP0' :: Parameters -> TimeDelta -> Probability -> Double
+logP0' params delay z =
+  log (cc * aa + x1 * x2 * (bb ** 2.0)) - 2 * log (aa - bb * z)
+  where
+    (x1, x2, _, expFact) = odeHelpers params delay
+    aa = x2 - x1 * expFact
+    bb = 1 - expFact
+    cc = x2 * expFact - x1
+
 -- | The second partial derivative of @p0@ with respect to its final argument
 -- @z@.
+--
+-- NOTE __do not__ use this function use @logP0''@ instead
 p0'' :: Parameters -> TimeDelta -> Probability -> Double
 p0'' params delay z =
   (2 * (expFact - 1) ** 2.0 * (x1 * (x2 - z) -
@@ -71,6 +87,19 @@ p0'' params delay z =
   / (x2 - expFact * (x1 - z) - z) ** 2.0
   where
     (x1, x2, _, expFact) = odeHelpers params delay
+
+-- | The second partial derivative of @p0@ with respect to its final argument
+-- @z@.
+--
+-- NOTE that this should avoid the numerical problems with @p0''@
+logP0'' :: Parameters -> TimeDelta -> Probability -> Double
+logP0'' params delay z =
+  log 2.0 + log bb + log (cc * aa + x1 * x2 * (bb ** 2.0)) - 3.0 * log (aa - bb * z)
+  where
+    (x1, x2, _, expFact) = odeHelpers params delay
+    aa = x2 - x1 * expFact
+    bb = 1 - expFact
+    cc = x2 * expFact - x1
 
 rr' :: Parameters -> TimeDelta -> Probability -> Double
 rr' params@(Parameters (lam, _, _, _, _, _)) delay z =
@@ -173,11 +202,11 @@ logPdeGF' params delay (PDESol nb k) z =
   logSumExp [firstTerm,secondTerm]
   where
     p0z = p0 params delay z
-    p0dashz = p0' params delay z
+    logP0DashZ = logP0' params delay z
     rz = rr params delay z
     rdashz = rr' params delay z
     firstTerm = logNbPGF' nb p0z +
-      log p0dashz +
+      logP0DashZ +
       k * log rz
     secondTerm = log k +
       (k-1) * log rz +
@@ -224,14 +253,14 @@ logPdeGF'' params delay (PDESol nb k) z =
     -- fdash = nbPGF' nb
     -- fdashdash = nbPGF'' nb
     p0z = p0 params delay z
-    p0dashz = p0' params delay z
-    p0dashdashz = p0'' params delay z
+    logP0DashZ = logP0' params delay z
+    logP0DashDashZ = logP0'' params delay z
     rz = rr params delay z
     rdashz = rr' params delay z
     rdashdashz = rr'' params delay z
-    term1 = logNbPGF'' nb p0z + 2 * log p0dashz + k * log rz
-    term2 = logNbPGF' nb p0z + log p0dashdashz + k * log rz
-    term3 = log 2 + logNbPGF' nb p0z + log p0dashz + log k + (k-1) * log rz + log rdashz
+    term1 = logNbPGF'' nb p0z + 2 * logP0DashZ + k * log rz
+    term2 = logNbPGF' nb p0z + logP0DashDashZ + k * log rz
+    term3 = log 2 + logNbPGF' nb p0z + logP0DashZ + log k + (k-1) * log rz + log rdashz
     term4 = logNbPGF nb p0z + log k + log (k-1) + (k-2) * log rz + 2 * log rdashz
     term5 = logNbPGF nb p0z + log k + (k-1) * log rz + log rdashdashz
 
@@ -282,13 +311,15 @@ logPdeStatistics params delay pdeSol@PDESol{} =
 
 intervalLlhd :: Parameters
              -> TimeDelta
-             -> Double
+             -> NumLineages
              -> NegativeBinomial
-             -> (Probability, NegativeBinomial)
+             -> (LogLikelihood, NegativeBinomial)
 intervalLlhd params delay k nb =
   let (logC, logm, logV) = logPdeStatistics params delay (PDESol nb k)
       nb' = nbFromMAndV (exp logm, exp logV)
-    in (logC, nb')
+    in if not (isNaN (exp logm) && isNaN (exp logV))
+       then (logC, nb')
+       else error $ "numerical error in intervalLlhd: " ++ show (params, delay, k, nb)
 
 
 
@@ -302,23 +333,23 @@ eventLlhd :: AbsoluteTime -- ^ Absolute time used to look up the parameter in th
           -> (LogLikelihood, NumLineages, NegativeBinomial)
 eventLlhd _ (Parameters (lam, _, _, _, _, _)) OBirth k nb = (log lam, k + 1, nb)
 eventLlhd _ (Parameters (_, _, psi, _, _, _)) ObsUnscheduledSequenced k nb = (log psi, k - 1, nb)
-eventLlhd _ (Parameters (_, _, _, _, om, _)) OOccurrence k nb@(NegBinom r p) =
-  (log om + logNbPGF' nb 1, k, NegBinom (r + 1) p)
-eventLlhd t (Parameters (_, _, _, Timed rhs, _, _)) (OCatastrophe n) k nb@(NegBinom r p) =
+eventLlhd _ (Parameters (_, _, _, _, om, _)) OOccurrence k nb@(NegBinomSizeProb r p) =
+  (log om + logNbPGF' nb 1, k, NegBinomSizeProb (r + 1) p)
+eventLlhd t (Parameters (_, _, _, Timed rhs, _, _)) (OCatastrophe n) k nb@(NegBinomSizeProb r p) =
   let maybeTRh = find ((== t) . fst) rhs
    in case maybeTRh of
         (Just (_,rh)) -> let logL = n * log rh + logNbPGF nb (1 - rh) + (k - n) * log (1 - rh)
                              in if isInfinite logL
                                 then error "numerical error: infinite logL in eventLlhd function while processing catastrophe"
-                                else (logL, k - n, NegBinom r ((1 - rh) * p))
+                                else (logL, k - n, NegBinomSizeProb r ((1 - rh) * p))
         Nothing -> error ("could not find a scheduled sequenced observation at time: " ++ show t)
-eventLlhd t (Parameters (_, _, _, _, _, Timed nus)) (ODisaster n) k nb@(NegBinom r p) =
+eventLlhd t (Parameters (_, _, _, _, _, Timed nus)) (ODisaster n) k nb@(NegBinomSizeProb r p) =
   let maybeTNu = find ((== t) . fst) nus
    in case maybeTNu of
         (Just (_,nu)) -> let logL = n * log nu + logNbPGFdash n nb (1 - nu) + k * log (1 - nu)
                          in if isInfinite logL
                             then error "numerical error: infinite logL in eventLlhd function while processing disaster"
-                            else (logL, k, NegBinom (r + n) ((1 - nu) * p))
+                            else (logL, k, NegBinomSizeProb (r + n) ((1 - nu) * p))
         Nothing -> error ("could not find a scheduled unsequenced observation at time: " ++ show t)
 eventLlhd _ (Parameters (_, _, _, _, _, _)) OOccurrence k Zero = (log 0, k, Zero)
 eventLlhd _ (Parameters (_, _, _, _, _, _)) (ODisaster _) k Zero = (log 0, k, Zero)

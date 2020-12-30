@@ -140,7 +140,12 @@ make_config_file <- function(sim_seed) {
           seq_agg_times,
           unseq_agg_times
         ),
-        NULL,
+        mcmc_configuration(
+          sprintf("%s/aggregated-data-mcmc-samples.csv", output_dir),
+          num_mcmc_samples,
+          5e-2,
+          7 # the mcmc seed
+        ),
         output_dir
       )
     ),

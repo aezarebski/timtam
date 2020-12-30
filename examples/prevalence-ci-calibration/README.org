@@ -43,7 +43,7 @@ want to change the settings.
 
 NUM_SEEDS=100
 
-Rscript generate-config-files.R $NUM_SEEDS
+Rscript src/generate-config-files.R $NUM_SEEDS
 
 for ix in 00 10 20 30 40 50 60 70 80 90;
 do
@@ -58,14 +58,9 @@ do
     wait "${pids[@]}"
 done
 
-Rscript plotter.R $NUM_SEEDS
+Rscript src/plotter.R $NUM_SEEDS
 #+end_src
 
 #+begin_src sh :tangle clean.sh
 rm -r out/*
-rm replication-results-lambda.png
-rm replication-results-omega.png
-rm replication-results-prevalence.png
-rm replication-results-psi.png
-rm replication-results-r-naught.png
 #+end_src

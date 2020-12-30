@@ -491,12 +491,13 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
-runScheduledObservationMCMC :: InferenceConfiguration
-                              -> Rate
-                              -> ScheduledTimes
-                              -> [Observation]
-                              -> AnnotatedParameter
-                              -> Simulation ()
+runScheduledObservationMCMC ::
+     InferenceConfiguration
+  -> Rate -- ^ the /known/ death rate
+  -> ScheduledTimes
+  -> [Observation]
+  -> AnnotatedParameter
+  -> Simulation ()
 runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes {..} obs (EstimatedParametersAggregatedData (Parameters (mleR1, _, _, _, _, _))) =
   case icMaybeMCMCConfig of
     (Just mcmcConfig) ->
@@ -512,14 +513,20 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
               , [(rt, p1) | rt <- stRhoTimes]
               , 0
               , [(nt, p2) | nt <- stNuTimes])
-          -- logPost x@([r1,p1,p2]) = llhd - lnNotExtinct where llhd = fst $ llhdAndNB obs (listAsParams x) initLlhdState; lnNotExtinct = log (r1 - (p1 + p2 + deathRate)) - log r1
-          logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
+          logPost :: [Double] -> Double
+          logPost x@[r1, p1, p2] =
+            if r1 > 0 && 0 < p1 && p1 < 1 && 0 < p2 && p2 < 1
+              then fst $ llhdAndNB obs (listAsParams x) initLlhdState
+              else (-1 / 0)
           prngSeed = mcmcSeed mcmcConfig
-          maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
+          maybeGenQuantityFunc =
+            Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
              genIO <- liftIO $ prngGen prngSeed
              chainVals <-
-               liftIO $ (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc) genIO
+               liftIO $
+               (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc)
+                 genIO
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
@@ -545,7 +552,7 @@ chainAsByteString' varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
       nbParams cv =
         case chainTunables cv of
-          Just (NegBinom r p) -> [r, p]
+          Just (NegBinomSizeProb r p) -> [r, p]
           Just Zero -> [0, 0]
           Nothing -> [-1, -1]
       records =

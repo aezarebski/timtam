@@ -94,31 +94,31 @@ testNbPGF = do
       nbPGF Zero 1.0 `shouldBe` 1
 
     it "known value of PGF is correct 4" $
-      nbPGF (NegBinom 1 0.5) 0.0 `shouldBe` 0.5
+      nbPGF (NegBinomSizeProb 1 0.5) 0.0 `shouldBe` 0.5
 
     it "known value of PGF is correct 5" $
-      nbPGF (NegBinom 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-6 (2.0 / 3.0))
+      nbPGF (NegBinomSizeProb 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-6 (2.0 / 3.0))
 
     it "known value of PGF is correct 5" $
-      nbPGF (NegBinom 1 0.5) 1.0 `shouldBe` 1.0
+      nbPGF (NegBinomSizeProb 1 0.5) 1.0 `shouldBe` 1.0
 
     it "PGF partial derivative seems correct 1" $
-      nbPGF' (NegBinom 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinom 1 0.5) x) 1.0))
+      nbPGF' (NegBinomSizeProb 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinomSizeProb 1 0.5) x) 1.0))
 
     it "PGF partial derivative seems correct 2" $
-      nbPGF' (NegBinom 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinom 1 0.5) x) 0.5))
+      nbPGF' (NegBinomSizeProb 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinomSizeProb 1 0.5) x) 0.5))
 
     it "PGF partial derivative seems correct 3" $
-      nbPGF' (NegBinom 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinom 1 0.5) x) 0.0))
+      nbPGF' (NegBinomSizeProb 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF (NegBinomSizeProb 1 0.5) x) 0.0))
 
     it "PGF second partial derivative seems correct 1" $
-      nbPGF'' (NegBinom 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF' (NegBinom 1 0.5) x) 1.0))
+      nbPGF'' (NegBinomSizeProb 1 0.5) 1.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-3 (\x -> nbPGF' (NegBinomSizeProb 1 0.5) x) 1.0))
 
     it "PGF second partial derivative seems correct 2" $
-      nbPGF'' (NegBinom 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinom 1 0.5) x) 0.5))
+      nbPGF'' (NegBinomSizeProb 1 0.5) 0.5 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinomSizeProb 1 0.5) x) 0.5))
 
     it "PGF second partial derivative seems correct 3" $
-      nbPGF'' (NegBinom 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinom 1 0.5) x) 0.0))
+      nbPGF'' (NegBinomSizeProb 1 0.5) 0.0 `shouldSatisfy` (withinDeltaOf 1e-5 (finiteDifference 1e-5 (\x -> nbPGF' (NegBinomSizeProb 1 0.5) x) 0.0))
 
   describe "Test nbPGF: 2" $ do
     it "test pochhammer and logPochhammer" $ do
@@ -128,19 +128,19 @@ testNbPGF = do
       all pochhammersWorking [(a+0.1,b) | a <- [1..10], b <- [1..10], a <= b] `shouldBe` True
 
     it "test nbPGFdash and logNbPGFdash" $ do
-      let nbPGFdashWorking (j,r,p,z) = withinDeltaOf 1e-5 (log $ nbPGFdash j (NegBinom r p) z) (logNbPGFdash j (NegBinom r p) z)
+      let nbPGFdashWorking (j,r,p,z) = withinDeltaOf 1e-5 (log $ nbPGFdash j (NegBinomSizeProb r p) z) (logNbPGFdash j (NegBinomSizeProb r p) z)
       all nbPGFdashWorking [(j,r,p,z) | j <- [2..50], r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
     it "test nbPGF and logNbPGF" $ do
-      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF (NegBinom r p) z) (logNbPGF (NegBinom r p) z)
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF (NegBinomSizeProb r p) z) (logNbPGF (NegBinomSizeProb r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
     it "test nbPGF' and logNbPGF'" $ do
-      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF' (NegBinom r p) z) (logNbPGF' (NegBinom r p) z)
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF' (NegBinomSizeProb r p) z) (logNbPGF' (NegBinomSizeProb r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
     it "test nbPGF'' and logNbPGF''" $ do
-      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF'' (NegBinom r p) z) (logNbPGF'' (NegBinom r p) z)
+      let nbPGFWorking (r,p,z) = withinDeltaOf 1e-5 (log $ nbPGF'' (NegBinomSizeProb r p) z) (logNbPGF'' (NegBinomSizeProb r p) z)
       all nbPGFWorking [(r,p,z) | r <- [2..50], p <- [0.1,0.3,0.5,0.7,0.9], z <- [0.1,0.3,0.5,0.7,0.9]] `shouldBe` True
 
 testLogPdeGF1 = do
@@ -414,7 +414,7 @@ testPdeStatistics = do
         m'' < v'' `shouldBe` True
 
     it "Properties 3" $
-      let (c,m,v) = pdeStatistics (Parameters (2.0,1.0,0.5, Timed [(AbsoluteTime 1000,0.5)],0.4,Timed [])) (TimeDelta 2.0) (PDESol (NegBinom 3.9 0.5) 1.0)
+      let (c,m,v) = pdeStatistics (Parameters (2.0,1.0,0.5, Timed [(AbsoluteTime 1000,0.5)],0.4,Timed [])) (TimeDelta 2.0) (PDESol (NegBinomSizeProb 3.9 0.5) 1.0)
        in do
         c > 0 `shouldBe` True
         m > 0 `shouldBe` True
@@ -560,48 +560,6 @@ tmpIsSampling e = case e of
   Sampling{} -> True
   _ -> False
 
--- | Simulate from the birth-death-sampling process multiple times and use this
--- to estimate the CI of probability the process is unobserved then check that
--- this matches the function which computes this probability.
-
--- bdsSimulations :: (Rate, Rate, Rate) -> TimeDelta -> IO Bool 
--- bdsSimulations simRates simDuration@(TimeDelta sdDouble) =
---   let simConfig = EpiBDS.configuration simDuration simRates
---       probUnobservedVals =
---         map
---           (\x -> probabilityUnobserved simRates (TimeDelta (sdDouble + x)))
---           [-0.1, 0.0, 0.1]
---       probUnobserved = probUnobservedVals !! 1
---       numReplicates = 1000
---       numObservations = length . filter tmpIsSampling
---       phat ns =
---         (fromIntegral . length $ filter (> 0) ns) / (fromIntegral (length ns))
---       probCI ns = (ph - d, ph + d)
---         where
---           ph = phat ns
---           n = fromIntegral $ length ns
---           d = 3 * sqrt (ph * (1 - ph) / n)
---    in do sims <-
---            replicateM
---              numReplicates
---              (EpiUtil.simulationWithSystemRandom
---                 False
---                 simConfig
---                 EpiBDS.allEvents)
---          (a, b) <- pure . probCI $ map numObservations sims
---          return $ a < (1 - probUnobserved) && (1 - probUnobserved) < b
-
--- testConditioningProbability :: SpecWith ()
--- testConditioningProbability =
---   describe "Test probability of going unobserved is correct" $ do
---     it "Test empirical estimate has CI containing value" $ do
---       x <- bdsSimulations (2.0,0.4,0.1) 0.7
---       x `shouldBe` True
---       x' <- bdsSimulations (2.0,0.1,0.4) 0.7
---       x' `shouldBe` True
---       x'' <- bdsSimulations (2.0,0.1,0.4) 0.1
---       x'' `shouldBe` True
-
 testHmatrixUsage :: SpecWith ()
 testHmatrixUsage =
   describe "Testing hmatrix-gsl usage" $
@@ -657,28 +615,94 @@ testMWCSeeding = do
       (z1 /= w1) `shouldBe` True
 
 
+-- | Generate a random @NumLineages@
+qcRandomNumLineages :: Gen NumLineages
+qcRandomNumLineages = do
+  kDouble <- choose (1 + 1e-6, 1e2 :: Double)
+  return . fromIntegral $ round kDouble
+
+-- | Generate a random @Rate@
+qcRandomRate :: Gen Rate
+qcRandomRate = choose (1e-3, 1e1)
+
+-- | Generate a random @Probability@
+qcRandomProbability :: Gen Probability
+qcRandomProbability = choose (0, 1)
+
+-- | Generate a random @NegativeBinomial@ using @NegBinomSizeProb@ /not/ any
+-- other constructor.
+qcRandomNegBinomSizeProb :: Gen NegativeBinomial
+qcRandomNegBinomSizeProb = do
+  r <- qcRandomRate
+  p <- qcRandomProbability
+  return $ NegBinomSizeProb r p
+
+-- | Generate a random @TimeDelta@
+qcRandomTimeDelta :: Gen TimeDelta
+qcRandomTimeDelta = do
+  td <- qcRandomRate
+  return $ TimeDelta td
+
+-- | Generate a random __small__ @TimeDelta@
+qcRandomSmallTimeDelta :: Gen TimeDelta
+qcRandomSmallTimeDelta = do
+  td <- choose (1e-3,2)
+  return $ TimeDelta td
+
+-- | Generate a list of absolute times that occur after the origin within the
+-- duration.
+qcRandomOrderedAbsTimes :: AbsoluteTime -> TimeDelta -> Gen [AbsoluteTime]
+qcRandomOrderedAbsTimes (AbsoluteTime a) (TimeDelta d) = do
+  times <- listOf1 $ choose (a, a + d)
+  return [AbsoluteTime t | t <- sort times]
+
+-- | Generate a random @Timed x@ from the start time and the duration and the
+-- constant value to store at each time.
+qcRandomTimedX :: Num x => AbsoluteTime -> TimeDelta -> x -> Gen (Timed x)
+qcRandomTimedX originTime duration x = do
+  absTimes <- qcRandomOrderedAbsTimes originTime duration
+  case asTimed (zip absTimes (repeat x)) of
+    Just timedVals -> return timedVals
+    Nothing -> qcRandomTimedX originTime duration x
+
+-- | Generate a random @Parameters@
+qcRandomParameters :: AbsoluteTime -> TimeDelta -> Gen Parameters
+qcRandomParameters originTime duration = do
+  -- randLambda <- qcRandomRate
+  randMu <- qcRandomRate
+  randPsi <- qcRandomRate
+  randRho <- qcRandomProbability
+  randOmega <- qcRandomRate
+  tmp <- choose (0.5,1.0)
+  let randLambda = (randMu + randPsi + randOmega) / tmp
+  randNu <- qcRandomProbability
+  randTimedRho <- qcRandomTimedX originTime duration randRho
+  randTimedNu <- qcRandomTimedX originTime duration randNu
+  return $
+    Parameters
+      (randLambda, randMu, randPsi, randTimedRho, randOmega, randTimedNu)
 
 -- | Generate a random @ObservedEvent@
 qcRandomObservedEvent :: Gen ObservedEvent
 qcRandomObservedEvent = do
   isUnscheduled <- chooseAny
   if isUnscheduled
-    then elements [OBirth,ObsUnscheduledSequenced,OOccurrence]
-    else do isSequenced <- chooseAny
-            numLineages <- suchThat chooseAny (>0)
-            if isSequenced
-              then return (OCatastrophe numLineages)
-              else return (ODisaster numLineages)
-
+    then elements [OBirth, ObsUnscheduledSequenced, OOccurrence]
+    else do
+      isSequenced <- chooseAny
+      numLineages <- suchThat chooseAny (> 0)
+      if isSequenced
+        then return (OCatastrophe numLineages)
+        else return (ODisaster numLineages)
 
 -- | Generate a random list of @observation@ values
 qcRandomObservations :: Gen [Observation]
 qcRandomObservations = do
-  durationDouble <- suchThat chooseAny (>0) :: Gen Double
-  eventAbsTimesDoubles <- listOf1 (choose (0,durationDouble))
+  durationDouble <- suchThat chooseAny (> 0) :: Gen Double
+  eventAbsTimesDoubles <- listOf1 (choose (0, durationDouble))
   let duration = TimeDelta durationDouble
       eventAbsTimes = [AbsoluteTime t | t <- eventAbsTimesDoubles]
-  let eats = sort ((AbsoluteTime 0):eventAbsTimes)
+  let eats = sort ((AbsoluteTime 0) : eventAbsTimes)
       timeDeltas = [timeDelta a b | (a, b) <- zip (init eats) (tail eats)]
       numEvents = length eventAbsTimes
   eventTypes <- vectorOf numEvents qcRandomObservedEvent
@@ -746,57 +770,186 @@ allWithinDeltaOfObs _ _ _ = False
 
 
 testAggregation :: SpecWith ()
-testAggregation = do
+testAggregation =
   describe "Testing Aggregation" $ do
     let smallDelta = 1e-4
         tinyDelta = TimeDelta 1e-6
         duration obs = AbsoluteTime $ sum [t | (TimeDelta t, _) <- obs]
         multiplyAbsTime a (AbsoluteTime x) = AbsoluteTime (a * x)
-        propertyRemoveSeq obs = let dur = duration obs
-                                    ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] []
-                                    (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                in  not $ any isUnscheduledSequenced obs'
-        propertyRemoveUnseq obs = let dur = duration obs
-                                      ats = fromJust $ maybeAggregationTimes [] [timeAfterDelta dur tinyDelta]
-                                      (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                  in  not $ any isOccurrence obs'
-        propertyRemoveUnsched1 obs = let dur = duration obs
-                                         ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] [timeAfterDelta (timeAfterDelta dur tinyDelta) (TimeDelta 1.0)]
-                                         (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                     in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
-        propertyRemoveUnsched2 obs = let dur = duration obs
-                                         ats = fromJust $ maybeAggregationTimes [multiplyAbsTime 0.4 dur] [multiplyAbsTime 0.5 dur]
-                                         (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                     in  not (any isOccurrence obs') && not (any isUnscheduledSequenced obs')
-        propertyBirthsRemain obs = let dur = duration obs
-                                       numBs = length $ filter isBirth obs
-                                       ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] [timeAfterDelta (timeAfterDelta dur tinyDelta) (TimeDelta 1.0)]
-                                       (AggregatedObservations _ obs') = aggregateUnscheduledObservations ats obs
-                                       numBs' = length $ filter isBirth obs'
-                                   in numBs == numBs'
-        propertyLineagesConst os = let dur = duration os
-                                       numSeq = sum $ map numSequenced os
-                                       numUnseq = sum $ map numUnsequenced os
-                                       ats = fromJust $ maybeAggregationTimes [timeAfterDelta dur tinyDelta] [timeAfterDelta (timeAfterDelta dur tinyDelta) (TimeDelta 1.0)]
-                                       (AggregatedObservations _ os') = aggregateUnscheduledObservations ats os
-                                       numSeq' = sum $ map numSequenced os'
-                                       numUnseq' = sum $ map numUnsequenced os'
-                                   in withinDeltaOf smallDelta numSeq numSeq' && withinDeltaOf smallDelta numUnseq numUnseq'
-    it "sequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveSeq
-    it "unsequenced aggregation removes all such unscheduled observations" $ forAll qcRandomObservations propertyRemoveUnseq
-    it "aggregating both removes all relevent observations 1" $ forAll qcRandomObservations propertyRemoveUnsched1
-    it "aggregating both removes all relevent observations 2" $ forAll qcRandomObservations propertyRemoveUnsched2
-    it "aggregating leaves birth observations unchanged" $ forAll qcRandomObservations propertyBirthsRemain
-    it "aggregating leaves the number of observed lineages unchanged" $ forAll qcRandomObservations propertyLineagesConst
+        propertyRemoveSeq obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes [timeAfterDelta dur tinyDelta] []
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not $ any isUnscheduledSequenced obs'
+        propertyRemoveUnseq obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes [] [timeAfterDelta dur tinyDelta]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not $ any isOccurrence obs'
+        propertyRemoveUnsched1 obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [timeAfterDelta dur tinyDelta]
+                  [ timeAfterDelta
+                      (timeAfterDelta dur tinyDelta)
+                      (TimeDelta 1.0)
+                  ]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not (any isOccurrence obs') &&
+              not (any isUnscheduledSequenced obs')
+        propertyRemoveUnsched2 obs =
+          let dur = duration obs
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [multiplyAbsTime 0.4 dur]
+                  [multiplyAbsTime 0.5 dur]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+           in not (any isOccurrence obs') &&
+              not (any isUnscheduledSequenced obs')
+        propertyBirthsRemain obs =
+          let dur = duration obs
+              numBs = length $ filter isBirth obs
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [timeAfterDelta dur tinyDelta]
+                  [ timeAfterDelta
+                      (timeAfterDelta dur tinyDelta)
+                      (TimeDelta 1.0)
+                  ]
+              (AggregatedObservations _ obs') =
+                aggregateUnscheduledObservations ats obs
+              numBs' = length $ filter isBirth obs'
+           in numBs == numBs'
+        propertyLineagesConst os =
+          let dur = duration os
+              numSeq = sum $ map numSequenced os
+              numUnseq = sum $ map numUnsequenced os
+              ats =
+                fromJust $
+                maybeAggregationTimes
+                  [timeAfterDelta dur tinyDelta]
+                  [ timeAfterDelta
+                      (timeAfterDelta dur tinyDelta)
+                      (TimeDelta 1.0)
+                  ]
+              (AggregatedObservations _ os') =
+                aggregateUnscheduledObservations ats os
+              numSeq' = sum $ map numSequenced os'
+              numUnseq' = sum $ map numUnsequenced os'
+           in withinDeltaOf smallDelta numSeq numSeq' &&
+              withinDeltaOf smallDelta numUnseq numUnseq'
+    it "sequenced aggregation removes all such unscheduled observations" $
+      forAll qcRandomObservations propertyRemoveSeq
+    it "unsequenced aggregation removes all such unscheduled observations" $
+      forAll qcRandomObservations propertyRemoveUnseq
+    it "aggregating both removes all relevent observations 1" $
+      forAll qcRandomObservations propertyRemoveUnsched1
+    it "aggregating both removes all relevent observations 2" $
+      forAll qcRandomObservations propertyRemoveUnsched2
+    it "aggregating leaves birth observations unchanged" $
+      forAll qcRandomObservations propertyBirthsRemain
+    it "aggregating leaves the number of observed lineages unchanged" $
+      forAll qcRandomObservations propertyLineagesConst
 
 
+
+
+testIntervalLlhd :: SpecWith ()
+testIntervalLlhd =
+  describe "Testing the intervalLlhd function" $ do
+    let propertyNBNotNaN (params, delay, k, nb) =
+          let (_, nb') = intervalLlhd params delay k nb
+              (m, _) = mAndVFromNb nb'
+           in not $ isNaN m
+        absTimeZero = AbsoluteTime 0
+        qcIntervalLlhdArgs ::
+             Gen (Parameters, TimeDelta, NumLineages, NegativeBinomial)
+        qcIntervalLlhdArgs = do
+          totalDuration <- qcRandomTimeDelta
+          params <- qcRandomParameters absTimeZero totalDuration
+          delay <- qcRandomSmallTimeDelta
+          k <- qcRandomNumLineages
+          nb <- qcRandomNegBinomSizeProb
+          return (params, delay, k, nb)
+        propertyPDEStatsNonNaN (params, delay, k, nb) =
+          let (_,logm,_) = logPdeStatistics params delay (PDESol nb k)
+          in not $ isNaN logm
+        propertyLogCNotNaN (params, delay, k, nb) =
+          let pdeSol = PDESol nb k
+              logmGF = logPdeGF params delay pdeSol
+              logC = logmGF 1
+          in not $ isNaN logC
+        propertyLogmTermNotNaN (params, delay, k, nb) =
+          let pdeSol = PDESol nb k
+              logmGF' = logPdeGF' params delay pdeSol
+              logmTerm = logmGF' 1
+          in not $ isNaN logmTerm
+        propertyOdeHelperNotNaN (params, delay, _, _) =
+          let (x1,x2,disc,expFact) = odeHelpers params delay
+              notNaN = not . isNaN
+          in notNaN x1 && notNaN x2 && 0 < disc && 1 > expFact && x2 > x1
+    it "resulting odeHelpers are not NaN" $ forAll qcIntervalLlhdArgs propertyOdeHelperNotNaN
+    it "resulting logmTerm from logPdeGF' is not NAN" $ forAll qcIntervalLlhdArgs propertyLogmTermNotNaN
+    it "resulting logC from logPdeGF is not NAN" $ forAll qcIntervalLlhdArgs propertyLogCNotNaN
+    it "resulting log(mean) from logPdeStatistics is not NAN" $ forAll qcIntervalLlhdArgs propertyPDEStatsNonNaN
+    it "resulting NB is not NAN" $ forAll qcIntervalLlhdArgs propertyNBNotNaN
+
+testLogP0Dash :: SpecWith ()
+testLogP0Dash = do
+  describe "Testing the logP0' function" $ do
+    let absTimeZero = AbsoluteTime 0
+        qcP0Args :: Gen (Parameters, TimeDelta, Probability)
+        qcP0Args = do
+          totalDuration <- qcRandomTimeDelta
+          params_ <- qcRandomParameters absTimeZero totalDuration
+          delay_ <- qcRandomSmallTimeDelta
+          z_ <- qcRandomProbability
+          return (params_, delay_, z_)
+        propertyLogValNotNaN (params_, delay_, z_) =
+          let logValue = logP0' params_ delay_ z_
+          in not $ isNaN logValue
+        propertyApproximateEquality (params, delay, z) =
+          let linearValue = p0' params delay z
+              logValue = logP0' params delay z
+          in withinDeltaOf 1e-10 (exp logValue) linearValue -- fails for smaller delta :)
+    it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
+    it "approximate equality to p0'" $ forAll qcP0Args propertyApproximateEquality
+  describe "Testing the logP0'' function" $ do
+    let absTimeZero = AbsoluteTime 0
+        qcP0Args :: Gen (Parameters, TimeDelta, Probability)
+        qcP0Args = do
+          totalDuration <- qcRandomTimeDelta
+          params_ <- qcRandomParameters absTimeZero totalDuration
+          delay_ <- qcRandomSmallTimeDelta
+          z_ <- qcRandomProbability
+          return (params_, delay_, z_)
+        propertyLogValNotNaN (params_, delay_, z_) =
+          let logValue = logP0'' params_ delay_ z_
+          in not $ isNaN logValue
+        propertyApproximateEquality (params, delay, z) =
+          let linearValue = p0'' params delay z
+              logValue = logP0'' params delay z
+          in withinDeltaOf 1e-10 (exp logValue) linearValue -- fails for smaller delta :)
+    it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
+    it "approximate equality to p0''" $ forAll qcP0Args propertyApproximateEquality
 
 main :: IO ()
 main = hspec $ do
   -- ** slow tests **
   testNbPGF
   testHmatrixUsage
-  -- testConditioningProbability
   -- ** fast tests **
   testTestingHelpers
   testPdeStatistics
@@ -818,3 +971,6 @@ main = hspec $ do
   testLogSumExp
   testLogPdeStatistics
   testAggregation
+  testIntervalLlhd
+  testLogP0Dash
+
