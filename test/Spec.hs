@@ -948,8 +948,8 @@ testLogP0Dash = do
 main :: IO ()
 main = hspec $ do
   -- ** slow tests **
-  -- testNbPGF
-  -- testHmatrixUsage
+  testNbPGF
+  testHmatrixUsage
   -- ** fast tests **
   testTestingHelpers
   testPdeStatistics
@@ -962,13 +962,13 @@ main = hspec $ do
   testInhomBDSLlhd
   testParameterUpdate
   testMWCSeeding
-  -- testLogPdeGF1
-  -- testLogPdeGF2
-  -- testLogPdeGFDash1
-  -- testLogPdeGFDash2
-  -- testLogPdeGFDashDash1
-  -- testLogPdeGFDashDash2
-  -- testLogSumExp
+  testLogPdeGF1
+  testLogPdeGF2
+  testLogPdeGFDash1
+  testLogPdeGFDash2
+  testLogPdeGFDashDash1
+  testLogPdeGFDashDash2
+  testLogSumExp
   testLogPdeStatistics
   testAggregation
   testIntervalLlhd
