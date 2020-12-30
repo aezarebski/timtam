@@ -188,18 +188,39 @@ run_post_processing <- function(sim_seed) {
   sim_params <- app_config$simulationParameters
   names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
 
+  summary_func <- function(x) quantile(x, probs = c(0.025, 0.5, 0.975))
+
+
+  #' Summarise the parameter estimates given the regular data
   tmp <- select(mcmc_df_list$regular_data, lambda, psi, omega)
   tmp$r_naught <- tmp$lambda / (sim_params$mu + tmp$psi + tmp$omega)
-  summary_func <- function(x) quantile(x, probs = c(0.025, 0.5, 0.975))
+  tmp$birth_on_death <- tmp$lambda / sim_params$mu
   tmp <- data.frame(
-    value = c(summary_func(tmp$lambda), summary_func(tmp$psi), summary_func(tmp$omega), summary_func(tmp$r_naught)),
-    param = rep(c("lambda", "psi", "omega", "r_naught"), each = 3),
+    value = c(summary_func(tmp$lambda), summary_func(tmp$psi), summary_func(tmp$omega), summary_func(tmp$r_naught), summary_func(tmp$birth_on_death)),
+    param = rep(c("lambda", "psi", "omega", "r_naught", "birth_on_death"), each = 3),
+    statistic = rep(c("min", "mid", "max"), 5),
+    sim_seed = rep(sim_seed, 15)
+  )
+  write.table(
+    x = tmp,
+    file = sprintf("%s/param-summary-%d-regular_data.csv", output_dir, sim_seed),
+    sep = ",",
+    row.names = FALSE
+  )
+  rm(tmp)
+
+  #' Summarise the parameter estimates given the aggregated data
+  tmp <- select(mcmc_df_list$aggregated_data, lambda, rho, nu)
+  tmp$birth_on_death <- tmp$lambda / sim_params$mu
+  tmp <- data.frame(
+    value = c(summary_func(tmp$lambda), summary_func(tmp$rho), summary_func(tmp$nu), summary_func(tmp$birth_on_death)),
+    param = rep(c("lambda", "psi", "omega", "birth_on_death"), each = 3),
     statistic = rep(c("min", "mid", "max"), 4),
     sim_seed = rep(sim_seed, 12)
   )
   write.table(
     x = tmp,
-    file = sprintf("%s/param-summary-%d-regular_data.csv", output_dir, sim_seed),
+    file = sprintf("%s/param-summary-%d-aggregated_data.csv", output_dir, sim_seed),
     sep = ",",
     row.names = FALSE
   )
@@ -348,6 +369,44 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
     )
 }
 
+birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
+
+  geom_colour <- if (data_type == "regular_data") {
+                   green_hex_colour
+                 } else if (data_type == "aggregated_data") {
+                   purple_hex_colour
+                 } else {
+                   stop(sprintf("Did not recognise data type: %s", data_type))
+                 }
+
+  .read_birth_on_death <- function(sim_seed) {
+    csv_name <- sprintf("out/seed-%d/param-summary-%d-%s.csv", sim_seed, sim_seed, data_type)
+    if (file.exists(csv_name)) {
+      read.csv(csv_name)
+    }
+  }
+  params_df <- lapply(sim_seeds, .read_birth_on_death) %>%
+    bind_rows() %>%
+    filter(param == "birth_on_death") %>%
+    select(value, statistic, sim_seed) %>%
+    dcast(sim_seed ~ statistic)
+
+  #' Sort the rows so that when plotted they come out in a nice order.
+  params_df <- params_df[order(params_df$mid - true_birth_on_death), ]
+  params_df$ix <- 1:nrow(params_df)
+
+  ggplot(data = params_df) +
+    geom_point(mapping = aes(x = ix, y = mid), colour = geom_colour) +
+    geom_errorbar(mapping = aes(x = ix, ymin = min, ymax = max), colour = geom_colour) +
+    geom_hline(yintercept = true_birth_on_death, linetype = "dashed") +
+    labs(x = "Replicate", y = "Ratio of the birth and death rates") +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+}
+
 
 main <- function(args) {
   num_seeds <- as.integer(args[1])
@@ -446,6 +505,16 @@ main <- function(args) {
 
     run_total_mcmc_diagnostics(successful_sim_seeds, "regular_data")
     run_total_mcmc_diagnostics(successful_sim_seeds, "aggregated_data")
+
+    true_birth_on_death <- sim_params$lambda / sim_params$mu
+    ggsave("out/birth-on-death-comparison-regular_data.pdf",
+           birth_on_death_ggplot(true_birth_on_death,
+                                 successful_sim_seeds,
+                                 "regular_data"))
+    ggsave("out/birth-on-death-comparison-aggregated_data.pdf",
+           birth_on_death_ggplot(true_birth_on_death,
+                                 successful_sim_seeds,
+                                 "aggregated_data"))
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
