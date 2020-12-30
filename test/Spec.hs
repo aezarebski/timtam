@@ -941,7 +941,7 @@ testLogP0Dash = do
         propertyApproximateEquality (params, delay, z) =
           let linearValue = p0'' params delay z
               logValue = logP0'' params delay z
-          in withinDeltaOf 1e-10 (exp logValue) linearValue
+          in withinDeltaOf 1e-10 (exp logValue) linearValue -- fails for smaller delta :)
     it "log version is not nan" $ forAll qcP0Args propertyLogValNotNaN
     it "approximate equality to p0''" $ forAll qcP0Args propertyApproximateEquality
 
