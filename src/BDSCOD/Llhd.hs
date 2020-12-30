@@ -317,7 +317,9 @@ intervalLlhd :: Parameters
 intervalLlhd params delay k nb =
   let (logC, logm, logV) = logPdeStatistics params delay (PDESol nb k)
       nb' = nbFromMAndV (exp logm, exp logV)
-    in (logC, nb')
+    in if not (isNaN (exp logm) && isNaN (exp logV))
+       then (logC, nb')
+       else error $ "numerical error in intervalLlhd: " ++ show (params, delay, k, nb)
 
 
 
