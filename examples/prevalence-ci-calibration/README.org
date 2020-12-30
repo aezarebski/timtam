@@ -41,13 +41,11 @@ want to change the settings.
 #
 # This must be run with bash!!!
 
-# NUM_SEEDS=30
-NUM_SEEDS=10
+NUM_SEEDS=30
 
 Rscript src/generate-config-files.R $NUM_SEEDS
 
-# for ix in 00 10 20;
-for ix in 00;
+for ix in 00 10 20;
 do
     pids=()
 
@@ -65,24 +63,4 @@ Rscript src/plotter.R $NUM_SEEDS
 
 #+begin_src sh :tangle clean.sh
 rm -r out/*
-#+end_src
-
-*** Debugging
-
-#+begin_src sh :tangle buggy.sh
-NUM_SEEDS=10
-SEED=5
-
-Rscript src/generate-config-files.R $NUM_SEEDS
-
-stack exec -- simulation-study-aggregated-observations out/seed-$SEED/config-$SEED.json
-#+end_src
-
-This gives the error message 
-
-#+begin_src 
-Running runScheduledObservationMCMC...
-simulation-study-aggregated-observations: nbFromMAndV received bad values: (NaN,NaN)
-CallStack (from HasCallStack):
-  error, called at src/BDSCOD/Utility.hs:42:10 in bdscod-0.1.4.0-81IA58J0LwOFE2RERM7fiR:BDSCOD.Utility
 #+end_src
