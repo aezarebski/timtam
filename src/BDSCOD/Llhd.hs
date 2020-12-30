@@ -76,6 +76,8 @@ logP0' params delay z =
 
 -- | The second partial derivative of @p0@ with respect to its final argument
 -- @z@.
+--
+-- NOTE __do not__ use this function use @logP0''@ instead
 p0'' :: Parameters -> TimeDelta -> Probability -> Double
 p0'' params delay z =
   (2 * (expFact - 1) ** 2.0 * (x1 * (x2 - z) -
@@ -85,6 +87,19 @@ p0'' params delay z =
   / (x2 - expFact * (x1 - z) - z) ** 2.0
   where
     (x1, x2, _, expFact) = odeHelpers params delay
+
+-- | The second partial derivative of @p0@ with respect to its final argument
+-- @z@.
+--
+-- NOTE that this should avoid the numerical problems with @p0''@
+logP0'' :: Parameters -> TimeDelta -> Probability -> Double
+logP0'' params delay z =
+  log 2.0 + log bb + log (cc * aa + x1 * x2 * (bb ** 2.0)) - 3.0 * log (aa - bb * z)
+  where
+    (x1, x2, _, expFact) = odeHelpers params delay
+    aa = x2 - x1 * expFact
+    bb = 1 - expFact
+    cc = x2 * expFact - x1
 
 rr' :: Parameters -> TimeDelta -> Probability -> Double
 rr' params@(Parameters (lam, _, _, _, _, _)) delay z =
