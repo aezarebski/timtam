@@ -41,11 +41,11 @@ want to change the settings.
 #
 # This must be run with bash!!!
 
-NUM_SEEDS=30
+NUM_SEEDS=100
 
 Rscript src/generate-config-files.R $NUM_SEEDS
 
-for ix in 00 10 20;
+for ix in 00 10 20 30 40 50 60 70 80 90;
 do
     pids=()
 
