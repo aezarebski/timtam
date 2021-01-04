@@ -14,7 +14,6 @@ package which provides a CLI (which is why there is long =stack exec= command)
 used in the following =main.sh= script.
 
 #+BEGIN_SRC sh :tangle main.sh
-stack clean 
 stack build 
 
 rm -f out/*
