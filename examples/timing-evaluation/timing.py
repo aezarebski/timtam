@@ -31,12 +31,13 @@ config_json = sys.argv[3]
 
 if os.path.isfile(config_json):
     with open(config_json) as config_data:
-        foo = json.load(config_data)
-        lamb, mu, psi, rhoPairs, omega, uPairs = foo['acSimParams']['mpParameters']
+        config_dict = json.load(config_data)
+        lamb, mu, psi, rhoPairs, omega, uPairs = config_dict['acSimParams']['mpParameters']
         assert rhoPairs.count(rhoPairs[0]) == len(rhoPairs)
         rho = rhoPairs[0][1]
         r = 1                   # this is the removal probability always fixed to one.
         params = lamb, mu, rho, psi, r, omega
+        num_replicates = config_dict['pyNumReplicates']
 else:
     raise FileNotFoundError
 
@@ -69,7 +70,6 @@ print(prev_llhd,curr_llhd)
 print(truncation_param)
 
 if has_converged:
-    num_replicates = 10
     eval_time = timeit.timeit('algo1.logDensity( obs, params, distinguishRemoval, truncation_param)',
                               globals=globals(),
                               number = num_replicates)
