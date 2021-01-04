@@ -1,0 +1,32 @@
+#+title: Examples
+
+* Simulation studies
+
+There are a couple of simulation studies. See the following files for details.
+
+- =examples/simulation-study/README.md=
+- =examples/simulation-study-time-series/README.org=
+- =examples/simulation-study-aggregated-observations/README.org=
+- =examples/prevalence-ci-calibration/README.org=
+
+* Measuring evaluation times
+
+See =examples/timing-evaluation/README.org= for details of a simulation study in
+which the evaluation speed of the likelihood is measured for a range of data
+sets.
+
+* Parameters
+
+In =aggregated-observations=, =ci-calibration= and =timing-evaluation= a common
+set of parameters are used for the unscheduled events.
+
+| Parameter       | Value |
+|-----------------+-------|
+| birth rate      |   1.7 |
+| death rate      |   0.9 |
+| sampling rate   |  0.05 |
+| occurrence rate |  0.25 |
+
+** TODO Re-run Aggregated Observations with correct parameters
+** TODO Re-run CI Calibration with correct parameters
+** TODO Re-run Timing Evaluation with correct parameters
