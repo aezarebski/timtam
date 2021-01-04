@@ -50,19 +50,22 @@ with open(input_json) as data_json:
 # params
 distinguishRemoval = True
 
-
+# These are the settings for computing the truncation parameter for the llhd
+# function.
 prev_llhd = -1e6
 curr_llhd = -1e4
 has_converged = False
 iter_count = 0
+max_iters = 15                  # maximum number of iterations prior to giving up
 truncation_param = 10
-truncation_delta = 5
+truncation_delta = 5            # how much to change delta per loop
+prop_change_thresh = 1e-3       # threshold for proportion difference to have converged.
 
-while iter_count < 15 and (not has_converged):
+while iter_count < max_iters and (not has_converged):
     truncation_param = truncation_param + truncation_delta
     iter_count = iter_count + 1
     prev_llhd, curr_llhd = curr_llhd, algo1.logDensity( obs, params, distinguishRemoval, truncation_param)
-    has_converged = abs(prev_llhd - curr_llhd) < abs(1e-3 * prev_llhd)
+    has_converged = abs(prev_llhd - curr_llhd) < abs(prop_change_thresh * prev_llhd)
 
 print("did it converge?")
 print(has_converged)
