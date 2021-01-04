@@ -16,9 +16,11 @@ used in the following =main.sh= script.
 #+BEGIN_SRC sh :tangle main.sh
 stack clean 
 stack build 
-rm out/*
-rm fibber.html 
-rm fobber.csv 
+
+rm -f out/*
+rm -f fibber.html 
+rm -f fobber.csv 
+
 stack exec -- timing-evaluation --output fibber.html --csv fobber.csv --time-limit 5 
 Rscript src/prepare-simulations-for-popsize.R 
 #+END_SRC
@@ -41,6 +43,15 @@ timing results.
 The output of =pip freeze= for the virtual environment being used is here, i.e.,
 the =requirements.txt= is given below.
 
+#+begin_src sh
+python3 -m venv venv
+source venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+#+end_src
+
+where the =requirements.txt= is as follows.
+
 #+BEGIN_SRC :tangle requirements.txt
 cycler==0.10.0
 Cython==0.29.21
@@ -55,11 +66,13 @@ scipy==1.4.1
 six==1.15.0
 #+END_SRC
 
-To actually run the this, follow the following steps.
+To actually run the this, you need to clone the =popsize-distribution=
+repository and copy over a couple of helper scripts as follows.
 
 #+BEGIN_SRC sh
-source venv/bin/activate
 cd popsize-distribution 
+cp ../timing.py .
+cp ../run-python-timing.sh
 ./run-python-timing.sh
 cd ../ 
 deactivate
