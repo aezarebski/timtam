@@ -67,13 +67,19 @@ six==1.15.0
 #+END_SRC
 
 To actually run the this, you need to clone the =popsize-distribution=
-repository and copy over a couple of helper scripts as follows.
+repository and copy over a couple of helper scripts as follows. The commit for
+=popsize-distribution= I used is =5223bd2812423c9be0c3086a30df25699cedcdda=.
 
 #+BEGIN_SRC sh
+git clone https://gitlab.com/MMarc/popsize-distribution.git
+
 cd popsize-distribution 
+
 cp ../timing.py .
 cp ../run-python-timing.sh
+
 ./run-python-timing.sh
+
 cd ../ 
 deactivate
 #+END_SRC
@@ -124,15 +130,15 @@ with some additional configuration variables.
 
 #+BEGIN_SRC json :tangle app-config.json
 {
-    "acDuration": 6,
-    "acNumSims": 1000,
-    "acBinWidth": 5,
-    "acNumBins": 40,
-    "acSimParams": [
-        [1.5, 0.3, 0.3, [
-            [5.999999, 0.5]
-        ], 0.3, []], 6
-    ],
+    "acDuration":6,
+    "acNumSims":1000,
+    "acBinWidth":5,
+    "acSimParams":
+    {
+        "mpParameters":[1.5,0.3,0.3,[[5.999999,0.5]],0.3,[]],
+        "mpDuration":6
+    },
+    "acNumBins":40,
     "acOutputCsv": "out/simulation-sizes-and-llhds.csv"
 }
 #+END_SRC
