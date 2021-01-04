@@ -138,7 +138,8 @@ with some additional configuration variables.
         "mpDuration":6
     },
     "acNumBins":40,
-    "acOutputCsv": "out/simulation-sizes-and-llhds.csv"
+    "acOutputCsv": "out/simulation-sizes-and-llhds.csv",
+    "pyNumReplicates": 10
 }
 #+END_SRC
 
@@ -149,3 +150,4 @@ with some additional configuration variables.
 - =acNumBins= is the number of different sizes to simulate
 - =acSimParams= is the actual simulation parameters 
 - =acOutputCsv= is where the application should store the results
+- =pyNumReplicates= is the number of times to average python evaluation over
