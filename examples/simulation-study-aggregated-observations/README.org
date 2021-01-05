@@ -24,6 +24,13 @@ stack exec -- simulation-study-aggregated-observations agg-app-config.json
 Rscript src/plot.R
 #+END_SRC
 
+*** Parameters
+
+This uses the parameters specified in =bdscod/example/example-parameters.json=
+for the rates of unscheduled events. The timings of the scheduled events in and
+the configuration of the MCMC are hard coded in the =src/make-json-config.R=
+script.
+
 *** Details
 
 The R script =make-json-config.R= produces the JSON configuration file and
