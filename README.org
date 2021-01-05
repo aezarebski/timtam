@@ -1,22 +1,9 @@
 #+title: BDSCOD
 
 This repository contains an implementation of the approximate likelihood of a
-birth-death process with various observation processes described [[https://doi.org/10.1101/2020.10.21.349068][here]].
-
-* Simulation studies
-
-There are a couple of simulation studies. See the following files for details.
-
-- =examples/simulation-study/README.md=
-- =examples/simulation-study-time-series/README.org=
-- =examples/simulation-study-aggregated-observations/README.org=
-- =examples/prevalence-ci-calibration/README.org=
-
-* Measuring evaluation times
-
-See =examples/timing-evaluation/README.org= for details of a simulation study in
-which the evaluation speed of the likelihood is measured for a range of data
-sets.
+birth-death process with various observation processes described [[https://doi.org/10.1101/2020.10.21.349068][here]]. See
+=examples/README.org= for a description of some of the examples included in this
+repository.
 
 * Computational environment
 

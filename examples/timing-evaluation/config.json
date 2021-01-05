@@ -1,5 +1,0 @@
-{
-    "simulationJson": "out/simulated-observations.json",
-    "popsizeDistributionFile": "out/popsize-distribution-data.json",
-    "simulationDuration": 3.0
-}

@@ -36,6 +36,9 @@ up into groups of 10 to avoid using up all the resources at once and crashing my
 machine. You will need to manually adjust this to have the correct loops if you
 want to change the settings.
 
+*WARNING* if you have not compiled, you will need to run =stack build= before
+hand.
+
 #+begin_src sh :tangle run.sh
 # run.sh
 #
@@ -64,3 +67,10 @@ Rscript src/plotter.R $NUM_SEEDS
 #+begin_src sh :tangle clean.sh
 rm -r out/*
 #+end_src
+
+** Parameters
+
+This uses the parameters specified in =bdscod/example/example-parameters.json=
+for the rates of unscheduled events. The timings of the scheduled events in and
+the configuration of the MCMC are hard coded in the
+=src/generate-config-files.R= script.

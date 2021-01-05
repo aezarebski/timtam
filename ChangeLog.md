@@ -2,6 +2,7 @@
 
 ## 0.1.4.0
 
+- Improve documentation and read shared parameters from a single file.
 - Replace `manceau-comparison` with an example looking at using data which
   starts from the TMRCA rather than the origin.
 - Move the `MCMCConfiguration` type into `BDSCOD.Types` so it can be used in
