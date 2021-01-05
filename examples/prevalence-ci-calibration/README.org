@@ -36,6 +36,9 @@ up into groups of 10 to avoid using up all the resources at once and crashing my
 machine. You will need to manually adjust this to have the correct loops if you
 want to change the settings.
 
+*WARNING* if you have not compiled, you will need to run =stack build= before
+hand.
+
 #+begin_src sh :tangle run.sh
 # run.sh
 #
