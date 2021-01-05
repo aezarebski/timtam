@@ -38,5 +38,3 @@ single source.
     "occurrenceRate": 0.25
 }
 #+end_src
-
-** TODO Re-run Timing Evaluation with correct parameters
