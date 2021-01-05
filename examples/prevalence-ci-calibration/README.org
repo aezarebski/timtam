@@ -67,3 +67,10 @@ Rscript src/plotter.R $NUM_SEEDS
 #+begin_src sh :tangle clean.sh
 rm -r out/*
 #+end_src
+
+** Parameters
+
+This uses the parameters specified in =bdscod/example/example-parameters.json=
+for the rates of unscheduled events. The timings of the scheduled events in and
+the configuration of the MCMC are hard coded in the
+=src/generate-config-files.R= script.

@@ -40,5 +40,4 @@ single source.
 #+end_src
 
 ** TODO Re-run Aggregated Observations with correct parameters
-** TODO Re-run CI Calibration with correct parameters
 ** TODO Re-run Timing Evaluation with correct parameters
