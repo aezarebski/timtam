@@ -27,6 +27,18 @@ set of parameters are used for the unscheduled events.
 | sampling rate   |  0.05 |
 | occurrence rate |  0.25 |
 
+These values are stored in =example-parameters.json= so they can be read from a
+single source.
+
+#+begin_src json :tangle example-parameters.json
+{
+    "birthRate": 1.7,
+    "deathRate": 0.9,
+    "samplingRate": 0.05,
+    "occurrenceRate": 0.25
+}
+#+end_src
+
 ** TODO Re-run Aggregated Observations with correct parameters
 ** TODO Re-run CI Calibration with correct parameters
 ** TODO Re-run Timing Evaluation with correct parameters
