@@ -1,0 +1,6 @@
+run.sh
+aggregated-data-mcmc-samples.csv
+regular-data-mcmc-samples.csv
+agg-app-config.json
+out/
+
