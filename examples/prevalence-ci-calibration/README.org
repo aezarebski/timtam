@@ -68,7 +68,7 @@ Rscript src/plotter.R $NUM_SEEDS
 #+end_src
 
 #+begin_src sh :tangle clean.sh
-rm -r out/*
+rm -f -r out/*
 #+end_src
 
 ** Parameters
