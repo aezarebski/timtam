@@ -344,7 +344,10 @@ if (SAVE_FIGURES) {
 ## Generate a figure looking at the prevalence through time and the data used in
 ## the inference.
 ## =============================================================================
-all_events <- read.csv("out/all-simulated-events.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+all_events <- read.csv("out/all-simulated-events.csv",
+  header = FALSE,
+  stringsAsFactors = FALSE
+) %>%
   select(V1, V2) %>%
   set_names(c("event", "abs_time"))
 
@@ -367,7 +370,10 @@ prev_df <- data.frame(
 
 ## -----------------------------------------------------------------------------
 
-regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv",
+  header = FALSE,
+  stringsAsFactors = FALSE
+) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
@@ -398,12 +404,19 @@ occ_df <- regular_data %>%
 
 ## -----------------------------------------------------------------------------
 
-aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv",
+  header = FALSE,
+  stringsAsFactors = FALSE
+) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
 just_agg_tree_obs <- aggregated_data %>%
-  filter(str_detect(string = observed_event, pattern = "odisaster", negate = TRUE)) %>%
+  filter(str_detect(
+    string = observed_event,
+    pattern = "odisaster",
+    negate = TRUE
+  )) %>%
   select(-delay)
 
 update_agg_data_ltt <- function(n, e) {
@@ -517,7 +530,7 @@ g_base <- ggplot() +
   theme(axis.title = element_text(face = "bold"))
 
 
-zoom_y_lims <- c(0,200)
+zoom_y_lims <- c(0, 200)
 
 g_zoomed <- g_base + coord_cartesian(ylim = zoom_y_lims)
 
@@ -530,29 +543,36 @@ rect_df <- data.frame(
 )
 
 g_annttd <- g_base +
-  geom_rect(data = rect_df,
-            mapping = aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax),
-            fill = NA,
-            colour = "black",
-            linetype = "dashed")
+  geom_rect(
+    data = rect_df,
+    mapping = aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax),
+    fill = NA,
+    colour = "black",
+    linetype = "dashed"
+  )
 
-g_with_inset <- ggdraw(g_annttd) +
-   draw_plot((g_zoomed + labs(x = NULL)),
-             scale = 0.6, x = 0.1, y = 0.1, hjust = 0.20, vjust = -0.05)
+g_with_inset <- ggdraw(g_zoomed) +
+  draw_plot((g_annttd + labs(x = NULL)),
+    scale = 0.45,
+    x = 0.1,
+    y = 0.1,
+    hjust = 0.30,
+    vjust = -0.05
+  )
 
 fig_height <- 10
 
 if (SAVE_FIGURES) {
   ggsave("out/regular-and-aggregated-data.png",
-         g_with_inset,
-         height = fig_height,
-         width = 1.618 * fig_height,
-         units = "cm"
-         )
+    g_with_inset,
+    height = fig_height,
+    width = 1.618 * fig_height,
+    units = "cm"
+  )
   ggsave("out/regular-and-aggregated-data.pdf",
-         g_with_inset,
-         height = fig_height,
-         width = 1.618 * fig_height,
-         units = "cm"
-         )
+    g_with_inset,
+    height = fig_height,
+    width = 1.618 * fig_height,
+    units = "cm"
+  )
 }
