@@ -47,3 +47,13 @@ The =src/plot.R= script generates all of the figures and writes them to =out/=.
 The most interesting figure is =regular-and-aggregated-data.png= which contrasts
 the prevalence estimate using the regular and aggregated data and shows a simple
 visualisation of these data.
+
+** Output 
+
+The main figures produced from this example are the following:
+
+- =out/aggregated-data-posterior-joints.pdf=
+- =out/aggregated-data-posterior-marginals.pdf=
+- =out/regular-and-aggregated-data.pdf=
+- =out/regular-data-posterior-joints.pdf=
+- =out/regular-data-posterior-marginals.pdf=
