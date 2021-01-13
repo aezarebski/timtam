@@ -306,15 +306,55 @@ agg_data_posterior_df <- tail(agg_data_posterior_df, -1e3)
 
 param_labels <- c(lambda = "Birth rate", rho = "Sequenced sampling\nprobability", nu = "Unsequenced sampling\nprobability")
 
-g3_df <- agg_data_posterior_df %>%
-  melt(id.vars = c(), variable.name = "parameter")
+
+## We want to create a replicate of the figure looking at the marginal posterior
+## distributions based on the regular data, but we need to change a few things
+## due to the different variable names so there is duplication here. Note that
+## we can reuse the \code{ci_subset} function from above.
+g3_df_tmp <- agg_data_posterior_df %>%
+  melt(
+    id.vars = c(),
+    variable.name = "parameter"
+  )
+
+g3_df <- map(unique(g3_df_tmp$parameter), function(param) {
+  g3_df_tmp %>%
+    subset(parameter == param) %>%
+    use_series("value") %>%
+    density() %>%
+    extract(c("x", "y")) %>%
+    data.frame() %>%
+    mutate(parameter = param)
+}) %>% bind_rows()
+
+g3_bounds_df <- g3_df_tmp %>%
+  group_by(parameter) %>%
+  summarise(
+    lower_bound = quantile(x = value, probs = 0.025),
+    upper_bound = quantile(x = value, probs = 0.975)
+  )
+
+g3_df_ci <- map(
+  unique(g3_df$parameter),
+  function(param) ci_subset(param, g3_bounds_df, g3_df)
+) %>% bind_rows()
 
 g3 <- ggplot() +
-  geom_density(
-    data = g3_df,
-    mapping = aes(x = value, y = ..density..),
+  geom_line(data = g3_df,mapping = aes(x = x, y = y), color = purple_hex_colour) +
+  geom_area(
+    data = g3_df_ci,
+    mapping = aes(x = x, y = y),
     colour = purple_hex_colour,
-    size = 1.2
+    fill = purple_hex_colour,
+    alpha = 0.3
+  ) +
+  geom_vline(
+    data = subset(melt(sim_param_df,
+                id.vars = c(),
+                variable.name = "parameter"
+                ), parameter == "lambda"),
+    mapping = aes(xintercept = value),
+    linetype = "dashed"
   ) +
   facet_wrap(~parameter,
     scales = "free",
