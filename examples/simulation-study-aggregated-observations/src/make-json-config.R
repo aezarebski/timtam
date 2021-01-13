@@ -39,7 +39,8 @@ catastrophe_params <- list()
 ## aggregation.
 time_mesh <- seq(from = 2.5, to = simulation_duration, by = 1)
 seq_agg_times <- as.list(time_mesh)
-unseq_agg_times <- as.list(time_mesh - 0.1)
+unseq_agg_times <- as.list(time_mesh - 0.1) # magic number for the difference
+                                            # between scheduled events
 
 
 #' Return a list corresponding to the \code{MCMCConfiguration} from \code{Main.hs}
