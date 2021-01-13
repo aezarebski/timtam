@@ -92,39 +92,68 @@ reg_data_posterior_df <- tail(reg_data_posterior_df, -1e3)
 param_labels <- c(lambda = "Birth rate", psi = "Sequenced sampling rate", omega = "Unsequenced sampling rate")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 g1_df_tmp <- reg_data_posterior_df %>%
-  melt(id.vars = c(), variable.name = "parameter")
+  melt(
+    id.vars = c(),
+    variable.name = "parameter"
+  )
 
-g1_df <- map(unique(g1_df_tmp$parameter), function(param) {g1_df_tmp %>% subset(parameter == param) %>% use_series("value") %>% density() %>% extract(c("x","y")) %>% data.frame() %>% mutate(parameter = param)}) %>% bind_rows
+## We construct a density here because this is the only reasonable way to
+## highlight just the region corresponding to the CI as far as stackexchange is
+## concerned.
+g1_df <- map(unique(g1_df_tmp$parameter), function(param) {
+  g1_df_tmp %>%
+    subset(parameter == param) %>%
+    use_series("value") %>%
+    density() %>%
+    extract(c("x", "y")) %>%
+    data.frame() %>%
+    mutate(parameter = param)
+}) %>% bind_rows()
 
 g1_bounds_df <- g1_df_tmp %>%
-  group_by(parameter) %>% summarise(lower_bound = quantile(x = value, probs = 0.025), upper_bound = quantile(x = value, probs = 0.975))
+  group_by(parameter) %>%
+  summarise(
+    lower_bound = quantile(x = value, probs = 0.025),
+    upper_bound = quantile(x = value, probs = 0.975)
+  )
 
 ci_subset <- function(param, bounds_df, density_df) {
   bounds <- bounds_df %>% subset(parameter == param)
-  density_df %>% filter(parameter == param, x > bounds$lower_bound, x < bounds$upper_bound)
+  density_df %>% filter(
+    parameter == param,
+    x > bounds$lower_bound,
+    x < bounds$upper_bound
+  )
 }
 
-g1_df_ci <- map(unique(g1_df$parameter), function(param) ci_subset(param, g1_bounds_df, g1_df)) %>% bind_rows
+g1_df_ci <- map(
+  unique(g1_df$parameter),
+  function(param) ci_subset(param, g1_bounds_df, g1_df)
+) %>% bind_rows()
 
 
 g1 <- ggplot() +
-  geom_line(data = g1_df, mapping = aes(x = x, y = y), colour = green_hex_colour) +
-  geom_area(data= g1_df_ci,  mapping = aes(x = x, y = y), colour = green_hex_colour, fill = green_hex_colour, alpha = 0.3) +
-  geom_vline(data = melt(sim_param_df, id.vars =c(), variable.name ="parameter"), mapping = aes(xintercept = value), linetype = "dashed") +
+  geom_line(
+    data = g1_df,
+    mapping = aes(x = x, y = y),
+    colour = green_hex_colour
+  ) +
+  geom_area(
+    data = g1_df_ci,
+    mapping = aes(x = x, y = y),
+    colour = green_hex_colour,
+    fill = green_hex_colour,
+    alpha = 0.3
+  ) +
+  geom_vline(
+    data = melt(sim_param_df,
+      id.vars = c(),
+      variable.name = "parameter"
+    ),
+    mapping = aes(xintercept = value),
+    linetype = "dashed"
+  ) +
   facet_wrap(~parameter,
     scales = "free",
     labeller = labeller(parameter = param_labels)
@@ -137,6 +166,7 @@ g1 <- ggplot() +
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 17)
   )
+
 
 fig_height <- 10
 
