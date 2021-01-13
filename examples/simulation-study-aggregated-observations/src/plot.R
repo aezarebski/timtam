@@ -91,15 +91,68 @@ reg_data_posterior_df <- tail(reg_data_posterior_df, -1e3)
 
 param_labels <- c(lambda = "Birth rate", psi = "Sequenced sampling rate", omega = "Unsequenced sampling rate")
 
-g1_df <- reg_data_posterior_df %>%
-  melt(id.vars = c(), variable.name = "parameter")
+
+g1_df_tmp <- reg_data_posterior_df %>%
+  melt(
+    id.vars = c(),
+    variable.name = "parameter"
+  )
+
+## We construct a density here because this is the only reasonable way to
+## highlight just the region corresponding to the CI as far as stackexchange is
+## concerned.
+g1_df <- map(unique(g1_df_tmp$parameter), function(param) {
+  g1_df_tmp %>%
+    subset(parameter == param) %>%
+    use_series("value") %>%
+    density() %>%
+    extract(c("x", "y")) %>%
+    data.frame() %>%
+    mutate(parameter = param)
+}) %>% bind_rows()
+
+g1_bounds_df <- g1_df_tmp %>%
+  group_by(parameter) %>%
+  summarise(
+    lower_bound = quantile(x = value, probs = 0.025),
+    upper_bound = quantile(x = value, probs = 0.975)
+  )
+
+ci_subset <- function(param, bounds_df, density_df) {
+  bounds <- bounds_df %>% subset(parameter == param)
+  density_df %>% filter(
+    parameter == param,
+    x > bounds$lower_bound,
+    x < bounds$upper_bound
+  )
+}
+
+g1_df_ci <- map(
+  unique(g1_df$parameter),
+  function(param) ci_subset(param, g1_bounds_df, g1_df)
+) %>% bind_rows()
+
 
 g1 <- ggplot() +
-  geom_density(
+  geom_line(
     data = g1_df,
-    mapping = aes(x = value, y = ..density..),
+    mapping = aes(x = x, y = y),
+    colour = green_hex_colour
+  ) +
+  geom_area(
+    data = g1_df_ci,
+    mapping = aes(x = x, y = y),
     colour = green_hex_colour,
-    size = 1.2
+    fill = green_hex_colour,
+    alpha = 0.3
+  ) +
+  geom_vline(
+    data = melt(sim_param_df,
+      id.vars = c(),
+      variable.name = "parameter"
+    ),
+    mapping = aes(xintercept = value),
+    linetype = "dashed"
   ) +
   facet_wrap(~parameter,
     scales = "free",
@@ -113,6 +166,7 @@ g1 <- ggplot() +
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 17)
   )
+
 
 fig_height <- 10
 
@@ -252,15 +306,55 @@ agg_data_posterior_df <- tail(agg_data_posterior_df, -1e3)
 
 param_labels <- c(lambda = "Birth rate", rho = "Sequenced sampling\nprobability", nu = "Unsequenced sampling\nprobability")
 
-g3_df <- agg_data_posterior_df %>%
-  melt(id.vars = c(), variable.name = "parameter")
+
+## We want to create a replicate of the figure looking at the marginal posterior
+## distributions based on the regular data, but we need to change a few things
+## due to the different variable names so there is duplication here. Note that
+## we can reuse the \code{ci_subset} function from above.
+g3_df_tmp <- agg_data_posterior_df %>%
+  melt(
+    id.vars = c(),
+    variable.name = "parameter"
+  )
+
+g3_df <- map(unique(g3_df_tmp$parameter), function(param) {
+  g3_df_tmp %>%
+    subset(parameter == param) %>%
+    use_series("value") %>%
+    density() %>%
+    extract(c("x", "y")) %>%
+    data.frame() %>%
+    mutate(parameter = param)
+}) %>% bind_rows()
+
+g3_bounds_df <- g3_df_tmp %>%
+  group_by(parameter) %>%
+  summarise(
+    lower_bound = quantile(x = value, probs = 0.025),
+    upper_bound = quantile(x = value, probs = 0.975)
+  )
+
+g3_df_ci <- map(
+  unique(g3_df$parameter),
+  function(param) ci_subset(param, g3_bounds_df, g3_df)
+) %>% bind_rows()
 
 g3 <- ggplot() +
-  geom_density(
-    data = g3_df,
-    mapping = aes(x = value, y = ..density..),
+  geom_line(data = g3_df, mapping = aes(x = x, y = y), color = purple_hex_colour) +
+  geom_area(
+    data = g3_df_ci,
+    mapping = aes(x = x, y = y),
     colour = purple_hex_colour,
-    size = 1.2
+    fill = purple_hex_colour,
+    alpha = 0.3
+  ) +
+  geom_vline(
+    data = subset(melt(sim_param_df,
+      id.vars = c(),
+      variable.name = "parameter"
+    ), parameter == "lambda"),
+    mapping = aes(xintercept = value),
+    linetype = "dashed"
   ) +
   facet_wrap(~parameter,
     scales = "free",
@@ -344,7 +438,10 @@ if (SAVE_FIGURES) {
 ## Generate a figure looking at the prevalence through time and the data used in
 ## the inference.
 ## =============================================================================
-all_events <- read.csv("out/all-simulated-events.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+all_events <- read.csv("out/all-simulated-events.csv",
+  header = FALSE,
+  stringsAsFactors = FALSE
+) %>%
   select(V1, V2) %>%
   set_names(c("event", "abs_time"))
 
@@ -367,7 +464,10 @@ prev_df <- data.frame(
 
 ## -----------------------------------------------------------------------------
 
-regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+regular_data <- read.csv("out/simulated-observations-true-params-regular-data.csv",
+  header = FALSE,
+  stringsAsFactors = FALSE
+) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
@@ -398,12 +498,19 @@ occ_df <- regular_data %>%
 
 ## -----------------------------------------------------------------------------
 
-aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+aggregated_data <- read.csv("out/simulated-observations-est-params-agg-data.csv",
+  header = FALSE,
+  stringsAsFactors = FALSE
+) %>%
   set_names(c("delay", "observed_event")) %>%
   mutate(abs_time = cumsum(delay))
 
 just_agg_tree_obs <- aggregated_data %>%
-  filter(str_detect(string = observed_event, pattern = "odisaster", negate = TRUE)) %>%
+  filter(str_detect(
+    string = observed_event,
+    pattern = "odisaster",
+    negate = TRUE
+  )) %>%
   select(-delay)
 
 update_agg_data_ltt <- function(n, e) {
@@ -517,7 +624,7 @@ g_base <- ggplot() +
   theme(axis.title = element_text(face = "bold"))
 
 
-zoom_y_lims <- c(0,200)
+zoom_y_lims <- c(0, 200)
 
 g_zoomed <- g_base + coord_cartesian(ylim = zoom_y_lims)
 
@@ -530,29 +637,36 @@ rect_df <- data.frame(
 )
 
 g_annttd <- g_base +
-  geom_rect(data = rect_df,
-            mapping = aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax),
-            fill = NA,
-            colour = "black",
-            linetype = "dashed")
+  geom_rect(
+    data = rect_df,
+    mapping = aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax),
+    fill = NA,
+    colour = "black",
+    linetype = "dashed"
+  )
 
-g_with_inset <- ggdraw(g_annttd) +
-   draw_plot((g_zoomed + labs(x = NULL)),
-             scale = 0.6, x = 0.1, y = 0.1, hjust = 0.20, vjust = -0.05)
+g_with_inset <- ggdraw(g_zoomed) +
+  draw_plot((g_annttd + labs(x = NULL)),
+    scale = 0.45,
+    x = 0.1,
+    y = 0.1,
+    hjust = 0.30,
+    vjust = -0.05
+  )
 
 fig_height <- 10
 
 if (SAVE_FIGURES) {
   ggsave("out/regular-and-aggregated-data.png",
-         g_with_inset,
-         height = fig_height,
-         width = 1.618 * fig_height,
-         units = "cm"
-         )
+    g_with_inset,
+    height = fig_height,
+    width = 1.618 * fig_height,
+    units = "cm"
+  )
   ggsave("out/regular-and-aggregated-data.pdf",
-         g_with_inset,
-         height = fig_height,
-         width = 1.618 * fig_height,
-         units = "cm"
-         )
+    g_with_inset,
+    height = fig_height,
+    width = 1.618 * fig_height,
+    units = "cm"
+  )
 }
