@@ -340,7 +340,7 @@ g3_df_ci <- map(
 ) %>% bind_rows()
 
 g3 <- ggplot() +
-  geom_line(data = g3_df,mapping = aes(x = x, y = y), color = purple_hex_colour) +
+  geom_line(data = g3_df, mapping = aes(x = x, y = y), color = purple_hex_colour) +
   geom_area(
     data = g3_df_ci,
     mapping = aes(x = x, y = y),
@@ -350,9 +350,9 @@ g3 <- ggplot() +
   ) +
   geom_vline(
     data = subset(melt(sim_param_df,
-                id.vars = c(),
-                variable.name = "parameter"
-                ), parameter == "lambda"),
+      id.vars = c(),
+      variable.name = "parameter"
+    ), parameter == "lambda"),
     mapping = aes(xintercept = value),
     linetype = "dashed"
   ) +
