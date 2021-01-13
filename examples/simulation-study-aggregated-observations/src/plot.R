@@ -107,24 +107,23 @@ param_labels <- c(lambda = "Birth rate", psi = "Sequenced sampling rate", omega 
 
 g1_df_tmp <- reg_data_posterior_df %>%
   melt(id.vars = c(), variable.name = "parameter")
+
 g1_df <- map(unique(g1_df_tmp$parameter), function(param) {g1_df_tmp %>% subset(parameter == param) %>% use_series("value") %>% density() %>% extract(c("x","y")) %>% data.frame() %>% mutate(parameter = param)}) %>% bind_rows
 
-
-## g1_df %>% subset(parameter == "lambda") %>% use_series("value") %>% density() %>% extract(c("x","y")) %>% data.frame() %>% mutate(parameter = "lambda")
-
-
 g1_bounds_df <- g1_df_tmp %>%
-  group_by(parameter) %>% summarise(lower_bound = quantile(x = value, probs = 0.025), upper_bound = quantile(x = value, probs = 0.975), middle = quantile(x = value, probs = 0.5))
+  group_by(parameter) %>% summarise(lower_bound = quantile(x = value, probs = 0.025), upper_bound = quantile(x = value, probs = 0.975))
+
+ci_subset <- function(param, bounds_df, density_df) {
+  bounds <- bounds_df %>% subset(parameter == param)
+  density_df %>% filter(parameter == param, x > bounds$lower_bound, x < bounds$upper_bound)
+}
+
+g1_df_ci <- map(unique(g1_df$parameter), function(param) ci_subset(param, g1_bounds_df, g1_df)) %>% bind_rows
+
 
 g1 <- ggplot() +
   geom_line(data = g1_df, mapping = aes(x = x, y = y), colour = green_hex_colour) +
-  ## geom_density(
-  ##   data = g1_df,
-  ##   mapping = aes(x = value, y = ..density..),
-  ##   colour = green_hex_colour,
-  ##   size = 1.2
-  ## ) +
-  ## geom_vline(data = g1_bounds_df, mapping = aes(xintercept = value), colour = green_hex_colour) +
+  geom_area(data= g1_df_ci,  mapping = aes(x = x, y = y), colour = green_hex_colour, fill = green_hex_colour, alpha = 0.3) +
   geom_vline(data = melt(sim_param_df, id.vars =c(), variable.name ="parameter"), mapping = aes(xintercept = value), linetype = "dashed") +
   facet_wrap(~parameter,
     scales = "free",
