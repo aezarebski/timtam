@@ -34,6 +34,7 @@ tmp <- pop_sim_records %>%
   select(Name, popsizeMeanSeconds)
 plot_df <- left_join(bdscod_records, tmp, by = "Name") %>%
     select(Size, bdscodMeanSeconds, popsizeMeanSeconds) %>%
+  filter(not(is.na(popsizeMeanSeconds))) %>%
     melt(id.vars = "Size")
 rm(tmp)
 
