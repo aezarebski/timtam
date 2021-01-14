@@ -79,18 +79,11 @@ sink()
 facet_label_map <- c(bdscodMeanSeconds = "TimTam log-likelihood",
                      popsizeMeanSeconds = "Numeric ODE log-likelihood")
 
-pseudo_points_df <- plot_df %>%
-  filter(variable == "bdscodMeanSeconds") %>%
-  mutate(variable = "popsizeMeanSeconds")
-
 g <- ggplot(data = plot_df,
             mapping = aes(x = Size, y = value)) +
   geom_point(shape = 1,
              size = 1) +
   geom_line(data = plot_df_2) +
-  geom_point(data = pseudo_points_df,
-             shape = 1,
-             colour = "grey") +
   facet_wrap(~variable,
              scales = "free_y",
              labeller = labeller(variable = facet_label_map)) +
