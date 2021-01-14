@@ -53,25 +53,55 @@ popsize_model <- plot_df %>%
            ln_time = log(value)) %>%
     {lm(ln_time ~ ln_size, data = .)}
 
+## We need to run the predictive model on a mesh so that we can display it later
+## as the model fit.
 x_vals <- 1:200
-
 y_vals1 <- exp(predict(bdscod_model, data.frame(ln_size = log(x_vals))))
 y_vals2 <- exp(predict(popsize_model, data.frame(ln_size = log(x_vals))))
 y_vals <- c(y_vals1, y_vals2)
 
 plot_df_2 <- data.frame(Size = rep(x_vals, 2),
                         value = y_vals,
-                        variable = rep(c("bdscodMeanSeconds", "popsizeMeanSeconds"), each = length(x_vals)))
+                        variable = rep(c("bdscodMeanSeconds",
+                                         "popsizeMeanSeconds"),
+                                       each = length(x_vals)))
 
+## Since in both of the models the smallest data set is an outlier for the
+## models we are using we repeat the estimation using robust linear regression
+## as an alternative to arguing that the estimates are not unduly influenced by
+## the initial data points. Note that \code{MASS} is a recommended package for R
+## so is available in all reputable implementations.
+bdscod_robust_model <- plot_df %>%
+  filter(variable == "bdscodMeanSeconds") %>%
+  mutate(ln_size = log(Size),
+         ln_time = log(value)) %>%
+  {MASS::rlm(ln_time ~ ln_size, data = .)}
+
+popsize_robust_model <- plot_df %>%
+  filter(variable == "popsizeMeanSeconds") %>%
+  mutate(ln_size = log(Size),
+         ln_time = log(value)) %>%
+  {MASS::rlm(ln_time ~ ln_size, data = .)}
+
+## Save a copy of the linear model summaries so we can check these later to
+## describe the model fits in the manuscript
 sink(file = "out/model-fit-summary.txt")
-print("================================================================================\n")
+cat("================================================================================\n")
 cat("BDSCOD model fit\n")
 cat("================================================================================\n")
 summary(bdscod_model)
+cat("================================================================================\n")
+cat("BDSCOD *ROBUST* model fit\n")
+cat("================================================================================\n")
+summary(bdscod_robust_model)
 cat("\n================================================================================\n")
 cat("Manceau et al (2020) model fit\n")
 cat("================================================================================\n")
 summary(popsize_model)
+cat("\n================================================================================\n")
+cat("Manceau et al (2020) *ROBUST* model fit\n")
+cat("================================================================================\n")
+summary(popsize_robust_model)
 sink()
 
 ## Now we actually put together the plot so we can see what the times look like
