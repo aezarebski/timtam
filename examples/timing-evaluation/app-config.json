@@ -1,6 +1,6 @@
 {
   "acDuration": 6,
-  "acNumSims": 1000,
+  "acNumSims": 2000,
   "acBinWidth": 5,
   "acSimParams": {
     "mpParameters": [
@@ -17,5 +17,5 @@
   },
   "acNumBins": 40,
   "acOutputCsv": "out/simulation-sizes-and-llhds.csv",
-  "pyNumReplicates": 10
+  "pyNumReplicates": 50
 }
