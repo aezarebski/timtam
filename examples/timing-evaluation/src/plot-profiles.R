@@ -26,7 +26,12 @@ pop_sim_records <- list.files(path = "out/", pattern = "^popsize", full.names = 
     bind_rows %>%
     mutate(Name = gsub(pattern = ".*observations", replacement = "out/simulated-observations", x = inputJson))
 
-tmp <- pop_sim_records %>% rename(popsizeMeanSeconds = evaluationTime / numReplicates) %>% select(Name, popsizeMeanSeconds)
+## Since the evaluation time is given as the total amount of time it took to
+## evaluate the log-likelihood multiple times, we need to divide it by the
+## number of replicates to get the sample average of the evaluation time.
+tmp <- pop_sim_records %>%
+  rename(popsizeMeanSeconds = evaluationTime / numReplicates) %>%
+  select(Name, popsizeMeanSeconds)
 plot_df <- left_join(bdscod_records, tmp, by = "Name") %>%
     select(Size, bdscodMeanSeconds, popsizeMeanSeconds) %>%
     melt(id.vars = "Size")
