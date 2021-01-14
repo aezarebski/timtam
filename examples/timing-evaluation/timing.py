@@ -73,6 +73,9 @@ print(prev_llhd,curr_llhd)
 print(truncation_param)
 
 if has_converged:
+    # NOTE this function returns the *total* amount of time it takes to
+    # evaluate the expression the given number of times, so to get the average
+    # evaluation time you need to divide by the number of replicates!!!
     eval_time = timeit.timeit('algo1.logDensity( obs, params, distinguishRemoval, truncation_param)',
                               globals=globals(),
                               number = num_replicates)

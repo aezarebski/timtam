@@ -44,12 +44,12 @@ main <- function(args) {
 
     app_config <- list(
       acDuration = duration,
-      acNumSims = 1000,
+      acNumSims = 2000,
       acBinWidth = 5,
       acSimParams = read_parameters(duration, rho_prob),
       acNumBins = 40,
       acOutputCsv = "out/simulation-sizes-and-llhds.csv",
-      pyNumReplicates = 10
+      pyNumReplicates = 50
     )
     write_json(
       x = app_config,
