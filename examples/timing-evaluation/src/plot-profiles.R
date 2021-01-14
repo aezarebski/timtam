@@ -76,8 +76,8 @@ sink()
 ## Now we actually put together the plot so we can see what the times look like
 ## side by side.
 
-facet_label_map <- c(bdscodMeanSeconds = "TimTam",
-                     popsizeMeanSeconds = "Manceau")
+facet_label_map <- c(bdscodMeanSeconds = "TimTam log-likelihood",
+                     popsizeMeanSeconds = "Numeric ODE log-likelihood")
 
 pseudo_points_df <- plot_df %>%
   filter(variable == "bdscodMeanSeconds") %>%
