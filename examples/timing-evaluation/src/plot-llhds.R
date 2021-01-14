@@ -30,8 +30,11 @@ pop_sim_llhds <- list.files(path = "out/", pattern = "^popsize", full.names = TR
     rename(popSimLlhd = convergedLlhd) %>%
     select(name, popSimLlhd, truncationParameter)
 
-plot_df <- left_join(bdscod_llhds, pop_sim_llhds, by = "name")
-
+## We need to filter the resulting data frame because there there are missing
+## entries from the \code{pop_sim_llhds} data frame for the simulations where a
+## truncation parameter was not found.
+plot_df <- left_join(bdscod_llhds, pop_sim_llhds, by = "name") %>%
+  filter(not(is.na(truncationParameter)))
 
 
 ## We save a copy of a summary of the linear model between the LLHDs of the two
@@ -49,9 +52,7 @@ sink()
 ## to make sure that the new approximation is accurate. We compute the limits
 ## manually so we can set them to the same values to improve the clarity of the
 ## comparison.
-llhd_range <- range(c(plot_df$bdscodLlhd, plot_df$popSimLlhd))
-plot_lower_lim <- llhd_range[1] %>% divide_by(10) %>% floor() %>% multiply_by(10)
-plot_upper_lim <- llhd_range[2] %>% divide_by(10) %>% ceiling() %>% multiply_by(10)
+plot_axis_breaks <- seq(from = -100, to = 50, by = 50)
 
 llhd_comparison <- ggplot(data = plot_df,
                           mapping = aes(x = bdscodLlhd,
@@ -68,11 +69,17 @@ llhd_comparison <- ggplot(data = plot_df,
               size = 0.3) +
   geom_point(shape = 1,
              size = 1) +
-  labs(x = "TimTam log-likelihood",
-       y = "Manceau log-likelihood") +
+  scale_x_continuous(
+    name = "TimTam log-likelihood",
+    breaks = plot_axis_breaks
+  ) +
+  scale_y_continuous(
+    name = "Numeric ODE log-likelihood", # Marc has asked that his name not be
+                                         # used to describe the method so this
+                                         # has been used instead
+    breaks = plot_axis_breaks
+  ) +
   coord_fixed() +
-  xlim(plot_lower_lim, plot_upper_lim) +
-  ylim(plot_lower_lim, plot_upper_lim) +
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
 
