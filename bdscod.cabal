@@ -1,5 +1,5 @@
 name:                bdscod
-version:             0.1.3.1
+version:             0.1.4.0
 -- synopsis:
 -- description:
 homepage:            https://github.com/aezarebski/bdscod#readme
@@ -11,14 +11,13 @@ copyright:           2020 Alexander E. Zarebski
 category:            Math
 build-type:          Simple
 cabal-version:       >=1.10
-extra-source-files:  README.md
+extra-source-files:  README.org
                      ChangeLog.md
 
 
 library
   exposed-modules: BDSCOD.Llhd
                    BDSCOD.Aggregation
-                   BDSCOD.Conditioning
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd
@@ -26,34 +25,39 @@ library
       src
   build-depends:
                     aeson
-                      , generic-random
-                , QuickCheck >= 2.13.2
-                , base >= 4.7 && < 5
-                , bytestring >= 0.10
-                , cassava >= 0.5
-                , deepseq >= 1.4.4.0
-                , epi-sim >= 0.2.2.0
-                , hspec-core >= 2.7.4
-                , vector
+                  , generic-random
+                  , QuickCheck >= 2.13.2
+                  , base >= 4.7 && < 5
+                  , bytestring >= 0.10
+                  , cassava >= 0.5
+                  , deepseq >= 1.4.4.0
+                  , epi-sim >= 0.3.0.0
+                  , hspec-core >= 2.7.4
+                  , vector
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs -Wmissing-signatures -O2 -fwarn-incomplete-patterns
-  -- ghc-options:        
 
 
-executable manceau-comparison
+executable prevalence-at-tmrca
   main-is: Main.hs
   other-modules:
       Paths_bdscod
   hs-source-dirs:
-      apps/manceau-comparison
-  ghc-options: 
+      apps/prevalence-at-tmrca
+  ghc-options:
   build-depends:
       base
+    , aeson
+    , bdscod
     , bytestring
     , cassava
+    , directory
     , epi-sim
-    , bdscod
-    , hspec
+    , hmatrix
+    , hmatrix-gsl
+    , mighty-metropolis >= 2.0.0
+    , mtl
+    , mwc-random
     , vector
   default-language: Haskell2010
 

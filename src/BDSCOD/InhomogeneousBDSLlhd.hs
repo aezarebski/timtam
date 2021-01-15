@@ -32,16 +32,18 @@ inhomLlhdAndNB' [] _ (l,_,_,nb) = Just (l,nb)
 inhomLlhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) (l,t,k,nb) =
   do
     rateChangeTime <- nextTime tlams t
-    if rateChangeTime - t > delay
+    if timeDelta t rateChangeTime > delay
       then let bdscodParams = Parameters (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
-               t' = t + delay
+               t' = timeAfterDelta t delay
                (l',nb') = intervalLlhd bdscodParams delay k nb
                (l'',k'',nb'') = eventLlhd t' bdscodParams event k nb'
              in inhomLlhdAndNB' events inhomParams (l+l'+l'',t',k'',nb'')
       else let bdscodParams = Parameters (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
                t' = rateChangeTime
-               (l',nb') = intervalLlhd bdscodParams (rateChangeTime-t) k nb
-             in inhomLlhdAndNB' ((delay-(rateChangeTime-t),event):events) inhomParams (l+l',t',k,nb')
+               (l',nb') = intervalLlhd bdscodParams (timeDelta t rateChangeTime) k nb
+               timeDeltaSubtraction (TimeDelta a) (TimeDelta b) = TimeDelta (a - b)
+               remainingTime = timeDelta t rateChangeTime
+             in inhomLlhdAndNB' ((timeDeltaSubtraction delay remainingTime, event):events) inhomParams (l+l',t',k,nb')
 
 -- | The log-likelihood and the distribution of prevalence of the inhomogenoues BDS.
 inhomLlhdAndNB :: [Observation]  -- ^ The observed events
@@ -51,6 +53,6 @@ inhomLlhdAndNB :: [Observation]  -- ^ The observed events
 inhomLlhdAndNB obs params state0 =
   fromMaybe (-1 / 0, Zero) $ inhomLlhdAndNB' obs params state0
 
-type InhomLlhdCalcState = (LogLikelihood,Time,NumLineages,NegativeBinomial)
+type InhomLlhdCalcState = (LogLikelihood,AbsoluteTime,NumLineages,NegativeBinomial)
 initLlhdState :: InhomLlhdCalcState
-initLlhdState = (0,0,1,Zero)
+initLlhdState = (0,AbsoluteTime 0,1,Zero)

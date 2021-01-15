@@ -7,9 +7,12 @@ with a set of suitable configuration files which each live in a subdirectory or
 
 ** Example results
 
+Below are the CIs from the original simulated data (i.e. the unscheduled
+events).
+
 *** Prevalence at present
 
-[[./replication-results-prevalence-bias.png]]
+[[./out/replication-results-prevalence-bias-regular_data.png]]
 
 *** Basic reproduction number
 
@@ -17,7 +20,7 @@ Here are the \(95\%\) credible intervals for the basic reproduction number in
 each of the replicates. The dashed line indicates the true value used in the
 simulations.
 
-[[./replication-results-r-naught.png]]
+[[./out/replication-results-r-naught-regular_data.png]]
 
 *** ESS as MCMC diagnostic
 
@@ -25,7 +28,7 @@ The following figure shows the ESS for each of the parameters in each replicate
 as calculated by =coda=, the dashed line indicates an effective sample size of
 200 which is a standard threshold used in the phylodynamics literature.
 
-[[./mcmc-ess.png]]
+[[./out/mcmc-ess-regular_data.png]]
 
 ** Usage
 
@@ -36,6 +39,9 @@ up into groups of 10 to avoid using up all the resources at once and crashing my
 machine. You will need to manually adjust this to have the correct loops if you
 want to change the settings.
 
+*WARNING* if you have not compiled, you will need to run =stack build= before
+hand.
+
 #+begin_src sh :tangle run.sh
 # run.sh
 #
@@ -43,7 +49,7 @@ want to change the settings.
 
 NUM_SEEDS=100
 
-Rscript generate-config-files.R $NUM_SEEDS
+Rscript src/generate-config-files.R $NUM_SEEDS
 
 for ix in 00 10 20 30 40 50 60 70 80 90;
 do
@@ -58,14 +64,16 @@ do
     wait "${pids[@]}"
 done
 
-Rscript plotter.R $NUM_SEEDS
+Rscript src/plotter.R $NUM_SEEDS
 #+end_src
 
 #+begin_src sh :tangle clean.sh
-rm -r out/*
-rm replication-results-lambda.png
-rm replication-results-omega.png
-rm replication-results-prevalence.png
-rm replication-results-psi.png
-rm replication-results-r-naught.png
+rm -f -r out/*
 #+end_src
+
+** Parameters
+
+This uses the parameters specified in =bdscod/example/example-parameters.json=
+for the rates of unscheduled events. The timings of the scheduled events in and
+the configuration of the MCMC are hard coded in the
+=src/generate-config-files.R= script.

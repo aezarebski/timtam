@@ -4,7 +4,6 @@
 
 module Main where
 
-import BDSCOD.Conditioning
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
@@ -35,24 +34,25 @@ data ParameterName
 
 type ProfileParameters = Map ParameterName [Parameters]
 
-condLlhdAndNB :: [Observation] -> Parameters -> Time -> Bool -> (LogLikelihood, NegativeBinomial)
-condLlhdAndNB obs params@(Parameters (birthRate,deathRate,samplingRate,_,occRate,_)) duration cond =
-  let (l,nb) = llhdAndNB obs params initLlhdState
-      lnProbObs = log $ 1 - probabilityUnobserved (birthRate,deathRate,samplingRate+occRate) duration
-   in (if cond then l - lnProbObs else l,nb)
+-- condLlhdAndNB :: [Observation] -> Parameters -> Time -> Bool -> (LogLikelihood, NegativeBinomial)
+-- condLlhdAndNB obs params@(Parameters (birthRate,deathRate,samplingRate,_,occRate,_)) duration cond =
+--   let (l,nb) = llhdAndNB obs params initLlhdState
+--       lnProbObs = log $ 1 - probabilityUnobserved (birthRate,deathRate,samplingRate+occRate) duration
+--    in (if cond then l - lnProbObs else l,nb)
 
 -- | Evalue the LLHD function with or without conditioning upon observing the
 -- process at each of the parameter values given and write the results to file.
-llhdsWriteFile :: FilePath -> [Observation] -> ProfileParameters -> Time -> Bool -> IO ()
+llhdsWriteFile :: FilePath -> [Observation] -> ProfileParameters -> TimeDelta -> Bool -> IO ()
 llhdsWriteFile fp d psMap duration conditionLlhd =
    mapM_ (\(pName,pVals) -> llhdsWriteFile' fp d pName pVals duration conditionLlhd) (toList psMap)
 
-llhdsWriteFile' :: FilePath -> [Observation] -> ParameterName -> [Parameters] -> Time -> Bool -> IO ()
+llhdsWriteFile' :: FilePath -> [Observation] -> ParameterName -> [Parameters] -> TimeDelta -> Bool -> IO ()
 llhdsWriteFile' fp d paramName ps duration conditionLlhd =
   case ps of
     [] -> return ()
     (p:ps') -> do
-      let x = condLlhdAndNB d p duration conditionLlhd
+      -- let x = condLlhdAndNB d p duration conditionLlhd
+      let x = llhdAndNB d p initLlhdState
       appendFile fp $ output p x
       llhdsWriteFile' fp d paramName ps' duration conditionLlhd
       where output (Parameters (x1, x2, x3, Timed ((_, x4):_), x5, Timed ((_, x6):_))) (x7, x8) =
@@ -85,15 +85,15 @@ data SimStudyParams =
     , outputEventsCsv :: FilePath
     , outputObservationsFile :: FilePath
     , outputLlhdFile :: FilePath
-    , simDuration :: Time
+    , simDuration :: TimeDelta
     , simLambda :: Rate
     , simMu :: Rate
     , simPsi :: Rate
     , simRho :: Probability
-    , simRhoTimes :: [Time]
+    , simRhoTimes :: [AbsoluteTime]
     , simOmega :: Rate
     , simNu :: Probability
-    , simNuTimes :: [Time]
+    , simNuTimes :: [AbsoluteTime]
     }
   deriving (Show, Generic)
 
@@ -125,7 +125,8 @@ main = do
   let simStudyParams@(SimStudyParams{..}) = fromJust config
       simParams = (simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes])
       infParamss = inferenceParameters simStudyParams
-      simConfig = SimBDSCOD.configuration simDuration simParams
+      (TimeDelta simDurDouble) = simDuration
+      simConfig = SimBDSCOD.configuration (AbsoluteTime simDurDouble) simParams
       conditionUponObservation = True
    in if isNothing simConfig
       then
@@ -137,7 +138,7 @@ main = do
            L.writeFile outputEventsCsv $ Csv.encode simEvents
              -- Generate the Newick representations so we can have a tree view of the whole simulation.
            let maybeEpiTree = maybeEpidemicTree simEvents
-           let Just (newickBuilder,newickMetaData) = asNewickString (0, Person 1) =<< maybeEpiTree
+           let Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeEpiTree
            L.writeFile "demo-newick-string-epitree.txt" $ BBuilder.toLazyByteString newickBuilder
            L.writeFile "demo-newick-metadata-epitree.csv" $ Csv.encode newickMetaData
            let obs =
@@ -146,7 +147,7 @@ main = do
                numSimEvents = length simEvents
                numObs = length obs
              -- Generate the Newick representations of the observed data
-           let Just (newickBuilder',newickMetaData') = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpiTree
+           let Just (newickBuilder',newickMetaData') = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeReconstructedTree =<< maybeEpiTree
            L.writeFile "demo-newick-string-recontree.txt" $ BBuilder.toLazyByteString newickBuilder'
            L.writeFile "demo-newick-metadata-recontree.csv" $ Csv.encode newickMetaData'
            fromJust $ Prelude.writeFile outputObservationsFile . intersperse '\n' <$> (fmap show obs)

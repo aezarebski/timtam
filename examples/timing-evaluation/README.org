@@ -1,15 +1,40 @@
-* Timing Evaluation
+#+title: Measuring evaluation times
 
-This examples simulates trees of varying sizes and then times how long it takes
-to evaluate the likelihood function on the resulting data set using our
-approximattion. There are instructions for timing the evaluation times using the
-algorithm described by Manceau /et al/ (2020) as well. We refer to that as the
-=popsize-distribution= since that is the name of the repository in which it is
-implemented.
+This example involves simulating trees of varying sizes and then timing how long
+it takes to evaluate the likelihood function on the resulting data set using our
+approximation. There are instructions for timing the evaluation times using the
+algorithm described by Manceau /et al/ (2020) included here as well. We refer to
+that as the =popsize-distribution= since that is the name of the repository in
+which it is implemented.
 
-** Manceau's LLHD function
+** Running the BDSCOD profiling
 
-To compute the evalaution times for the =popsize-distribuion= function, you need
+The profiling of the Haskell code is done using the =criterion= profiling
+package which provides a CLI (which is why there is long =stack exec= command)
+used in the following =main.sh= script.
+
+#+BEGIN_SRC sh :tangle main.sh
+Rscript src/make-json-config.R
+
+stack build 
+
+rm -f out/*
+rm -f fibber.html 
+rm -f fobber.csv 
+
+stack exec -- timing-evaluation --output fibber.html --csv fobber.csv --time-limit 5 
+Rscript src/prepare-simulations-for-popsize.R 
+#+END_SRC
+
+The files =fibber.html= and =fobber.csv= are used by =criterion= to write output
+to. At this point you can open =fibber.html= in a browser to see the results.
+The next steps are used to do the analogous timing in python.
+
+** Running Manceau's approximation
+
+*REMEMBER TO SOURCE THE VIRTUAL ENVIRONMENT FIRST!*
+
+To compute the evaluation times for the =popsize-distribuion= function, you need
 to clone the correct repository into the current directory and then set up the
 necessary python environment (there is a =requirements.txt= provided). Then
 after running the BDSCOD timing, you need to adjust the simulation files and run
@@ -18,6 +43,15 @@ timing results.
 
 The output of =pip freeze= for the virtual environment being used is here, i.e.,
 the =requirements.txt= is given below.
+
+#+begin_src sh
+python3 -m venv venv
+source venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+#+end_src
+
+where the =requirements.txt= is as follows.
 
 #+BEGIN_SRC :tangle requirements.txt
 cycler==0.10.0
@@ -33,34 +67,19 @@ scipy==1.4.1
 six==1.15.0
 #+END_SRC
 
-** Parameters
+To actually run the this, you need to clone the =popsize-distribution=
+repository and copy over a couple of helper scripts as follows. The commit for
+=popsize-distribution= I used is =5223bd2812423c9be0c3086a30df25699cedcdda=.
 
-The parameters used in this computation are defined in a JSON file:
-=app-config.json=, this includes the parameters used in the simulation along
-with some additional variables about the simulation.
+#+BEGIN_SRC sh
+git clone https://gitlab.com/MMarc/popsize-distribution.git
 
-#+BEGIN_SRC json :tangle app-config.json
-{
-    "acDuration": 6,
-    "acNumSims": 1000,
-    "acBinWidth": 5,
-    "acNumBins": 40,
-    "acSimParams": [
-        [1.5, 0.3, 0.3, [
-            [5.999999, 0.5]
-        ], 0.3, []], 6
-    ],
-    "acOutputCsv": "out/simulation-sizes-and-llhds.csv"
-}
-#+END_SRC
+cd popsize-distribution 
 
+cp ../timing.py .
+cp ../run-python-timing.sh
 
-- =acDuration= is the duration of the simulated data set 
-- =acNumSims= is the number of simulations to attempt
-- =acBinWidth= is the desired spacing between the sizes of the simulations
-- =acNumBins= is the number of different sizes to simulate
-- =acSimParams= is the actual simulation parameters 
-- =acOutputCsv= is where the application should store the results
+./run-python-timing.sh
 
 ** Running
 
@@ -91,19 +110,19 @@ cd ../
 deactivate
 #+END_SRC
 
-The =run-python-timing.sh= script just loops over the reformatted files and runs
-the =timing.py= script on them. This outputs
+The =run-python-timing.sh= script is something that has been added to
+=popsize-distribution=. It loops over the reformatted files and runs the
+=timing.py= script on them. This outputs
 =popsize-distribution-timing-<xxx>.json= files which describe the files that
-where used, the estimated minimal truncation parameter and the timem associated
+where used, the estimated minimal truncation parameter and the time associated
 with the final evaluation.
 
-The final step is to generate figures to display the results, the first looks at
-the comparison of the timing between the two models and evaluates the degree of
-a polynomial explaining the complexity, i.e., the order of the complexity. The
-second creates a comparison of the LLHDs between the two models and reports the
-proportion of the variance in the Manceau LLHD explained by our model. There is
-also a figure looking at how the truncation parameter scales with the size of
-the dataset.
+** Results
+
+The final step is to generate figures to display the results this is done using
+the R scripts in the =src= directory. Don't forget that there is a =shell.nix=
+file in the root of this repository to specify the R environment, although there
+is nothing fancy so this should run in most R versions.
 
 #+BEGIN_SRC 
 Rscript src/plot-profiles.R
@@ -131,3 +150,8 @@ Finally, let's consider how the selected truncation parameter differs with the
 size of the data set, since this is a novel result too.
 
 [[./out/truncation-comparison.png]]
+
+** Parameters
+
+The parameters used in this computation are defined in a JSON file,
+=app-config.json= which is generated by =src/make-json-config.R=.
