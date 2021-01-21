@@ -80,6 +80,7 @@ cp ../timing.py .
 cp ../run-python-timing.sh
 
 ./run-python-timing.sh
+#+END_SRC
 
 ** Running
 
