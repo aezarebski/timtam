@@ -2,11 +2,17 @@ module BDSCOD.Utility where
 
 import qualified Data.Vector as V
 
+import qualified Data.Csv as Csv
 import Epidemic.Types.Parameter
 import Epidemic.Types.Events
 import Epidemic.Types.Population
 import BDSCOD.Types
 -- import BDSCOD.Llhd --
+
+
+instance Csv.ToField TimeDelta where
+  toField (TimeDelta td) = Csv.toField td
+
 
 -- | Convert simulation events to observation events, this assumes that the
 -- epidemic events have already been filtered by to only include the observable
@@ -14,32 +20,32 @@ import BDSCOD.Types
 -- provided to do this.
 eventsAsObservations :: [EpidemicEvent] -> [Observation]
 eventsAsObservations epiSimEvents =
-  drop 1 . map fst $ scanl processEvent' ((0, OBirth), 0) epiSimEvents
+  drop 1 . map fst $ scanl processEvent' ((TimeDelta 0, OBirth), AbsoluteTime 0) epiSimEvents
 
-processEvent' :: (Observation, Time) -> EpidemicEvent -> (Observation, Time)
+processEvent' :: (Observation, AbsoluteTime) -> EpidemicEvent -> (Observation, AbsoluteTime)
 processEvent' (_, currTime) epiSimEvent =
   case epiSimEvent of
     (Infection absTime _ _) ->
-      ((absTime - currTime, OBirth), absTime)
-    (Sampling absTime _) -> ((absTime - currTime, ObsUnscheduledSequenced), absTime)
-    (Catastrophe absTime (People persons)) -> ((absTime - currTime, OCatastrophe . fromIntegral $ V.length persons), absTime)
+      ((timeDelta currTime absTime, OBirth), absTime)
+    (Sampling absTime _) -> ((timeDelta currTime absTime, ObsUnscheduledSequenced), absTime)
+    (Catastrophe absTime (People persons)) -> ((timeDelta currTime absTime, OCatastrophe . fromIntegral $ V.length persons), absTime)
     (Occurrence absTime _) ->
-      ((absTime - currTime, OOccurrence), absTime)
-    (Disaster absTime (People persons)) -> ((absTime - currTime, ODisaster . fromIntegral $ V.length persons), absTime)
+      ((timeDelta currTime absTime, OOccurrence), absTime)
+    (Disaster absTime (People persons)) -> ((timeDelta currTime absTime, ODisaster . fromIntegral $ V.length persons), absTime)
     (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
 
 nbFromMAndV :: (Double, Double) -> NegativeBinomial
 nbFromMAndV (0, 0) = Zero
 nbFromMAndV (m, v) =
   if m > 0 && v >= m
-    then NegBinom r p
+    then NegBinomSizeProb r p
     else error $ "nbFromMAndV received bad values: " ++ show (m,v)
   where
     r = (m ** 2) / (v - m)
     p = (v - m) / v
 
 mAndVFromNb :: NegativeBinomial -> (Double, Double)
-mAndVFromNb (NegBinom r p) = (m, v)
+mAndVFromNb (NegBinomSizeProb r p) = (m, v)
   where
     m = p * r / (1 - p)
     v = m / (1 - p)
@@ -53,39 +59,39 @@ mAndVFromNb Zero = (0,0)
 nbPGF :: NegativeBinomial -> Double -> Double
 nbPGF nb z = case nb of
   Zero -> 1
-  (NegBinom r p) -> ((1 - p) / (1 - p * z)) ** r
+  (NegBinomSizeProb r p) -> ((1 - p) / (1 - p * z)) ** r
 
 nbPGF' :: NegativeBinomial -> Double -> Double
 nbPGF' nb z = case nb of
   Zero -> 0
-  (NegBinom r p) -> (r * p / (1 - p)) * nbPGF (NegBinom (r+1) p) z
+  (NegBinomSizeProb r p) -> (r * p / (1 - p)) * nbPGF (NegBinomSizeProb (r+1) p) z
 
 nbPGF'' :: NegativeBinomial -> Double -> Double
 nbPGF'' nb z = case nb of
   Zero -> 0
-  (NegBinom r p) -> (r * (r + 1) * (p / (1 - p)) ** 2.0) *
-                      nbPGF (NegBinom (r+2) p) z
+  (NegBinomSizeProb r p) -> (r * (r + 1) * (p / (1 - p)) ** 2.0) *
+                      nbPGF (NegBinomSizeProb (r+2) p) z
 
 -- | The log of the PGF of the negative binomial distribution.
 logNbPGF :: NegativeBinomial -> Double -> Double
 logNbPGF nb z = case nb of
   Zero -> 0
-  (NegBinom r p) -> r * (log (1 - p) - log (1 - p * z))
+  (NegBinomSizeProb r p) -> r * (log (1 - p) - log (1 - p * z))
 
 logNbPGF' :: NegativeBinomial -> Double -> Double
 logNbPGF' nb z =
   case nb of
     Zero -> log 0
-    (NegBinom r p) ->
-      log (r * p) - log (1 - p) + logNbPGF (NegBinom (r + 1) p) z
+    (NegBinomSizeProb r p) ->
+      log (r * p) - log (1 - p) + logNbPGF (NegBinomSizeProb (r + 1) p) z
 
 logNbPGF'' :: NegativeBinomial -> Double -> Double
 logNbPGF'' nb z =
   case nb of
     Zero -> log 0
-    (NegBinom r p) ->
+    (NegBinomSizeProb r p) ->
       log (r * (r + 1)) + 2 * log (p / (1 - p)) +
-      logNbPGF (NegBinom (r + 2) p) z
+      logNbPGF (NegBinomSizeProb (r + 2) p) z
 
 -- | The jth derivative of the negative binomial PGF.
 --
@@ -95,18 +101,18 @@ nbPGFdash :: Double -> NegativeBinomial -> Double -> Double
 nbPGFdash j nb z =
   case nb of
     Zero -> 0
-    (NegBinom r p) ->
+    (NegBinomSizeProb r p) ->
       pochhammer r j * (p / (1 - p)) ** j *
-        nbPGF (NegBinom (r + j) p) z
+        nbPGF (NegBinomSizeProb (r + j) p) z
 
 -- | The log of the jth derivative of the negative binomial PGF.
 logNbPGFdash :: Double -> NegativeBinomial -> Double -> Double
 logNbPGFdash j nb z =
   case nb of
     Zero -> log 0
-    (NegBinom r p) ->
+    (NegBinomSizeProb r p) ->
       logPochhammer r j + j * log (p / (1 - p)) +
-      logNbPGF (NegBinom (r + j) p) z
+      logNbPGF (NegBinomSizeProb (r + j) p) z
 
 pochhammer :: (Eq p, Num p) => p -> p -> p
 pochhammer _ 0 = 1

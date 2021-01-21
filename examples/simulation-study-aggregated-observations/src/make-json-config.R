@@ -18,10 +18,19 @@ num_mcmc_samples <- 5e4 # the number of MCMC iterations to use.
 
 simulation_duration <- 13.5
 
-birth_rate <- 1.7
-death_rate <- 0.9
-sampling_rate <- 0.05
-occurrence_rate <- 0.25
+## Read in the parameters to use in the example from a configuration file so
+## they are shared between examples.
+example_params_json <- "../example-parameters.json"
+if (not(file.exists(example_params_json))) {
+  stop("Cannot find JSON with example parameters!!!")
+} else {
+  example_params_list <- read_json(example_params_json)
+  birth_rate <- example_params_list$birthRate
+  death_rate <- example_params_list$deathRate
+  sampling_rate <- example_params_list$samplingRate
+  occurrence_rate <- example_params_list$occurrenceRate
+  rm(example_params_list,example_params_json)
+}
 
 disaster_params <- list()
 catastrophe_params <- list()
@@ -30,7 +39,8 @@ catastrophe_params <- list()
 ## aggregation.
 time_mesh <- seq(from = 2.5, to = simulation_duration, by = 1)
 seq_agg_times <- as.list(time_mesh)
-unseq_agg_times <- as.list(time_mesh - 0.1)
+unseq_agg_times <- as.list(time_mesh - 0.1) # magic number for the difference
+                                            # between scheduled events
 
 
 #' Return a list corresponding to the \code{MCMCConfiguration} from \code{Main.hs}
@@ -135,7 +145,7 @@ result <- list(
     )
   ),
   isVerbose = TRUE,
-  configSimulationSeed = 92
+  configSimulationSeed = 7
 )
 
 write_json(result,

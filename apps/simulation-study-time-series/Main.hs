@@ -5,7 +5,7 @@
 
 module Main where
 
-import BDSCOD.Conditioning
+-- import BDSCOD.Conditioning
 import BDSCOD.Llhd
 import BDSCOD.Types
 import BDSCOD.Utility
@@ -28,7 +28,7 @@ import Epidemic.Types.Events
   , maybeReconstructedTree
   )
 import Epidemic.Types.Parameter
-import Epidemic.Types.Population (Person(..))
+import Epidemic.Types.Population (Person(..), Identifier(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
@@ -42,7 +42,7 @@ import System.Random.MWC
 -- of data influences the results.
 data InferenceConfiguration =
   InferenceConfiguration
-    { inferenceTime :: Time
+    { inferenceTime :: AbsoluteTime
     , reconstructedTreeOutputFiles :: (FilePath, FilePath)
     , observationsOutputCsv :: FilePath
     , llhdOutputCsv :: FilePath
@@ -70,7 +70,7 @@ data AppConfiguration =
   AppConfiguration
     { simulatedEventsOutputCsv :: FilePath
     , simulationParameters :: Parameters
-    , simulationDuration :: Time
+    , simulationDuration :: TimeDelta
     , simulationSizeBounds :: (Int,Int)
     , inferenceConfigurations :: [InferenceConfiguration]
     , partialEvaluationOutputCsv :: FilePath
@@ -97,8 +97,8 @@ data ParameterKind
 -- environment.
 bdscodConfiguration = do
   simParams <- asks simulationParameters
-  simDur <- asks simulationDuration
-  let bdscodConfig = SimBDSCOD.configuration simDur (unpackParameters simParams)
+  (TimeDelta simDurDouble) <- asks simulationDuration
+  let bdscodConfig = SimBDSCOD.configuration (AbsoluteTime simDurDouble) (unpackParameters simParams)
   case bdscodConfig of
     Nothing -> throwError "Could not construct BDSCOD configuration"
     (Just config) -> return config
@@ -132,7 +132,7 @@ simulatedObservations :: InferenceConfiguration
                       -> [EpidemicEvent]
                       -> Simulation (InferenceConfiguration,[Observation])
 simulatedObservations infConfig@InferenceConfiguration{..} simEvents = do
-  let Just (newickBuilder,newickMetaData) = asNewickString (0, Person 1) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
+  let Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
       maybeObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles
   case maybeObs of
@@ -212,7 +212,7 @@ estimateLLHD infConfig obs = do
 --
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
-estimateParameters :: Rate -> ([Time],[Time]) -> [Observation] -> Parameters
+estimateParameters :: Rate -> ([AbsoluteTime],[AbsoluteTime]) -> [Observation] -> Parameters
 estimateParameters deathRate sched obs =
   let maxIters = 500
       desiredPrec = 1e-3
@@ -223,7 +223,7 @@ estimateParameters deathRate sched obs =
   in vectorAsParameters deathRate sched est
 
 -- | Helper function for @estimateParameters@
-vectorAsParameters :: Rate -> ([Time],[Time]) -> Vector Double -> Parameters
+vectorAsParameters :: Rate -> ([AbsoluteTime],[AbsoluteTime]) -> Vector Double -> Parameters
 vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
   let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec
       p1 = invLogit lnP1

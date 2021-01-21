@@ -27,23 +27,54 @@ module BDSCOD.Types
   , isBirth
   , isUnscheduledSequenced
   , isOccurrence
+  , nbMV2SP
   , numUnsequenced
   , numSequenced
   , NegativeBinomial(..)
   , PDESolution(..)
   , LogLikelihood
   , LlhdAndNB
-  , LlhdCalcState) where
+  , LlhdCalcState
+  , MCMCConfiguration(..)
+  , MWCSeed
+  ) where
 
 import Control.DeepSeq
 import Data.Aeson
+import qualified Data.Aeson as Json
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as BBuilder
+import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
 import Data.List (intersperse)
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
+import GHC.Word (Word32(..))
+
+-- | TODO Remove this once the version of @epi-sim@ has been updated to the
+-- latest one on github.
+instance Ord TimeDelta where
+  (TimeDelta a) <= (TimeDelta b) = a <= b
+
+-- | Alias for the type used to seed the MWC PRNG.
+type MWCSeed = Word32
+
+-- | These objects configure an MCMC run.
+data MCMCConfiguration =
+  MCMCConfiguration
+    { -- | Where to write MCMC samples
+      mcmcOutputCSV :: FilePath
+      -- | The number of samples to generate
+    , mcmcNumIters :: Int
+      -- | The standard deviation of the step size
+    , mcmcStepSD :: Double
+      -- | The seed for the PRNG
+    , mcmcSeed :: MWCSeed
+    }
+  deriving (Show, Generic)
+
+instance Json.FromJSON MCMCConfiguration
 
 -- | The parameters of the constant rate BDSCOD are the birth rate, the natural
 -- removal rate, the sampling rate, the timing and probability of catastrophic
@@ -103,7 +134,12 @@ getNus :: Parameters -> Timed Probability
 getNus (Parameters (_, _, _, _, _, tns)) = tns
 
 type UnpackedParameters
-   = (Rate, Rate, Rate, [(Time, Probability)], Rate, [(Time, Probability)])
+   = ( Rate
+     , Rate
+     , Rate
+     , [(AbsoluteTime, Probability)]
+     , Rate
+     , [(AbsoluteTime, Probability)])
 
 unpackParameters :: Parameters -> UnpackedParameters
 unpackParameters (Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)) =
@@ -113,12 +149,11 @@ packParameters :: UnpackedParameters -> Parameters
 packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
   Parameters (pLambda, pMu, pPsi, Timed pRhos, pOmega, Timed pNus)
 
-
 -- | Return the times of scheduled events: catastrophes and disasters.
-scheduledTimes :: Parameters -> ([Time],[Time])
+scheduledTimes :: Parameters -> ([AbsoluteTime], [AbsoluteTime])
 scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
   let times = map fst
-  in (times pRhos, times pNus)
+   in (times pRhos, times pNus)
 
 -- | The number of lineages that exist in a phylogeny
 type NumLineages = Double
@@ -166,42 +201,44 @@ instance Csv.ToField ObservedEvent where
 -- which has holds the absolute time of the event. This is used because the
 -- likelihood is defined in terms of intervals of time between events rather
 -- than their abolute times.
-type Observation = (Time, ObservedEvent)
+type Observation = (TimeDelta, ObservedEvent)
 
 -- | A setter function to return a new observation with a different delay.
-updateDelay :: Observation -> Time -> Observation
+updateDelay :: Observation -> TimeDelta -> Observation
 updateDelay (_, oEvent) delay = (delay, oEvent)
 
 -- | Predicate for the observation referring to a birth.
 isBirth :: Observation -> Bool
-isBirth = (==OBirth) . snd
+isBirth = (== OBirth) . snd
 
 -- | Predicate for the observation referring to an unscheduled and sequenced
 -- observation.
 isUnscheduledSequenced :: Observation -> Bool
-isUnscheduledSequenced = (==ObsUnscheduledSequenced) . snd
+isUnscheduledSequenced = (== ObsUnscheduledSequenced) . snd
 
 -- | Predicate for the observation referring to an occurrence.
 isOccurrence :: Observation -> Bool
-isOccurrence = (==OOccurrence) . snd
+isOccurrence = (== OOccurrence) . snd
 
 -- | The number of /unsequenced/ lineages that were observed.
 numUnsequenced :: Observation -> NumLineages
-numUnsequenced obs = case snd obs of
-  OBirth -> 0
-  ObsUnscheduledSequenced -> 0
-  OOccurrence -> 1
-  (OCatastrophe _) -> 0
-  (ODisaster n) -> n
+numUnsequenced obs =
+  case snd obs of
+    OBirth -> 0
+    ObsUnscheduledSequenced -> 0
+    OOccurrence -> 1
+    (OCatastrophe _) -> 0
+    (ODisaster n) -> n
 
 -- | The number of /sequenced/ lineages that were observed.
 numSequenced :: Observation -> NumLineages
-numSequenced obs = case snd obs of
-  OBirth -> 0
-  ObsUnscheduledSequenced -> 1
-  OOccurrence -> 0
-  (OCatastrophe n) -> n
-  (ODisaster _) -> 0
+numSequenced obs =
+  case snd obs of
+    OBirth -> 0
+    ObsUnscheduledSequenced -> 1
+    OOccurrence -> 0
+    (OCatastrophe n) -> n
+    (ODisaster _) -> 0
 
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
@@ -212,27 +249,48 @@ numSequenced obs = case snd obs of
 -- but not the same as the one used by R which uses /1-p/ as the probability.
 data NegativeBinomial
   = Zero -- ^ A point mass at zero
-  | NegBinom Double Probability
+  | NegBinomSizeProb Double Probability
+  | NegBinomMeanVar Double Double
   deriving (Show, Generic)
 
+-- | Being able to convert the mean and variance parameterisation into the
+-- standard size and probability parameterisation is useful but this is a
+-- partial function so we reserve the option of an error string.
+nbMV2SP :: NegativeBinomial -> Either String NegativeBinomial
+nbMV2SP nb =
+  case nb of
+    (NegBinomMeanVar 0 _) -> Right Zero
+    (NegBinomMeanVar m v) ->
+      if m > 0 && v >= m
+        then Right $ NegBinomSizeProb r p
+        else Left $ "nbMV2SP received bad input data: " ++ show (m, v)
+      where r = (m ** 2) / (v - m)
+            p = (v - m) / v
+    _ -> Right nb
+
 instance Csv.ToField NegativeBinomial where
-  toField Zero = "Zero"
-  toField (NegBinom r p) =
-    strictByteString . BBuilder.toLazyByteString . mconcat $
-    intersperse
-      del
-      [BBuilder.stringUtf8 "NB", BBuilder.doubleDec r, BBuilder.doubleDec p]
-    where
-      del = BBuilder.charUtf8 ' '
+  toField nb =
+    case nb of
+      Zero -> "Zero"
+      (NegBinomSizeProb r p) ->
+        strictByteString . BBuilder.toLazyByteString . mconcat $
+        intersperse
+          del
+          [ BBuilder.stringUtf8 "NBSizeProb"
+          , BBuilder.doubleDec r
+          , BBuilder.doubleDec p
+          ]
+        where del = BBuilder.charUtf8 ' '
+      (NegBinomMeanVar _ _) ->
+        case nbMV2SP nb of
+          Right negbinom -> Csv.toField negbinom
+          Left errMssg -> pack errMssg
 
-instance Csv.ToRecord NegativeBinomial
-
-data PDESolution = PDESol NegativeBinomial NumLineages
+data PDESolution =
+  PDESol NegativeBinomial NumLineages
 
 type LogLikelihood = Double
 
-type LlhdAndNB = (LogLikelihood,NegativeBinomial)
+type LlhdAndNB = (LogLikelihood, NegativeBinomial)
 
-type LlhdCalcState = (LlhdAndNB
-                     ,Time
-                     ,NumLineages)
+type LlhdCalcState = (LlhdAndNB, AbsoluteTime, NumLineages)

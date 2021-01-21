@@ -6,16 +6,25 @@ if (not(dir.exists("out"))) {
   stop("Output directory does not exist!!!")
 }
 
-num_mcmc_samples <- 3e4 # the number of MCMC iterations to use.
+num_mcmc_samples <- list(
+  regular_data = 4e4,
+  aggregated_data = 7e4
+) # the number of MCMC iterations to use.
 simulation_duration <- 13.5
 
-
-
-
-birth_rate <- 1.7
-death_rate <- 0.9
-sampling_rate <- 0.05
-occurrence_rate <- 0.25
+## Read in the parameters to use in the example from a configuration file so
+## they are shared between examples.
+example_params_json <- "../example-parameters.json"
+if (not(file.exists(example_params_json))) {
+  stop("Cannot find JSON with example parameters!!!")
+} else {
+  example_params_list <- read_json(example_params_json)
+  birth_rate <- example_params_list$birthRate
+  death_rate <- example_params_list$deathRate
+  sampling_rate <- example_params_list$samplingRate
+  occurrence_rate <- example_params_list$occurrenceRate
+  rm(example_params_list, example_params_json)
+}
 
 disaster_params <- list()
 catastrophe_params <- list()
@@ -128,7 +137,7 @@ make_config_file <- function(sim_seed) {
         NULL,
         mcmc_configuration(
           sprintf("%s/regular-data-mcmc-samples.csv", output_dir),
-          num_mcmc_samples,
+          num_mcmc_samples$regular_data,
           5e-2,
           7 # the mcmc seed
         ),
@@ -140,7 +149,12 @@ make_config_file <- function(sim_seed) {
           seq_agg_times,
           unseq_agg_times
         ),
-        NULL,
+        mcmc_configuration(
+          sprintf("%s/aggregated-data-mcmc-samples.csv", output_dir),
+          num_mcmc_samples$aggregated_data,
+          5e-2,
+          7 # the mcmc seed
+        ),
         output_dir
       )
     ),

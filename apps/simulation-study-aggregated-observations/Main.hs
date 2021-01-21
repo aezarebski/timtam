@@ -28,6 +28,8 @@ import BDSCOD.Types
   , ObservedEvent(..)
   , PDESolution(..)
   , Parameters(..)
+  , MCMCConfiguration(..)
+  , MWCSeed
   , packParameters
   , putLambda
   , putMu
@@ -56,11 +58,11 @@ import Epidemic.Types.Events
   , maybeEpidemicTree
   , maybeReconstructedTree
   )
-import Epidemic.Types.Parameter (Probability, Rate, Time, Timed(..))
-import Epidemic.Types.Population (People(..), Person(..), numPeople)
+import Epidemic.Types.Parameter (Probability, Rate, AbsoluteTime(..), TimeDelta(..), Timed(..))
+import Epidemic.Types.Population (People(..), Person(..), numPeople, Identifier(..))
+import Epidemic.Utility
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
-import GHC.Word (Word32(..))
 import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
 import Numeric.LinearAlgebra (dot)
 import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
@@ -68,14 +70,12 @@ import Numeric.MCMC.Metropolis
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
 
--- | Alias for the type used to seed the MWC PRNG.
-type MWCSeed = Word32
 
 -- | Record of the scheduled observation times.
 data ScheduledTimes =
   ScheduledTimes
-    { stRhoTimes :: [Time]
-    , stNuTimes :: [Time]
+    { stRhoTimes :: [AbsoluteTime]
+    , stNuTimes :: [AbsoluteTime]
     }
   deriving (Show)
 
@@ -92,23 +92,13 @@ data InferenceConfiguration =
     , llhdOutputCsv :: FilePath
     , pointEstimatesCsv :: FilePath
     , maybePointEstimate :: Maybe Parameters
-    , icMaybeTimesForAgg :: Maybe ([Time], [Time])
+    , icMaybeTimesForAgg :: Maybe ([AbsoluteTime], [AbsoluteTime])
     , icMaybeMCMCConfig :: Maybe MCMCConfiguration
     }
   deriving (Show, Generic)
 
 instance Json.FromJSON InferenceConfiguration
 
--- | These objects configure an MCMC run.
-data MCMCConfiguration =
-  MCMCConfiguration
-  { mcmcOutputCSV :: FilePath
-  , mcmcNumIters :: Int
-  , mcmcStepSD :: Double
-  , mcmcSeed :: MWCSeed
-  } deriving (Show, Generic)
-
-instance Json.FromJSON MCMCConfiguration
 
 -- | This object configures the whole evaluation of this program and is to be
 -- read in from a suitable JSON file.
@@ -126,7 +116,7 @@ data Configuration =
   Configuration
     { simulatedEventsOutputCsv :: FilePath
     , simulationParameters :: Parameters
-    , simulationDuration :: Time
+    , simulationDuration :: TimeDelta
     , simulationSizeBounds :: (Int, Int)
     , inferenceConfigurations :: ( InferenceConfiguration
                                  , InferenceConfiguration
@@ -166,9 +156,9 @@ bdscodConfiguration = do
     asks simulationParameters
   if pLambda > 0 && pMu > 0 && pPsi > 0 && pOmega > 0 && null pRhos && null pNus
     then do
-      simDur <- asks simulationDuration
+      (TimeDelta simDur) <- asks simulationDuration
       let bdscodConfig =
-            SimBDSCOD.configuration simDur (unpackParameters simParams)
+            SimBDSCOD.configuration (AbsoluteTime simDur) (unpackParameters simParams)
       case bdscodConfig of
         Nothing -> throwError "Could not construct BDSCOD configuration"
         (Just config) -> return config
@@ -246,7 +236,7 @@ observeEpidemicThrice simEvents' = do
       (reconNewickTxt, reconNewickCsv) =
         reconstructedTreeOutputFiles regInfConfig
       maybeNewickData =
-        asNewickString (0, Person 1) =<<
+        asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<<
         maybeReconstructedTree =<< maybeEpidemicTree simEvents
   case maybeNewickData of
     Just (newickBuilder, newickMetaData) -> do
@@ -501,12 +491,13 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
-runScheduledObservationMCMC :: InferenceConfiguration
-                              -> Rate
-                              -> ScheduledTimes
-                              -> [Observation]
-                              -> AnnotatedParameter
-                              -> Simulation ()
+runScheduledObservationMCMC ::
+     InferenceConfiguration
+  -> Rate -- ^ the /known/ death rate
+  -> ScheduledTimes
+  -> [Observation]
+  -> AnnotatedParameter
+  -> Simulation ()
 runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes {..} obs (EstimatedParametersAggregatedData (Parameters (mleR1, _, _, _, _, _))) =
   case icMaybeMCMCConfig of
     (Just mcmcConfig) ->
@@ -522,14 +513,20 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
               , [(rt, p1) | rt <- stRhoTimes]
               , 0
               , [(nt, p2) | nt <- stNuTimes])
-          -- logPost x@([r1,p1,p2]) = llhd - lnNotExtinct where llhd = fst $ llhdAndNB obs (listAsParams x) initLlhdState; lnNotExtinct = log (r1 - (p1 + p2 + deathRate)) - log r1
-          logPost x = fst $ llhdAndNB obs (listAsParams x) initLlhdState
+          logPost :: [Double] -> Double
+          logPost x@[r1, p1, p2] =
+            if r1 > 0 && 0 < p1 && p1 < 1 && 0 < p2 && p2 < 1
+              then fst $ llhdAndNB obs (listAsParams x) initLlhdState
+              else (-1 / 0)
           prngSeed = mcmcSeed mcmcConfig
-          maybeGenQuantityFunc = Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
+          maybeGenQuantityFunc =
+            Just (\x -> snd $ llhdAndNB obs (listAsParams x) initLlhdState)
        in do ifVerbosePutStrLn "Running runScheduledObservationMCMC..."
              genIO <- liftIO $ prngGen prngSeed
              chainVals <-
-               liftIO $ (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc) genIO
+               liftIO $
+               (asGenIO $ chain' numIters stepSd x0 logPost maybeGenQuantityFunc)
+                 genIO
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
@@ -555,7 +552,7 @@ chainAsByteString' varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
       nbParams cv =
         case chainTunables cv of
-          Just (NegBinom r p) -> [r, p]
+          Just (NegBinomSizeProb r p) -> [r, p]
           Just Zero -> [0, 0]
           Nothing -> [-1, -1]
       records =

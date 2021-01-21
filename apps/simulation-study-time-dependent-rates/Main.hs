@@ -37,7 +37,7 @@ appMessage =
 
 
 data Config = Config { simulationParameters :: InhomParams
-                     , simulationDuration :: Time
+                     , simulationDuration :: TimeDelta
                      , simulationEventsFile :: FilePath
                      , inferenceParameters :: [InhomParams]
                      , inferenceLlhdFile :: FilePath
@@ -61,9 +61,9 @@ writeLlhdVals :: [LlhdEval] -> FilePath -> IO ()
 writeLlhdVals llhdEvals fp =
   B.writeFile fp $ B.intercalate "\n" (map asRecord llhdEvals)
 
-getSimEvents :: Maybe Time -> Maybe InhomParams -> IO (Maybe [EpidemicEvent])
-getSimEvents (Just duration) (Just (InhomParams (Timed brts, mu, psi))) =
-  do conf <- pure $ configuration duration (brts,mu,psi)
+getSimEvents :: Maybe TimeDelta -> Maybe InhomParams -> IO (Maybe [EpidemicEvent])
+getSimEvents (Just (TimeDelta duration)) (Just (InhomParams (Timed brts, mu, psi))) =
+  do conf <- pure $ configuration (AbsoluteTime duration) (brts,mu,psi)
      if isJust conf
        then do sim <- simulation True (fromJust conf) allEvents
                return $ Just sim
