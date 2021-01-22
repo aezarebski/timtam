@@ -577,33 +577,68 @@ g_prev_and_ests <- ggplot() +
 sub_fig_margin_rl <- 10
 
 g_ltt_reg_data <- ggplot() +
-  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
+  geom_step(data = reg_tree_df,
+            mapping = aes(x = absolute_time, y = ltt),
+            colour = green_hex_colour) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold"),
-        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
+  theme(
+    axis.title = element_text(face = "bold"),
+    plot.margin = margin(sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl)
+  )
 
 g_ltt_agg_data <- ggplot() +
-  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
+  geom_step(data = agg_tree_df,
+            mapping = aes(x = absolute_time, y = ltt),
+            colour = purple_hex_colour) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold"),
-        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
+  theme(
+    axis.title = element_text(face = "bold"),
+    plot.margin = margin(sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl)
+  )
 
 g_point_process_data <- ggplot() +
-  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
+  geom_histogram(data = occ_df,
+                 mapping = aes(x = absolute_time),
+                 fill = green_hex_colour,
+                 alpha = 0.1,
+                 colour = green_hex_colour) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold"),
-        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
+  theme(
+    axis.title = element_text(face = "bold"),
+    plot.margin = margin(sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl)
+  )
 
 g_time_series_data <- ggplot() +
-  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
-  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
+  geom_segment(data = agg_occ_df,
+               mapping = aes(x = absolute_time,
+                             y = num_obs,
+                             xend = absolute_time,
+                             yend = 0),
+               colour = purple_hex_colour) +
+  geom_point(data = agg_occ_df,
+             mapping = aes(x = absolute_time, y = num_obs),
+             colour = purple_hex_colour) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold"),
-        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
+  theme(
+    axis.title = element_text(face = "bold"),
+    plot.margin = margin(sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl,
+                         sub_fig_margin_rl)
+  )
 
 ## Combining the data into a single figure.
 g_combined_data <- plot_grid(
@@ -613,9 +648,15 @@ g_combined_data <- plot_grid(
   g_time_series_data,
   labels = "AUTO",
   label_x = -0.07,
-  ncol = 2, align = "h") + theme(plot.margin = margin(0,10,0,0))
-g_combined <- plot_grid(g_combined_data, g_prev_and_ests, ncol = 2, rel_widths = c(0.6, 0.4), labels = c("", "E"), label_x = -0.07) +
-  theme(plot.margin = margin(10,10,10,10))
+  ncol = 2, align = "h"
+) + theme(plot.margin = margin(0, 10, 0, 0))
+g_combined <- plot_grid(g_combined_data,
+                        g_prev_and_ests,
+                        ncol = 2,
+                        rel_widths = c(0.6, 0.4),
+                        labels = c("", "E"),
+                        label_x = -0.07) +
+  theme(plot.margin = margin(10, 10, 10, 10))
 
 
 fig_height <- 10
