@@ -14,6 +14,7 @@ purple_hex_colour <- "#beaed4"
 
 
 SAVE_FIGURES <- TRUE
+## SAVE_FIGURES <- FALSE
 
 app_config <- read_json("agg-app-config.json")
 sim_duration <- app_config$simulationDuration
@@ -434,10 +435,12 @@ if (SAVE_FIGURES) {
     units = "cm"
   )
 }
+
 ## =============================================================================
-## Generate a figure looking at the prevalence through time and the data used in
-## the inference.
+## Generate a figure looking at the prevalence through time, the estimates of
+## prevalence at the present and the data sets that were used in the inference.
 ## =============================================================================
+
 all_events <- read.csv("out/all-simulated-events.csv",
   header = FALSE,
   stringsAsFactors = FALSE
@@ -539,66 +542,13 @@ agg_occ_df <- aggregated_data %>%
 
 ## -----------------------------------------------------------------------------
 
-
-## g <- ggplot() +
-##   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
-##   geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
-##   geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
-##   geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
-##   geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
-##   geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
-##   geom_errorbar(
-##     data = reg_data_nb_summary,
-##     mapping = aes(x = absolute_time - 0.1, ymin = nb_min, ymax = nb_max),
-##     colour = green_hex_colour, linetype = "solid", width = 0.2
-##   ) +
-##   geom_point(
-##     data = reg_data_nb_summary,
-##     mapping = aes(x = absolute_time - 0.1, y = nb_med),
-##     colour = green_hex_colour
-##   ) +
-##   geom_errorbar(
-##     data = agg_data_nb_summary,
-##     mapping = aes(x = absolute_time + 0.1, ymin = nb_min, ymax = nb_max),
-##     colour = purple_hex_colour, linetype = "solid", width = 0.2
-##   ) +
-##   geom_point(
-##     data = agg_data_nb_summary,
-##     mapping = aes(x = absolute_time + 0.1, y = nb_med),
-##     colour = purple_hex_colour
-##   ) +
-##   labs(y = NULL, x = "Time since origin") +
-##   coord_cartesian(ylim = c(0, 250)) +
-##   theme_classic() +
-##   theme(axis.title = element_text(face = "bold"))
-##
-## fig_height <- 10
-##
-## if (SAVE_FIGURES) {
-##   ggsave("out/regular-and-aggregated-data.png",
-##          g,
-##          height = fig_height,
-##          width = 1.618 * fig_height,
-##          units = "cm"
-##          )
-##   ggsave("out/regular-and-aggregated-data.pdf",
-##          g,
-##          height = fig_height,
-##          width = 1.618 * fig_height,
-##          units = "cm"
-##          )
-## }
-
 error_bar_width <- 0.4
 error_bar_hnudge <- 0.2
 
-g_base <- ggplot() +
+## A figure showing the full prevalence through time and the estiamtes of this
+## at the present.
+g_prev_and_ests <- ggplot() +
   geom_step(data = prev_df, mapping = aes(x = absolute_time, y = prevalence)) +
-  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
-  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
-  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
-  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
-  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
   geom_errorbar(
     data = reg_data_nb_summary,
     mapping = aes(x = absolute_time - error_bar_hnudge, ymin = nb_min, ymax = nb_max),
@@ -623,50 +573,64 @@ g_base <- ggplot() +
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
 
+## The figures of the different data sets generated in the simulation.
+sub_fig_margin_rl <- 10
 
-zoom_y_lims <- c(0, 200)
+g_ltt_reg_data <- ggplot() +
+  geom_step(data = reg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = green_hex_colour) +
+  labs(y = NULL, x = NULL) +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
 
-g_zoomed <- g_base + coord_cartesian(ylim = zoom_y_lims)
+g_ltt_agg_data <- ggplot() +
+  geom_step(data = agg_tree_df, mapping = aes(x = absolute_time, y = ltt), colour = purple_hex_colour) +
+  labs(y = NULL, x = NULL) +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
 
+g_point_process_data <- ggplot() +
+  geom_histogram(data = occ_df, mapping = aes(x = absolute_time), fill = green_hex_colour, alpha = 0.1, colour = green_hex_colour) +
+  labs(y = NULL, x = NULL) +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
 
-rect_df <- data.frame(
-  xmin = -0.1,
-  xmax = sim_duration + 0.1,
-  ymin = zoom_y_lims[1] - 10,
-  ymax = zoom_y_lims[2] + 10
-)
+g_time_series_data <- ggplot() +
+  geom_segment(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs, xend = absolute_time, yend = 0), colour = purple_hex_colour) +
+  geom_point(data = agg_occ_df, mapping = aes(x = absolute_time, y = num_obs), colour = purple_hex_colour) +
+  labs(y = NULL, x = NULL) +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        plot.margin = margin(sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl,sub_fig_margin_rl))
 
-g_annttd <- g_base +
-  geom_rect(
-    data = rect_df,
-    mapping = aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax),
-    fill = NA,
-    colour = "black",
-    linetype = "dashed"
-  )
+## Combining the data into a single figure.
+g_combined_data <- plot_grid(
+  g_ltt_reg_data,
+  g_point_process_data,
+  g_ltt_agg_data,
+  g_time_series_data,
+  labels = "AUTO",
+  label_x = -0.07,
+  ncol = 2, align = "h") + theme(plot.margin = margin(0,10,0,0))
+g_combined <- plot_grid(g_combined_data, g_prev_and_ests, ncol = 2, rel_widths = c(0.6, 0.4), labels = c("", "E"), label_x = -0.07) +
+  theme(plot.margin = margin(10,10,10,10))
 
-g_with_inset <- ggdraw(g_zoomed) +
-  draw_plot((g_annttd + labs(x = NULL)),
-    scale = 0.45,
-    x = 0.1,
-    y = 0.1,
-    hjust = 0.30,
-    vjust = -0.05
-  )
 
 fig_height <- 10
 
 if (SAVE_FIGURES) {
   ggsave("out/regular-and-aggregated-data.png",
-    g_with_inset,
+    g_combined,
     height = fig_height,
-    width = 1.618 * fig_height,
+    width = 2 * fig_height,
     units = "cm"
   )
   ggsave("out/regular-and-aggregated-data.pdf",
-    g_with_inset,
+    g_combined,
     height = fig_height,
-    width = 1.618 * fig_height,
+    width = 2 * fig_height,
     units = "cm"
   )
 }
