@@ -557,7 +557,8 @@ g_prev_and_ests <- ggplot() +
   geom_point(
     data = reg_data_nb_summary,
     mapping = aes(x = absolute_time - error_bar_hnudge, y = nb_med),
-    colour = green_hex_colour
+    colour = green_hex_colour,
+    shape = 19
   ) +
   geom_errorbar(
     data = agg_data_nb_summary,
@@ -567,7 +568,8 @@ g_prev_and_ests <- ggplot() +
   geom_point(
     data = agg_data_nb_summary,
     mapping = aes(x = absolute_time + error_bar_hnudge, y = nb_med),
-    colour = purple_hex_colour
+    colour = purple_hex_colour,
+    shape = 19
   ) +
   labs(y = NULL, x = "Time since origin") +
   theme_classic() +
@@ -629,7 +631,8 @@ g_time_series_data <- ggplot() +
                colour = purple_hex_colour) +
   geom_point(data = agg_occ_df,
              mapping = aes(x = absolute_time, y = num_obs),
-             colour = purple_hex_colour) +
+             colour = purple_hex_colour,
+             shape = 19) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
   theme(
