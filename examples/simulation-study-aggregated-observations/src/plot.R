@@ -584,6 +584,8 @@ g_ltt_reg_data <- ggplot() +
     mapping = aes(x = absolute_time, y = ltt),
     colour = green_hex_colour
   ) +
+  scale_y_continuous(breaks = c(0,20,40,60), limits = c(0, 60)) +
+  scale_x_continuous(breaks = c(0,5,10), limits = c(0, 14)) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
   theme(
@@ -602,6 +604,8 @@ g_ltt_agg_data <- ggplot() +
     mapping = aes(x = absolute_time, y = ltt),
     colour = purple_hex_colour
   ) +
+  scale_y_continuous(breaks = c(0,20,40,60), limits = c(0, 60)) +
+  scale_x_continuous(breaks = c(0,5,10), limits = c(0, 14)) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
   theme(
@@ -629,6 +633,8 @@ g_point_process_data <- ggplot(
     colour = green_hex_colour,
     length = unit(0.05, "npc"),
   ) +
+  scale_y_continuous(breaks = c(0,100,200), limits = c(0, 200)) +
+  scale_x_continuous(breaks = c(0,5,10), limits = c(0, 14)) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
   theme(
@@ -658,6 +664,8 @@ g_time_series_data <- ggplot() +
     colour = purple_hex_colour,
     shape = 19
   ) +
+  scale_y_continuous(breaks = c(0,100,200), limits = c(0, 200)) +
+  scale_x_continuous(breaks = c(0,5,10), limits = c(0, 14)) +
   labs(y = NULL, x = NULL) +
   theme_classic() +
   theme(
