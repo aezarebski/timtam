@@ -241,8 +241,14 @@ main <- function() {
                                          true_parameters,
                                          estimated_parameters,
                                          param_mesh)
+    ## Output the figure as both as PDF and a PNG so that we have a raster for
+    ## the GitHub page.
     ggsave(output_file,
            output_figure)
+    ggsave(file = gsub(pattern = "pdf",
+                       replacement = "png",
+                       x = output_file),
+           plot = output_figure)
   }
 
   ## The events are parsed into a data frame so that we can draw the LTT plot to
