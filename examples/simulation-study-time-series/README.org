@@ -1,13 +1,10 @@
 * Simulation Study Time Series
 
-See =run.sh= for the steps involved in running this example. There is a script
-=clean.sh= which can be used to clean up intermediate files.
-
-This simulates a data set and then takes portions of the data based on what had
-been observed at several points in the simulation. It then evaluaes
-log-likelihood profiles both about the actual parameters used in the simulation
-and about a MLE estimate of the parameters. The resulting figures appear in
-=out/=.
+See =run.sh= for the steps involved in running this example. This simulates a
+data set and then takes portions of the data based on what had been observed at
+several points in the simulation. It then evaluaes log-likelihood profiles both
+about the actual parameters used in the simulation and about a MLE estimate of
+the parameters. The resulting figures appear in =out/=.
 
 The =src= directory contains some helpful R scripts for both the configuration
 of the simulation study and the visualisation of results. The configuration of
@@ -21,18 +18,16 @@ construction is managed by =src/make-json-config.R=.
 The estimates of the prevalence through time based on both the true parameters
 used in the simulation and the estimated values.
 
-[[./out/llhd-profiles-15p00.png]]
+[[./out/llhd-profiles-16p00.png]]
 
 The LLHD profiles based on the final data set collected.
 
 ** Running this simulation study
 
+To build the executable use =stack build=. The rest of the computation is driven
+by =run.sh=.
+
 #+BEGIN_SRC sh :tangle run.sh
-rm out/*
-rm ts-config.json
-
-stack build
-
 Rscript src/make-json-config.R
 
 stack exec -- simulation-study-time-series ts-config.json
@@ -40,3 +35,5 @@ stack exec -- simulation-study-time-series ts-config.json
 Rscript src/plot-simulated-data.R
 Rscript src/plot-llhd-profiles.R
 #+END_SRC
+
+To clean up remove the contents of =out/= and remove =ts-config.json=.
