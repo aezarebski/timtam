@@ -2,6 +2,7 @@ library(dplyr)
 library(reshape2)
 library(jsonlite)
 library(ggplot2)
+library(cowplot)
 library(purrr)
 library(magrittr)
 library(coda)
@@ -27,8 +28,6 @@ run_mcmc_diagnostics <- function(output_dir, sim_seed, mcmc_csv) {
   } else {
     stop(sprintf("\n\tnot use how to run diagnostics on MCMC file: %s", mcmc_csv))
   }
-
-
 }
 
 #' Generate the plot that looks at the ESS for all of the MCMC runs in a single
@@ -50,7 +49,6 @@ run_total_mcmc_diagnostics <- function(sim_seeds, data_type) {
     theme_classic()
   ggsave(sprintf("out/mcmc-ess-%s.png", data_type), g_ess)
   ggsave(sprintf("out/mcmc-ess-%s.pdf", data_type), g_ess)
-
 }
 
 run_mcmc_diagnostics_for_aggregated_data <- function(output_dir, sim_seed, mcmc_csv) {
@@ -283,101 +281,90 @@ run_post_processing <- function(sim_seed) {
 #' simulation seeds in the supplied vector and data type so that we can see how
 #' well the MCMC estimates these this.
 run_prevalence_plotting <- function(sim_seeds, data_type) {
-
   geom_colour <- if (data_type == "regular_data") {
-                   green_hex_colour
-                 } else if (data_type == "aggregated_data") {
-                   purple_hex_colour
-                 } else {
-                   stop(sprintf("Did not recognise data type: %s", data_type))
-                 }
+    green_hex_colour
+  } else if (data_type == "aggregated_data") {
+    purple_hex_colour
+  } else {
+    stop(sprintf("Did not recognise data type: %s", data_type))
+  }
 
-    .read_csv_from_seed <- function(sim_seed) {
-      read.csv(sprintf(
-        "out/seed-%d/summary-seed-%d-%s.csv",
-        sim_seed, sim_seed, data_type
-      )) %>% mutate(sim_seed = sim_seed)
-    }
-    plot_df <- lapply(sim_seeds, .read_csv_from_seed) %>%
-      bind_rows() %>%
-      mutate(
-        contains_truth = nb_min <= true_final_prevalence & true_final_prevalence <= nb_max,
-        point_prop_error = (nb_med - true_final_prevalence) / true_final_prevalence
-      )
-    plot_df <- plot_df[order(plot_df$point_prop_error), ]
-    plot_df$ix <- 1:nrow(plot_df)
-
-    g_prev <- ggplot() +
-      geom_point(
-        data = plot_df,
-        mapping = aes(x = sim_seed, y = true_final_prevalence)
-      ) +
-      geom_point(
-        data = plot_df,
-        mapping = aes(x = sim_seed, y = nb_med),
-        colour = geom_colour
-      ) +
-      geom_errorbar(
-        data = plot_df,
-        mapping = aes(x = sim_seed, ymin = nb_min, y = nb_med, ymax = nb_max),
-        colour = geom_colour
-      ) +
-      labs(x = "Sorted replicate number", y = "Prevalence") +
-      theme_classic()
-
-  ggsave(sprintf("out/replication-results-prevalence-%s.png", data_type), g_prev)
-  ggsave(sprintf("out/replication-results-prevalence-%s.pdf", data_type), g_prev)
-
-    g_prev_bias <- ggplot() +
-      geom_point(
-        data = plot_df,
-        mapping = aes(
-          x = ix,
-          y = (nb_med - true_final_prevalence) / true_final_prevalence
-        ),
-        colour = geom_colour
-      ) +
-      geom_errorbar(
-        data = plot_df,
-        mapping = aes(
-          x = ix,
-          ymin = (nb_min - true_final_prevalence) / true_final_prevalence,
-          ymax = (nb_max - true_final_prevalence) / true_final_prevalence
-        ),
-        colour = geom_colour
-      ) +
-      geom_hline(yintercept = 0, linetype = "dashed") +
-      labs(x = "Replicate", y = "Proportional error in prevalence") +
-      ylim(c(c(-1.0, 1.0))) +
-      theme_classic() +
-      theme(
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()
-      )
-
-  ggsave(sprintf("out/replication-results-prevalence-bias-%s.png", data_type), g_prev_bias)
-  ggsave(sprintf("out/replication-results-prevalence-bias-%s.pdf", data_type), g_prev_bias)
-
-    ## We save a copy of this data frame because it is useful as a way to map
-    ## between the prevalence estimates and the particular simulation seed that
-    ## was used. This helps in debugging.
-    write.table(
-      x = plot_df,
-      file = sprintf("out/proportion-prevalence-in-ci-%s.csv", data_type),
-      sep = ",",
-      row.names = FALSE
+  .read_csv_from_seed <- function(sim_seed) {
+    read.csv(sprintf(
+      "out/seed-%d/summary-seed-%d-%s.csv",
+      sim_seed, sim_seed, data_type
+    )) %>% mutate(sim_seed = sim_seed)
+  }
+  plot_df <- lapply(sim_seeds, .read_csv_from_seed) %>%
+    bind_rows() %>%
+    mutate(
+      contains_truth = nb_min <= true_final_prevalence & true_final_prevalence <= nb_max,
+      point_prop_error = (nb_med - true_final_prevalence) / true_final_prevalence
     )
+  plot_df <- plot_df[order(plot_df$point_prop_error), ]
+  plot_df$ix <- 1:nrow(plot_df)
+
+  g_prev_bias <- ggplot() +
+    geom_point(
+      data = plot_df,
+      mapping = aes(
+        x = ix,
+        y = (nb_med - true_final_prevalence) / true_final_prevalence
+      ),
+      colour = geom_colour
+    ) +
+    geom_errorbar(
+      data = plot_df,
+      mapping = aes(
+        x = ix,
+        ymin = (nb_min - true_final_prevalence) / true_final_prevalence,
+        ymax = (nb_max - true_final_prevalence) / true_final_prevalence
+      ),
+      colour = geom_colour
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    labs(x = "Replicate", y = "Proportional error in prevalence") +
+    ylim(c(c(-1.0, 1.0))) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+
+  ## Save a copy of the actual object so that we can revive it later if tweaks
+  ## need to be made.
+  saveRDS(
+    object = g_prev_bias,
+    file = sprintf("out/replication-results-prevalence-bias-%s-figure.rds", data_type)
+  )
+  ggsave(
+    sprintf("out/replication-results-prevalence-bias-%s.png", data_type),
+    g_prev_bias
+  )
+  ggsave(
+    sprintf("out/replication-results-prevalence-bias-%s.pdf", data_type),
+    g_prev_bias
+  )
+
+  ## We save a copy of this data frame because it is useful as a way to map
+  ## between the prevalence estimates and the particular simulation seed that
+  ## was used. This helps in debugging.
+  write.table(
+    x = plot_df,
+    file = sprintf("out/proportion-prevalence-in-ci-%s.csv", data_type),
+    sep = ",",
+    row.names = FALSE
+  )
 }
 
 birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
-
   geom_colour <- if (data_type == "regular_data") {
-                   green_hex_colour
-                 } else if (data_type == "aggregated_data") {
-                   purple_hex_colour
-                 } else {
-                   stop(sprintf("Did not recognise data type: %s", data_type))
-                 }
+    green_hex_colour
+  } else if (data_type == "aggregated_data") {
+    purple_hex_colour
+  } else {
+    stop(sprintf("Did not recognise data type: %s", data_type))
+  }
 
   .read_birth_on_death <- function(sim_seed) {
     csv_name <- sprintf("out/seed-%d/param-summary-%d-%s.csv", sim_seed, sim_seed, data_type)
@@ -407,6 +394,33 @@ birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
     )
 }
 
+## Generate a combined figure which works for a single column of text.
+run_combined_figure <- function() {
+  r_naught_fig_file <- "out/replication-results-r-naught-regular_data-figure.rds"
+  prevalence_bias_fig_file <- "out/replication-results-prevalence-bias-regular_data-figure.rds"
+
+  if (all(file.exists(c(r_naught_fig_file, prevalence_bias_fig_file)))) {
+    r_naught_fig <- readRDS(r_naught_fig_file) +
+      scale_y_continuous() +
+      labs(x = NULL, y = "Basic reproduction\nnumber")
+    prevalence_bias_fig <- readRDS(prevalence_bias_fig_file) +
+      scale_y_continuous() +
+      labs(x = "Replicate", y = "Proportional bias\nin prevalence")
+    combined_plot <- plot_grid(r_naught_fig,
+                               prevalence_bias_fig,
+                               ncol = 1
+                               )
+    ggsave(
+      filename = "out/replication-results-combined-plot.pdf",
+      plot = combined_plot,
+      height = 10,
+      width = 10,
+      units = "cm"
+    )
+  } else {
+    stop("Missing figure RDS file in run_combined_figure!!!")
+  }
+}
 
 main <- function(args) {
   num_seeds <- as.integer(args[1])
@@ -495,6 +509,13 @@ main <- function(args) {
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()
       )
+
+    ## Save a copy of the actual object so that we can revive it later if tweaks
+    ## need to be made.
+    saveRDS(
+      object = g_r_naught,
+      file = "out/replication-results-r-naught-regular_data-figure.rds"
+    )
     ggsave("out/replication-results-r-naught-regular_data.png", g_r_naught)
     ggsave("out/replication-results-r-naught-regular_data.pdf", g_r_naught)
 
@@ -507,14 +528,24 @@ main <- function(args) {
     run_total_mcmc_diagnostics(successful_sim_seeds, "aggregated_data")
 
     true_birth_on_death <- sim_params$lambda / sim_params$mu
-    ggsave("out/birth-on-death-comparison-regular_data.pdf",
-           birth_on_death_ggplot(true_birth_on_death,
-                                 successful_sim_seeds,
-                                 "regular_data"))
-    ggsave("out/birth-on-death-comparison-aggregated_data.pdf",
-           birth_on_death_ggplot(true_birth_on_death,
-                                 successful_sim_seeds,
-                                 "aggregated_data"))
+    ggsave(
+      "out/birth-on-death-comparison-regular_data.pdf",
+      birth_on_death_ggplot(
+        true_birth_on_death,
+        successful_sim_seeds,
+        "regular_data"
+      )
+    )
+    ggsave(
+      "out/birth-on-death-comparison-aggregated_data.pdf",
+      birth_on_death_ggplot(
+        true_birth_on_death,
+        successful_sim_seeds,
+        "aggregated_data"
+      )
+    )
+
+    run_combined_figure()
   } else {
     stop("Could not get num_seeds from command line argument.")
   }
