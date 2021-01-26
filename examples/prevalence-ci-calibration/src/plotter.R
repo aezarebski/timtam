@@ -415,6 +415,33 @@ birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
     )
 }
 
+## Generate a combined figure which works for a single column of text.
+run_combined_figure <- function() {
+  r_naught_fig_file <- "out/replication-results-r-naught-regular_data-figure.rds"
+  prevalence_bias_fig_file <- "out/replication-results-prevalence-bias-regular_data-figure.rds"
+
+  if (all(file.exists(c(r_naught_fig_file, prevalence_bias_fig_file)))) {
+    r_naught_fig <- readRDS(r_naught_fig_file) +
+      scale_y_continuous() +
+      labs(x = NULL, y = "Basic reproduction\nnumber")
+    prevalence_bias_fig <- readRDS(prevalence_bias_fig_file) +
+      scale_y_continuous() +
+      labs(x = "Replicate", y = "Proportional bias\nin prevalence")
+    combined_plot <- plot_grid(r_naught_fig,
+                               prevalence_bias_fig,
+                               ncol = 1
+                               )
+    ggsave(
+      filename = "out/replication-results-combined-plot.pdf",
+      plot = combined_plot,
+      height = 10,
+      width = 10,
+      units = "cm"
+    )
+  } else {
+    stop("Missing figure RDS file in run_combined_figure!!!")
+  }
+}
 
 main <- function(args) {
   num_seeds <- as.integer(args[1])
@@ -551,29 +578,3 @@ if (!interactive()) {
 }
 
 
-run_combined_figure <- function() {
-  r_naught_fig_file <- "out/replication-results-r-naught-regular_data-figure.rds"
-  prevalence_bias_fig_file <- "out/replication-results-prevalence-bias-regular_data-figure.rds"
-
-  if (all(file.exists(c(r_naught_fig_file, prevalence_bias_fig_file)))) {
-    r_naught_fig <- readRDS(r_naught_fig_file) +
-      scale_y_continuous() +
-      labs(x = NULL, y = "Basic reproduction\nnumber")
-    prevalence_bias_fig <- readRDS(prevalence_bias_fig_file) +
-      scale_y_continuous() +
-      labs(x = "Replicate", y = "Proportional bias\nin prevalence")
-    combined_plot <- plot_grid(r_naught_fig,
-      prevalence_bias_fig,
-      ncol = 1
-    )
-    ggsave(
-      filename = "out/replication-results-combined-plot.pdf",
-      plot = combined_plot,
-      height = 10,
-      width = 10,
-      units = "cm"
-    )
-  } else {
-    stop("Missing figure RDS file in run_combined_figure!!!")
-  }
-}
