@@ -1,4 +1,5 @@
 library(purrr)
+library(magrittr)
 library(jsonlite)
 
 if (not(dir.exists("out"))) {
@@ -34,8 +35,8 @@ if (not(file.exists(example_params_json))) {
 ## are not in the sared JSON so we define them here. Then we need to construct
 ## the list which specifies when these occur in a way that the executable
 ## understands.
-catastrophe_prob <- 0.1
-disaster_prob <- 0.1
+catastrophe_prob <- 0.05
+disaster_prob <- 0.05
 
 disaster_times <- seq(from = 2, to = simulation_duration, by = 1.5)
 num_disasters <- length(disaster_times)
@@ -76,13 +77,13 @@ sim_params <- list(birth_rate,
 ## parameter and the mesh size refers to the number of points to evaluate the
 ## likelihood at for each profile.
 llhd_profile_mesh <- list(
-  lpmLambdaBounds = c(1.2, 1.9),
-  lpmMuBounds = c(0.1, 0.9),
-  lpmPsiBounds = c(0.10,0.3),
-  lpmOmegaBounds = c(0.15,0.35),
+  lpmLambdaBounds = c(1.5, 2.0),
+  lpmMuBounds = c(0.5, 1.5),
+  lpmPsiBounds = c(0.01,0.1),
+  lpmOmegaBounds = c(0.1,0.5),
   lpmMeshSize = 100,
-  lpmRhoBounds = c(0.10, 0.3),
-  lpmNuBounds = c(0.10, 0.2)
+  lpmRhoBounds = c(0.01, 0.1),
+  lpmNuBounds = c(0.01, 0.1)
 )
 
 
@@ -95,7 +96,7 @@ result <- list(
                                    rho = catastrophe_prob,
                                    omega = occurrence_rate,
                                    nu = disaster_prob),
-  simulationDuration = simulation_duration + 1e-6,
+  simulationDuration = simulation_duration,
   simulationSizeBounds = c(100,100000),
   inferenceConfigurations = inference_configurations,
   partialEvaluationOutputCsv = "out/partial-evaluations.csv",
