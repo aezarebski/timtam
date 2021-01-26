@@ -1,6 +1,11 @@
 library(purrr)
 library(jsonlite)
 
+if (not(dir.exists("out"))) {
+  err_message <- "\n\n---> cannot find the output directory: out <---\n\n"
+  stop(err_message)
+}
+
 output_file <- "ts-config.json"
 
 
@@ -9,18 +14,28 @@ simulation_duration <- 17
 ## We want to see how the inference changes over times so we set several time
 ## points at which to generate estimates. This vector is used to specify when
 ## they occur.
-inference_times <- seq(from = 12, to = 17, by = 4)
+inference_times <- seq(from = 12, to = simulation_duration, by = 4)
 
-## These are the values of the parameters used in the simulation, we put them
-## here so they stand out and we can re-use them in subsequent parts of the
-## specification.
-birth_rate <- 1.5
-death_rate <- 0.50
-sampling_rate <- 0.2
-catastrophe_prob <- 0.2
-occurrence_rate <- 0.2
-disaster_prob <- 0.15
+## Read in the parameters to use in the example from a configuration file so
+## they are shared between examples.
+example_params_json <- "../example-parameters.json"
+if (not(file.exists(example_params_json))) {
+  stop("Cannot find JSON with example parameters!!!")
+} else {
+  example_params_list <- read_json(example_params_json)
+  birth_rate <- example_params_list$birthRate
+  death_rate <- example_params_list$deathRate
+  sampling_rate <- example_params_list$samplingRate
+  occurrence_rate <- example_params_list$occurrenceRate
+  rm(example_params_list,example_params_json)
+}
 
+## In this example we also want to have some scheduled observations and these
+## are not in the sared JSON so we define them here. Then we need to construct
+## the list which specifies when these occur in a way that the executable
+## understands.
+catastrophe_prob <- 0.1
+disaster_prob <- 0.1
 
 disaster_times <- seq(from = 2, to = simulation_duration, by = 1.5)
 num_disasters <- length(disaster_times)
