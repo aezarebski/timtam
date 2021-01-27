@@ -313,7 +313,7 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
       data = plot_df,
       mapping = aes(
         x = ix,
-        y = (nb_med - true_final_prevalence) / true_final_prevalence
+        y = point_prop_error
       ),
       colour = geom_colour
     ) +
@@ -326,6 +326,7 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
       ),
       colour = geom_colour
     ) +
+    geom_hline(yintercept = mean(plot_df$point_prop_error), colour = geom_colour) +
     geom_hline(yintercept = 0, linetype = "dashed") +
     labs(x = "Replicate", y = "Proportional error in prevalence") +
     ylim(c(c(-1.0, 1.0))) +
@@ -363,7 +364,11 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
   ## We also make a simple text file which summarises these values for quick
   ## reference.
   sink(sprintf("out/proportion-prevalence-in-ci-%s-table.txt", data_type))
+  print("Table of the number of CIs that contain the true prevalence.")
   print(table(plot_df$contains_truth))
+  print(c("See ",
+        sprintf("out/proportion-prevalence-in-ci-%s.csv", data_type),
+        " for more details."))
   sink()
 
 }
@@ -397,6 +402,7 @@ birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
     geom_point(mapping = aes(x = ix, y = mid), colour = geom_colour) +
     geom_errorbar(mapping = aes(x = ix, ymin = min, ymax = max), colour = geom_colour) +
     geom_hline(yintercept = true_birth_on_death, linetype = "dashed") +
+    geom_hline(yintercept = mean(params_df$mid), colour = geom_colour) +
     labs(x = "Replicate", y = "Ratio of the birth and death rates") +
     theme_classic() +
     theme(
@@ -477,34 +483,32 @@ main <- function(args) {
     }
     params_df <- lapply(successful_sim_seeds, .read_csv_param_summary) %>% bind_rows()
 
-    lambda_df <- params_df %>%
-      filter(param == "lambda") %>%
-      select(value, statistic, sim_seed) %>%
-      dcast(sim_seed ~ statistic)
-    g_lambda <- ggplot(lambda_df) +
-      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-      geom_hline(yintercept = sim_params$lambda, linetype = "dashed")
-    ggsave("out/replication-results-lambda-regular_data.png", g_lambda)
+    ## lambda_df <- params_df %>%
+    ##   filter(param == "lambda") %>%
+    ##   select(value, statistic, sim_seed) %>%
+    ##   dcast(sim_seed ~ statistic)
+    ## g_lambda <- ggplot(lambda_df) +
+    ##   geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+    ##   geom_hline(yintercept = sim_params$lambda, linetype = "dashed")
+    ## ggsave("out/replication-results-lambda-regular_data.png", g_lambda)
 
+    ## psi_df <- params_df %>%
+    ##   filter(param == "psi") %>%
+    ##   select(value, statistic, sim_seed) %>%
+    ##   dcast(sim_seed ~ statistic)
+    ## g_psi <- ggplot(psi_df) +
+    ##   geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+    ##   geom_hline(yintercept = sim_params$psi, linetype = "dashed")
+    ## ggsave("out/replication-results-psi-regular_data.png", g_psi)
 
-    psi_df <- params_df %>%
-      filter(param == "psi") %>%
-      select(value, statistic, sim_seed) %>%
-      dcast(sim_seed ~ statistic)
-    g_psi <- ggplot(psi_df) +
-      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-      geom_hline(yintercept = sim_params$psi, linetype = "dashed")
-    ggsave("out/replication-results-psi-regular_data.png", g_psi)
-
-
-    omega_df <- params_df %>%
-      filter(param == "omega") %>%
-      select(value, statistic, sim_seed) %>%
-      dcast(sim_seed ~ statistic)
-    g_omega <- ggplot(omega_df) +
-      geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-      geom_hline(yintercept = sim_params$omega, linetype = "dashed")
-    ggsave("out/replication-results-omega-regular_data.png", g_omega)
+    ## omega_df <- params_df %>%
+    ##   filter(param == "omega") %>%
+    ##   select(value, statistic, sim_seed) %>%
+    ##   dcast(sim_seed ~ statistic)
+    ## g_omega <- ggplot(omega_df) +
+    ##   geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
+    ##   geom_hline(yintercept = sim_params$omega, linetype = "dashed")
+    ## ggsave("out/replication-results-omega-regular_data.png", g_omega)
 
     simulation_r_naught <- sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega)
     r_naught_df <- params_df %>%
@@ -514,9 +518,10 @@ main <- function(args) {
     r_naught_df <- r_naught_df[order(r_naught_df$mid), ]
     r_naught_df$ix <- 1:nrow(r_naught_df)
     g_r_naught <- ggplot(r_naught_df) +
-      geom_hline(yintercept = simulation_r_naught, linetype = "dashed") +
       geom_errorbar(mapping = aes(x = ix, ymin = min, ymax = max), colour = green_hex_colour) +
       geom_point(mapping = aes(x = ix, y = mid), colour = green_hex_colour) +
+      geom_hline(yintercept = simulation_r_naught, linetype = "dashed") +
+      geom_hline(yintercept = mean(r_naught_df$mid), colour = green_hex_colour) +
       labs(x = "Replicate", y = "Basic reproduction number") +
       theme_classic() +
       theme(
