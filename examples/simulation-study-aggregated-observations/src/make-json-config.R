@@ -117,7 +117,7 @@ result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
   simulationDuration = simulation_duration,
-  simulationSizeBounds = c(3000, 7000),
+  simulationSizeBounds = c(1000, 10000),
   inferenceConfigurations = list(
     inference_configuration("true-params-regular-data", NULL, NULL),
     inference_configuration(
@@ -145,7 +145,7 @@ result <- list(
     )
   ),
   isVerbose = TRUE,
-  configSimulationSeed = 7
+  configSimulationSeed = 23
 )
 
 write_json(result,
