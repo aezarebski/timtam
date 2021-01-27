@@ -281,6 +281,10 @@ run_post_processing <- function(sim_seed) {
 #' simulation seeds in the supplied vector and data type so that we can see how
 #' well the MCMC estimates these this.
 run_prevalence_plotting <- function(sim_seeds, data_type) {
+  if (length(sim_seeds) == 0) {
+    stop("Empty list of simulation seeds given to run_prevalence_plotting.")
+  }
+
   geom_colour <- if (data_type == "regular_data") {
     green_hex_colour
   } else if (data_type == "aggregated_data") {
@@ -303,27 +307,6 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
     )
   plot_df <- plot_df[order(plot_df$point_prop_error), ]
   plot_df$ix <- 1:nrow(plot_df)
-
-  ##   g_prev <- ggplot() +
-  ##     geom_point(
-  ##       data = plot_df,
-  ##       mapping = aes(x = sim_seed, y = true_final_prevalence)
-  ##     ) +
-  ##     geom_point(
-  ##       data = plot_df,
-  ##       mapping = aes(x = sim_seed, y = nb_med),
-  ##       colour = geom_colour
-  ##     ) +
-  ##     geom_errorbar(
-  ##       data = plot_df,
-  ##       mapping = aes(x = sim_seed, ymin = nb_min, y = nb_med, ymax = nb_max),
-  ##       colour = geom_colour
-  ##     ) +
-  ##     labs(x = "Sorted replicate number", y = "Prevalence") +
-  ##     theme_classic()
-
-  ## ggsave(sprintf("out/replication-results-prevalence-%s.png", data_type), g_prev)
-  ## ggsave(sprintf("out/replication-results-prevalence-%s.pdf", data_type), g_prev)
 
   g_prev_bias <- ggplot() +
     geom_point(
@@ -444,6 +427,9 @@ run_combined_figure <- function() {
 }
 
 main <- function(args) {
+  if (not(dir.exists("out"))) {
+    stop("Cannot find output directory: out.")
+  }
   num_seeds <- as.integer(args[1])
 
   ## include validation that a sensible number of seeds was provided from the
