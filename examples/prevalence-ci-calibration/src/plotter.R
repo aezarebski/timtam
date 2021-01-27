@@ -359,6 +359,13 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
     sep = ",",
     row.names = FALSE
   )
+
+  ## We also make a simple text file which summarises these values for quick
+  ## reference.
+  sink(sprintf("out/proportion-prevalence-in-ci-%s-table.txt", data_type))
+  print(table(plot_df$contains_truth))
+  sink()
+
 }
 
 birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
