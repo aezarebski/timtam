@@ -13,6 +13,10 @@ import BDSCOD.Types
 instance Csv.ToField TimeDelta where
   toField (TimeDelta td) = Csv.toField td
 
+-- | Check if two absolute times differ by such a small amount that they are
+-- likely identical.
+timesWithinEpsilon :: AbsoluteTime -> AbsoluteTime -> Bool
+timesWithinEpsilon (AbsoluteTime a) (AbsoluteTime b) = abs (a - b) < 1e-13
 
 -- | Convert simulation events to observation events, this assumes that the
 -- epidemic events have already been filtered by to only include the observable
