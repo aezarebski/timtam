@@ -7,10 +7,10 @@ if (not(dir.exists("out"))) {
 }
 
 num_mcmc_samples <- list(
-  regular_data = 4e4,
-  aggregated_data = 7e4
+  regular_data = 4e3,
+  aggregated_data = 7e3
 ) # the number of MCMC iterations to use.
-simulation_duration <- 13.5
+simulation_duration <- 9.5
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
@@ -175,10 +175,14 @@ make_config_file <- function(sim_seed) {
 
 
 main <- function(args) {
-  num_seeds <- as.integer(args[1])
+  seed_start <- as.integer(args[1])
+  seed_stop <- as.integer(args[2])
 
-  if (and(is.integer(num_seeds), num_seeds > 0)) {
-    for (sim_seed in 1:num_seeds) {
+  if (all(c(is.integer(seed_stop),
+            is.integer(seed_start),
+            seed_start < seed_stop,
+            seed_start > 0))) {
+    for (sim_seed in seed_start:seed_stop) {
       make_config_file(sim_seed)
     }
   } else {
