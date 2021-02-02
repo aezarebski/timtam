@@ -10,17 +10,13 @@ with a set of suitable configuration files which each live in a subdirectory or
 Below are the CIs from the original simulated data (i.e. the unscheduled
 events).
 
-*** Prevalence at present
-
-[[./out/replication-results-prevalence-bias-regular_data.png]]
-
-*** Basic reproduction number
+*** Basic reproduction number and prevalence
 
 Here are the \(95\%\) credible intervals for the basic reproduction number in
 each of the replicates. The dashed line indicates the true value used in the
 simulations.
 
-[[./out/replication-results-r-naught-regular_data.png]]
+[[./replication-results-combined-plot.pdf]]
 
 *** ESS as MCMC diagnostic
 
