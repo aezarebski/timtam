@@ -7,10 +7,10 @@ if (not(dir.exists("out"))) {
 }
 
 num_mcmc_samples <- list(
-  regular_data = 4e3,
-  aggregated_data = 7e3
+  regular_data = 4e4,
+  aggregated_data = 7e4
 ) # the number of MCMC iterations to use.
-simulation_duration <- 9.5
+simulation_duration <- 13.5
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
