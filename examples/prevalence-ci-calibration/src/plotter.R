@@ -329,7 +329,6 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
     geom_hline(yintercept = mean(plot_df$point_prop_error), colour = geom_colour) +
     geom_hline(yintercept = 0, linetype = "dashed") +
     labs(x = "Replicate", y = "Proportional error in prevalence") +
-    ylim(c(c(-1.0, 1.0))) +
     theme_classic() +
     theme(
       axis.text.x = element_blank(),

@@ -2,6 +2,10 @@
 
 ## 0.1.4.0
 
+- When looking for scheduled events at a particular time, search for times less
+  than 1e-13 different rather than using equality to prevent numerical errors
+  causing them to be missed. See `timesWithinEpsilon` function in
+  `BDSCOD.Utility`.
 - Improve documentation and read shared parameters from a single file.
 - Replace `manceau-comparison` with an example looking at using data which
   starts from the TMRCA rather than the origin.

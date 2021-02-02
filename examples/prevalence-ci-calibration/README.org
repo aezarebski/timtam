@@ -49,7 +49,7 @@ hand.
 
 NUM_SEEDS=100
 
-Rscript src/generate-config-files.R $NUM_SEEDS
+Rscript src/generate-config-files.R 1 $NUM_SEEDS
 
 for ix in 00 10 20 30 40 50 60 70 80 90;
 do
