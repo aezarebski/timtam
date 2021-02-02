@@ -175,10 +175,14 @@ make_config_file <- function(sim_seed) {
 
 
 main <- function(args) {
-  num_seeds <- as.integer(args[1])
+  seed_start <- as.integer(args[1])
+  seed_stop <- as.integer(args[2])
 
-  if (and(is.integer(num_seeds), num_seeds > 0)) {
-    for (sim_seed in 1:num_seeds) {
+  if (all(c(is.integer(seed_stop),
+            is.integer(seed_start),
+            seed_start < seed_stop,
+            seed_start > 0))) {
+    for (sim_seed in seed_start:seed_stop) {
       make_config_file(sim_seed)
     }
   } else {
