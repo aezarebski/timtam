@@ -1,571 +1,281 @@
 library(dplyr)
-library(reshape2)
-library(jsonlite)
-library(ggplot2)
-library(cowplot)
 library(purrr)
 library(magrittr)
-library(coda)
+library(ggplot2)
+library(stringr)
+library(reshape2)
+library(jsonlite)
 
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
-#' Predicate for whether an MCMC sample file was generated using regular data
-used_regular_data <- function(mcmc_csv) {
-  grepl(pattern = "regular-data", x = mcmc_csv)
+
+birth_rate_and_prevalence_record <- function(data_type, sim_result) {
+  sim_seed <- sim_result$simulationSeed
+  param_est <- switch(data_type,
+    regular_data = sim_result$regularParameterEstimates,
+    aggregated_data = sim_result$aggregatedParameterEstimates
+  )
+  birth_rate <- param_est %>%
+    keep(~ .x$name == "birthRate") %>%
+    purrr::flatten()
+  prev <- switch(data_type,
+    regular_data = sim_result$regularPrevalenceEstimate,
+    aggregated_data = sim_result$aggregatedPrevalenceEstimate
+  )
+  data.frame(
+    seed = sim_seed,
+    birth_rate_est = birth_rate$estimate,
+    birth_rate_lower = birth_rate$credibleInterval[[1]],
+    birth_rate_upper = birth_rate$credibleInterval[[2]],
+    prev_est = prev$estimate,
+    prev_lower = prev$credibleInterval[[1]],
+    prev_upper = prev$credibleInterval[[2]],
+    prev_truth = prev$truth
+  )
 }
 
-#' Predicate for whether an MCMC sample file was generated using aggregated data
-used_aggregated_data <- function(mcmc_csv) {
-  grepl(pattern = "aggregated-data", x = mcmc_csv)
-}
+birth_rate_and_prev_gg_list <- function(data_type, true_birth_rate, vis_data) {
+  plot_colour <- switch(data_type,
+    regular_data = green_hex_colour,
+    aggregated_data = purple_hex_colour
+  )
 
-run_mcmc_diagnostics <- function(output_dir, sim_seed, mcmc_csv) {
-  if (used_regular_data(mcmc_csv)) {
-    run_mcmc_diagnostics_for_regular_data(output_dir, sim_seed, mcmc_csv)
-  } else if (used_aggregated_data(mcmc_csv)) {
-    run_mcmc_diagnostics_for_aggregated_data(output_dir, sim_seed, mcmc_csv)
-  } else {
-    stop(sprintf("\n\tnot use how to run diagnostics on MCMC file: %s", mcmc_csv))
-  }
-}
-
-#' Generate the plot that looks at the ESS for all of the MCMC runs in a single
-#' figure.
-run_total_mcmc_diagnostics <- function(sim_seeds, data_type) {
-
-  ## We want to know that the MCMC has a sufficient sample size so we check
-  ## the effective sample size for each parameter in each iteration.
-  .ess <- function(sim_seed) {
-    read.csv(sprintf("out/seed-%d/mcmc-effective-size-%d-%s.csv", sim_seed, sim_seed, data_type))
-  }
-  tmp <- lapply(sim_seeds, .ess) %>%
-    bind_rows() %>%
-    melt(id.vars = "sim_seed")
-  g_ess <- ggplot(tmp, aes(x = sim_seed, y = value, colour = variable)) +
-    geom_point() +
-    geom_hline(yintercept = 200, linetype = "dashed") +
-    labs(x = "Replicate number", y = "Effective sample size", colour = "Parameter") +
-    theme_classic()
-  ggsave(sprintf("out/mcmc-ess-%s.png", data_type), g_ess)
-  ggsave(sprintf("out/mcmc-ess-%s.pdf", data_type), g_ess)
-}
-
-run_mcmc_diagnostics_for_aggregated_data <- function(output_dir, sim_seed, mcmc_csv) {
-  if (file.exists(mcmc_csv)) {
-    ## We want to know that the MCMC has behaved sensibly in the computations that
-    ## we have run so we generate some diagnostic output to check this.
-    mcmc_obj <- read.csv(mcmc_csv) %>%
-      select(lambda, rho, nu) %>%
-      as.mcmc()
-    png(sprintf("%s/mcmc-trace-%d-aggregated-data.png", output_dir, sim_seed))
-    plot(mcmc_obj)
-    dev.off()
-
-    tmp <- mcmc_obj %>%
-      effectiveSize() %>%
-      as.list() %>%
-      as.data.frame() %>%
-      mutate(sim_seed = sim_seed)
-    write.table(
-      x = tmp,
-      file = sprintf("%s/mcmc-effective-size-%d-aggregated_data.csv", output_dir, sim_seed),
-      sep = ",",
-      row.names = FALSE
-    )
-  } else {
-    stop(sprintf("\n\tcannot open file %s: No such file or directory", mcmc_csv))
-  }
-
-  return(NULL)
-}
-
-run_mcmc_diagnostics_for_regular_data <- function(output_dir, sim_seed, mcmc_csv) {
-  if (file.exists(mcmc_csv)) {
-    ## We want to know that the MCMC has behaved sensibly in the computations that
-    ## we have run so we generate some diagnostic output to check this.
-    mcmc_obj <- read.csv(mcmc_csv) %>%
-      select(lambda, psi, omega) %>%
-      as.mcmc()
-    png(sprintf("%s/mcmc-trace-%d-regular-data.png", output_dir, sim_seed))
-    plot(mcmc_obj)
-    dev.off()
-
-    tmp <- mcmc_obj %>%
-      effectiveSize() %>%
-      as.list() %>%
-      as.data.frame() %>%
-      mutate(sim_seed = sim_seed)
-    write.table(
-      x = tmp,
-      file = sprintf("%s/mcmc-effective-size-%d-regular_data.csv", output_dir, sim_seed),
-      sep = ",",
-      row.names = FALSE
-    )
-  } else {
-    stop(sprintf("\n\tcannot open file %s: No such file or directory", mcmc_csv))
-  }
-
-  return(NULL)
-}
-
-
-
-
-
-run_post_processing <- function(sim_seed) {
-  cat("Running post-processing for ", sim_seed, "\n")
-
-  output_dir <- sprintf("out/seed-%d", sim_seed)
-  if (not(dir.exists(output_dir))) {
-    stop(sprintf("\n\tcannot find directory %s: No such directory", output_dir))
-  }
-
-  all_events_csv <- sprintf("%s/all-simulated-events.csv", output_dir)
-  if (not(file.exists(all_events_csv))) {
-    stop(sprintf("\n\tcannot open file %s: No such file or directory", all_events_csv))
-  }
-
-  all_events <- read.csv(all_events_csv,
-    header = FALSE,
-    stringsAsFactors = FALSE
+  birth_rate_and_prev_df <- map(
+    vis_data$simulationResults,
+    ~ birth_rate_and_prevalence_record(data_type, .x)
   ) %>%
-    select(V1, V2) %>%
-    set_names(c("event", "abs_time"))
-
-  update_prev <- function(n, e) {
-    switch(EXPR = as.character(e),
-      infection = n + 1,
-      occurrence = n - 1,
-      removal = n - 1,
-      sampling = n - 1
-    )
-  }
-
-  prev_df <- data.frame(
-    absolute_time = c(0, all_events$abs_time),
-    prevalence = accumulate(
-      .x = all_events$event,
-      .f = update_prev, .init = 1
-    )
-  )
-
-  app_config <- read_json(sprintf("%s/config-%d.json", output_dir, sim_seed))
-  sim_duration <- app_config$simulationDuration
-
-  mcmc_csv_list <- list()
-  mcmc_csv_list$regular_data <- app_config$inferenceConfigurations %>%
-    extract2(2) %>%
-    extract("icMaybeMCMCConfig") %>%
-    extract2(1) %>%
-    extract2("mcmcOutputCSV")
-  mcmc_csv_list$aggregated_data <- app_config$inferenceConfigurations %>%
-    extract2(3) %>%
-    extract("icMaybeMCMCConfig") %>%
-    extract2(1) %>%
-    extract2("mcmcOutputCSV")
-
-  #' Read in MCMC samples and compute the CI of prevalence at present.
-  read_mcmc_df_with_prevalence <- function(mcmc_csv) {
-    if (file.exists(mcmc_csv)) {
-      read.csv(mcmc_csv, stringsAsFactors = FALSE) %>%
-        mutate(
-          nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
-          nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
-          nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb)
-        )
-    } else {
-      stop(sprintf("Missing file: %s", mcmc_csv))
-    }
-  }
-
-  mcmc_df_list <- list()
-  mcmc_df_list$regular_data <- read_mcmc_df_with_prevalence(mcmc_csv_list$regular_data)
-  mcmc_df_list$aggregated_data <- read_mcmc_df_with_prevalence(mcmc_csv_list$aggregated_data)
-
-  sim_params <- app_config$simulationParameters
-  names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
-
-  summary_func <- function(x) quantile(x, probs = c(0.025, 0.5, 0.975))
-
-
-  #' Summarise the parameter estimates given the regular data
-  tmp <- select(mcmc_df_list$regular_data, lambda, psi, omega)
-  tmp$r_naught <- tmp$lambda / (sim_params$mu + tmp$psi + tmp$omega)
-  tmp$birth_on_death <- tmp$lambda / sim_params$mu
-  tmp <- data.frame(
-    value = c(summary_func(tmp$lambda), summary_func(tmp$psi), summary_func(tmp$omega), summary_func(tmp$r_naught), summary_func(tmp$birth_on_death)),
-    param = rep(c("lambda", "psi", "omega", "r_naught", "birth_on_death"), each = 3),
-    statistic = rep(c("min", "mid", "max"), 5),
-    sim_seed = rep(sim_seed, 15)
-  )
-  write.table(
-    x = tmp,
-    file = sprintf("%s/param-summary-%d-regular_data.csv", output_dir, sim_seed),
-    sep = ",",
-    row.names = FALSE
-  )
-  rm(tmp)
-
-  #' Summarise the parameter estimates given the aggregated data
-  tmp <- select(mcmc_df_list$aggregated_data, lambda, rho, nu)
-  tmp$birth_on_death <- tmp$lambda / sim_params$mu
-  tmp <- data.frame(
-    value = c(summary_func(tmp$lambda), summary_func(tmp$rho), summary_func(tmp$nu), summary_func(tmp$birth_on_death)),
-    param = rep(c("lambda", "psi", "omega", "birth_on_death"), each = 3),
-    statistic = rep(c("min", "mid", "max"), 4),
-    sim_seed = rep(sim_seed, 12)
-  )
-  write.table(
-    x = tmp,
-    file = sprintf("%s/param-summary-%d-aggregated_data.csv", output_dir, sim_seed),
-    sep = ",",
-    row.names = FALSE
-  )
-  rm(tmp, summary_func)
-
-  nb_summary <- function(mcmc_df, sim_duration) {
-    nb_summary_df <- mcmc_df %>%
-      select(starts_with("nb_")) %>%
-      colMeans() %>%
-      as.list() %>%
-      as.data.frame()
-    nb_summary_df$absolute_time <- sim_duration
-    return(nb_summary_df)
-  }
-
-  nb_summary_list <- list(
-    regular_data = nb_summary(mcmc_df_list$regular_data, sim_duration),
-    aggregated_data = nb_summary(mcmc_df_list$aggregated_data, sim_duration)
-  )
-
-  g <- ggplot() +
-    geom_step(
-      data = prev_df,
-      mapping = aes(x = absolute_time, y = prevalence)
-    ) +
-    geom_errorbar(
-      data = nb_summary_list$regular_data,
-      mapping = aes(x = absolute_time, ymin = nb_min, y = nb_med, ymax = nb_max),
-      colour = green_hex_colour
-    ) +
-    geom_point(
-      data = nb_summary_list$regular_data,
-      mapping = aes(x = absolute_time, ymin = nb_min, y = nb_med, ymax = nb_max),
-      colour = green_hex_colour
-    )
-
-  ggsave(sprintf("%s/summary-figure-%d-regular-data.png", output_dir, sim_seed), g)
-  ggsave(sprintf("%s/summary-figure-%d-log-scale-regular-data.png", output_dir, sim_seed), g + scale_y_log10())
-
-  for (data_type in c("regular_data", "aggregated_data")) {
-    result <- nb_summary_list[[data_type]]
-    result$true_final_prevalence <- prev_df$prevalence %>% tail(1)
-
-    write.table(
-      x = result,
-      file = sprintf("%s/summary-seed-%d-%s.csv", output_dir, sim_seed, data_type),
-      sep = ",",
-      row.names = FALSE
-    )
-
-    run_mcmc_diagnostics(output_dir, sim_seed, mcmc_csv_list$regular_data)
-    run_mcmc_diagnostics(output_dir, sim_seed, mcmc_csv_list$aggregated_data)
-  }
-
-  return(NULL)
-}
-
-
-#' Do all the work regarding looking at the prevalence estimates for the
-#' simulation seeds in the supplied vector and data type so that we can see how
-#' well the MCMC estimates these this.
-run_prevalence_plotting <- function(sim_seeds, data_type) {
-  if (length(sim_seeds) == 0) {
-    stop("Empty list of simulation seeds given to run_prevalence_plotting.")
-  }
-
-  geom_colour <- if (data_type == "regular_data") {
-    green_hex_colour
-  } else if (data_type == "aggregated_data") {
-    purple_hex_colour
-  } else {
-    stop(sprintf("Did not recognise data type: %s", data_type))
-  }
-
-  .read_csv_from_seed <- function(sim_seed) {
-    read.csv(sprintf(
-      "out/seed-%d/summary-seed-%d-%s.csv",
-      sim_seed, sim_seed, data_type
-    )) %>% mutate(sim_seed = sim_seed)
-  }
-  plot_df <- lapply(sim_seeds, .read_csv_from_seed) %>%
     bind_rows() %>%
     mutate(
-      contains_truth = nb_min <= true_final_prevalence & true_final_prevalence <= nb_max,
-      point_prop_error = (nb_med - true_final_prevalence) / true_final_prevalence
+      prev_err_est = (prev_est - prev_truth) / prev_truth,
+      prev_err_lower = (prev_lower - prev_truth) / prev_truth,
+      prev_err_upper = (prev_upper - prev_truth) / prev_truth
     )
-  plot_df <- plot_df[order(plot_df$point_prop_error), ]
-  plot_df$ix <- 1:nrow(plot_df)
 
-  g_prev_bias <- ggplot() +
+  birth_rate_plot_df <- birth_rate_and_prev_df %>% select(seed, starts_with("birth_rate"))
+  birth_rate_plot_df <- birth_rate_plot_df[order(birth_rate_plot_df$birth_rate_est), ]
+  birth_rate_plot_df$replicate <- 1:nrow(birth_rate_plot_df)
+
+  birth_rate_gg <- ggplot() +
+    geom_point(
+      data = birth_rate_plot_df,
+      mapping = aes(x = replicate, y = birth_rate_est),
+      colour = plot_colour,
+      size = 0.5
+    ) +
+    geom_errorbar(
+      data = birth_rate_plot_df,
+      mapping = aes(x = replicate, ymin = birth_rate_lower, ymax = birth_rate_upper),
+      colour = plot_colour
+    ) +
+    geom_hline(
+      yintercept = true_birth_rate,
+      linetype = "dashed"
+    ) +
+    geom_hline(
+      yintercept = mean(birth_rate_plot_df$birth_rate_est),
+      colour = plot_colour
+    ) +
+    labs(y = "Birth rate", x = "Replicate") +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+
+  prev_err_plot_df <- birth_rate_and_prev_df %>% select(seed, starts_with("prev_err"))
+  prev_err_plot_df <- prev_err_plot_df[order(prev_err_plot_df$prev_err_est), ]
+  prev_err_plot_df$replicate <- 1:nrow(prev_err_plot_df)
+
+
+  prev_err_gg <- ggplot() +
+    geom_point(
+      data = prev_err_plot_df,
+      mapping = aes(x = replicate, y = prev_err_est),
+      colour = plot_colour,
+      size = 0.5
+    ) +
+    geom_errorbar(
+      data = prev_err_plot_df,
+      mapping = aes(x = replicate, ymin = prev_err_lower, ymax = prev_err_upper),
+      colour = plot_colour
+    ) +
+    geom_hline(
+      yintercept = 0,
+      linetype = "dashed"
+    ) +
+    geom_hline(
+      yintercept = mean(prev_err_plot_df$prev_err_est),
+      colour = plot_colour
+    ) +
+    labs(y = "Relative bias\nin prevalence", x = "Replicate") +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+
+  list(
+    birth_rate = birth_rate_gg,
+    prevalence = prev_err_gg
+  )
+}
+
+
+r_naught_and_prevalence_ci_plot <- function(vis_data) {
+  true_r_naught <- vis_data$simulationParameters$birthRate / (vis_data$simulationParameters$deathRate + vis_data$simulationParameters$samplingRate + vis_data$simulationParameters$occurrenceRate)
+
+  r_naught_and_prevalence_record <- function(sim_result) {
+    sim_seed <- sim_result$simulationSeed
+    r_naught <- sim_result$regularParameterEstimates %>%
+      keep(~ .x$name == "rNaught") %>%
+      purrr::flatten()
+    prev <- sim_result$regularPrevalenceEstimate
+    data.frame(
+      seed = sim_seed,
+      r_naught_est = r_naught$estimate,
+      r_naught_lower = r_naught$credibleInterval[[1]],
+      r_naught_upper = r_naught$credibleInterval[[2]],
+      prev_est = prev$estimate,
+      prev_lower = prev$credibleInterval[[1]],
+      prev_upper = prev$credibleInterval[[2]],
+      prev_truth = prev$truth
+    )
+  }
+
+  #' This is the data frame that produces the figure in the main text. The
+  #' definition of relative bias is the one taken from here:
+  #' https://sisu.ut.ee/lcms_method_validation/51-Bias-and-its-constituents
+
+  r_and_prev_df <- map(
+    vis_data$simulationResults,
+    r_naught_and_prevalence_record
+  ) %>%
+    bind_rows() %>%
+    mutate(
+      prev_err_est = (prev_est - prev_truth) / prev_truth,
+      prev_err_lower = (prev_lower - prev_truth) / prev_truth,
+      prev_err_upper = (prev_upper - prev_truth) / prev_truth
+    ) %>%
+    select(starts_with("r_naught"), starts_with("prev_err"))
+  r_and_prev_df <- r_and_prev_df[order(r_and_prev_df$r_naught_est), ]
+  r_and_prev_df$replicate <- 1:nrow(r_and_prev_df)
+
+  r_df <- r_and_prev_df %>%
+    select(replicate, starts_with("r_naught")) %>%
+    mutate(var = "r_naught") %>%
+    rename(
+      est = r_naught_est,
+      lower = r_naught_lower,
+      upper = r_naught_upper
+    )
+
+  prev_df <- r_and_prev_df %>%
+    select(replicate, starts_with("prev_err")) %>%
+    mutate(var = "prev_err") %>%
+    rename(
+      est = prev_err_est,
+      lower = prev_err_lower,
+      upper = prev_err_upper
+    )
+
+
+  plot_df <- rbind(r_df, prev_df)
+  plot_df$var <- factor(plot_df$var,
+    levels = c("r_naught", "prev_err"), ordered = TRUE
+  )
+
+  truth_df <- data.frame(truth = c(true_r_naught, 0), var = c("r_naught", "prev_err"))
+  truth_df$var <- factor(truth_df$var, levels = levels(plot_df$var), ordered = TRUE)
+
+  facet_labels <- c(
+    r_naught = "Basic reproduction number",
+    prev_err = "Relative bias in prevalence"
+  )
+  ggplot() +
     geom_point(
       data = plot_df,
-      mapping = aes(
-        x = ix,
-        y = point_prop_error
-      ),
-      colour = geom_colour
+      mapping = aes(x = replicate, y = est),
+      colour = green_hex_colour,
+      size = 0.5
     ) +
     geom_errorbar(
       data = plot_df,
-      mapping = aes(
-        x = ix,
-        ymin = (nb_min - true_final_prevalence) / true_final_prevalence,
-        ymax = (nb_max - true_final_prevalence) / true_final_prevalence
-      ),
-      colour = geom_colour
+      mapping = aes(x = replicate, ymin = lower, ymax = upper),
+      colour = green_hex_colour
     ) +
-    geom_hline(yintercept = mean(plot_df$point_prop_error), colour = geom_colour) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    labs(x = "Replicate", y = "Proportional error in prevalence") +
+    geom_hline(
+      data = truth_df,
+      mapping = aes(yintercept = truth),
+      linetype = "dashed"
+    ) +
+    geom_hline(
+      data = plot_df %>% group_by(var) %>% summarise(mean_est = mean(est)),
+      mapping = aes(yintercept = mean_est),
+      colour = green_hex_colour
+    ) +
+    facet_grid(var ~ ., scales = "free_y", labeller = labeller(var = facet_labels)) +
+    labs(y = NULL, x = "Replicate") +
     theme_classic() +
     theme(
       axis.text.x = element_blank(),
-      axis.ticks.x = element_blank()
-    )
-
-  ## Save a copy of the actual object so that we can revive it later if tweaks
-  ## need to be made.
-  saveRDS(
-    object = g_prev_bias,
-    file = sprintf("out/replication-results-prevalence-bias-%s-figure.rds", data_type)
-  )
-  ggsave(
-    sprintf("out/replication-results-prevalence-bias-%s.png", data_type),
-    g_prev_bias
-  )
-  ggsave(
-    sprintf("out/replication-results-prevalence-bias-%s.pdf", data_type),
-    g_prev_bias
-  )
-
-  ## We save a copy of this data frame because it is useful as a way to map
-  ## between the prevalence estimates and the particular simulation seed that
-  ## was used. This helps in debugging.
-  write.table(
-    x = plot_df,
-    file = sprintf("out/proportion-prevalence-in-ci-%s.csv", data_type),
-    sep = ",",
-    row.names = FALSE
-  )
-
-  ## We also make a simple text file which summarises these values for quick
-  ## reference.
-  sink(sprintf("out/proportion-prevalence-in-ci-%s-table.txt", data_type))
-  print("Table of the number of CIs that contain the true prevalence.")
-  print(table(plot_df$contains_truth))
-  print(c("See ",
-        sprintf("out/proportion-prevalence-in-ci-%s.csv", data_type),
-        " for more details."))
-  sink()
-
-}
-
-birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
-  geom_colour <- if (data_type == "regular_data") {
-    green_hex_colour
-  } else if (data_type == "aggregated_data") {
-    purple_hex_colour
-  } else {
-    stop(sprintf("Did not recognise data type: %s", data_type))
-  }
-
-  .read_birth_on_death <- function(sim_seed) {
-    csv_name <- sprintf("out/seed-%d/param-summary-%d-%s.csv", sim_seed, sim_seed, data_type)
-    if (file.exists(csv_name)) {
-      read.csv(csv_name)
-    }
-  }
-  params_df <- lapply(sim_seeds, .read_birth_on_death) %>%
-    bind_rows() %>%
-    filter(param == "birth_on_death") %>%
-    select(value, statistic, sim_seed) %>%
-    dcast(sim_seed ~ statistic)
-
-  #' Sort the rows so that when plotted they come out in a nice order.
-  params_df <- params_df[order(params_df$mid - true_birth_on_death), ]
-  params_df$ix <- 1:nrow(params_df)
-
-  ggplot(data = params_df) +
-    geom_point(mapping = aes(x = ix, y = mid), colour = geom_colour) +
-    geom_errorbar(mapping = aes(x = ix, ymin = min, ymax = max), colour = geom_colour) +
-    geom_hline(yintercept = true_birth_on_death, linetype = "dashed") +
-    geom_hline(yintercept = mean(params_df$mid), colour = geom_colour) +
-    labs(x = "Replicate", y = "Ratio of the birth and death rates") +
-    theme_classic() +
-    theme(
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank()
+      axis.ticks.x = element_blank(),
+      strip.background = element_blank()
     )
 }
 
-## Generate a combined figure which works for a single column of text.
-run_combined_figure <- function() {
-  r_naught_fig_file <- "out/replication-results-r-naught-regular_data-figure.rds"
-  prevalence_bias_fig_file <- "out/replication-results-prevalence-bias-regular_data-figure.rds"
 
-  if (all(file.exists(c(r_naught_fig_file, prevalence_bias_fig_file)))) {
-    r_naught_fig <- readRDS(r_naught_fig_file) +
-      scale_y_continuous() +
-      labs(x = NULL, y = "Basic reproduction\nnumber")
-    prevalence_bias_fig <- readRDS(prevalence_bias_fig_file) +
-      scale_y_continuous() +
-      labs(x = "Replicate", y = "Proportional bias\nin prevalence")
-    combined_plot <- plot_grid(r_naught_fig,
-                               prevalence_bias_fig,
-                               ncol = 1
-                               )
+## =============================================================================
+
+main <- function(args) {
+  vis_data_json <- as.character(args[1])
+
+  if (file.exists(vis_data_json)) {
+    vis_data <- read_json(vis_data_json)
+
+    fig_1 <- r_naught_and_prevalence_ci_plot(vis_data)
     ggsave(
-      filename = "out/replication-results-combined-plot.pdf",
-      plot = combined_plot,
+      filename = "timtam-figure-1.pdf",
+      plot = fig_1,
       height = 10,
       width = 10,
       units = "cm"
     )
-  } else {
-    stop("Missing figure RDS file in run_combined_figure!!!")
-  }
-}
 
-main <- function(args) {
-  if (not(dir.exists("out"))) {
-    stop("Cannot find output directory: out.")
-  }
-  num_seeds <- as.integer(args[1])
+    true_birth_rate <- vis_data$simulationParameters$birthRate
 
-  ## include validation that a sensible number of seeds was provided from the
-  ## command line.
-  if (and(is.integer(num_seeds), num_seeds > 0)) {
-    successful_sim_seeds <- keep(
-      1:num_seeds,
-      function(n) {
-        fp1 <- sprintf("out/seed-%d/all-simulated-events.csv", n)
-        fp2 <- sprintf("out/seed-%d/regular-data-mcmc-samples.csv", n)
-        fp3 <- sprintf("out/seed-%d/aggregated-data-mcmc-samples.csv", n)
-        all(c(
-          file.exists(fp1),
-          file.exists(fp2),
-          file.exists(fp3)
-        ))
-      }
-    )
-
-    for (sim_seed in successful_sim_seeds) {
-      run_post_processing(sim_seed)
-    }
-    run_prevalence_plotting(successful_sim_seeds, "regular_data")
-    run_prevalence_plotting(successful_sim_seeds, "aggregated_data")
-
-
-    config <- read_json("out/seed-1/config-1.json")
-    sim_params <- config$simulationParameters
-    names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
-
-    .read_csv_param_summary <- function(sim_seed) {
-      param_summary_csv <- sprintf("out/seed-%d/param-summary-%d-regular_data.csv", sim_seed, sim_seed)
-      if (file.exists(param_summary_csv)) {
-        read.csv(param_summary_csv)
-      } else {
-        stop(sprintf("Cannot find file: %s", param_summary_csv))
-      }
-    }
-    params_df <- lapply(successful_sim_seeds, .read_csv_param_summary) %>% bind_rows()
-
-    ## lambda_df <- params_df %>%
-    ##   filter(param == "lambda") %>%
-    ##   select(value, statistic, sim_seed) %>%
-    ##   dcast(sim_seed ~ statistic)
-    ## g_lambda <- ggplot(lambda_df) +
-    ##   geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-    ##   geom_hline(yintercept = sim_params$lambda, linetype = "dashed")
-    ## ggsave("out/replication-results-lambda-regular_data.png", g_lambda)
-
-    ## psi_df <- params_df %>%
-    ##   filter(param == "psi") %>%
-    ##   select(value, statistic, sim_seed) %>%
-    ##   dcast(sim_seed ~ statistic)
-    ## g_psi <- ggplot(psi_df) +
-    ##   geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-    ##   geom_hline(yintercept = sim_params$psi, linetype = "dashed")
-    ## ggsave("out/replication-results-psi-regular_data.png", g_psi)
-
-    ## omega_df <- params_df %>%
-    ##   filter(param == "omega") %>%
-    ##   select(value, statistic, sim_seed) %>%
-    ##   dcast(sim_seed ~ statistic)
-    ## g_omega <- ggplot(omega_df) +
-    ##   geom_errorbar(mapping = aes(x = sim_seed, ymin = min, ymax = max), colour = green_hex_colour) +
-    ##   geom_hline(yintercept = sim_params$omega, linetype = "dashed")
-    ## ggsave("out/replication-results-omega-regular_data.png", g_omega)
-
-    simulation_r_naught <- sim_params$lambda / (sim_params$mu + sim_params$psi + sim_params$omega)
-    r_naught_df <- params_df %>%
-      filter(param == "r_naught") %>%
-      select(value, statistic, sim_seed) %>%
-      dcast(sim_seed ~ statistic)
-    r_naught_df <- r_naught_df[order(r_naught_df$mid), ]
-    r_naught_df$ix <- 1:nrow(r_naught_df)
-    g_r_naught <- ggplot(r_naught_df) +
-      geom_errorbar(mapping = aes(x = ix, ymin = min, ymax = max), colour = green_hex_colour) +
-      geom_point(mapping = aes(x = ix, y = mid), colour = green_hex_colour) +
-      geom_hline(yintercept = simulation_r_naught, linetype = "dashed") +
-      geom_hline(yintercept = mean(r_naught_df$mid), colour = green_hex_colour) +
-      labs(x = "Replicate", y = "Basic reproduction number") +
-      theme_classic() +
-      theme(
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()
-      )
-
-    ## Save a copy of the actual object so that we can revive it later if tweaks
-    ## need to be made.
-    saveRDS(
-      object = g_r_naught,
-      file = "out/replication-results-r-naught-regular_data-figure.rds"
-    )
-    ggsave("out/replication-results-r-naught-regular_data.png", g_r_naught)
-    ggsave("out/replication-results-r-naught-regular_data.pdf", g_r_naught)
-
-    ci_contains_r_naught <- r_naught_df$min <= simulation_r_naught & simulation_r_naught <= r_naught_df$max
-    sink("out/r-naught-in-ci-regular_data.txt")
-    print((table(ci_contains_r_naught)))
-    sink()
-
-    run_total_mcmc_diagnostics(successful_sim_seeds, "regular_data")
-    run_total_mcmc_diagnostics(successful_sim_seeds, "aggregated_data")
-
-    true_birth_on_death <- sim_params$lambda / sim_params$mu
+    reg_ggs <- birth_rate_and_prev_gg_list("regular_data", true_birth_rate, vis_data)
     ggsave(
-      "out/birth-on-death-comparison-regular_data.pdf",
-      birth_on_death_ggplot(
-        true_birth_on_death,
-        successful_sim_seeds,
-        "regular_data"
-      )
+      filename = "timtam-figure-s7a.pdf",
+      plot = reg_ggs$prevalence,
+      height = 5,
+      width = 10,
+      units = "cm"
     )
     ggsave(
-      "out/birth-on-death-comparison-aggregated_data.pdf",
-      birth_on_death_ggplot(
-        true_birth_on_death,
-        successful_sim_seeds,
-        "aggregated_data"
-      )
+      filename = "timtam-figure-s8a.pdf",
+      plot = reg_ggs$birth_rate,
+      height = 5,
+      width = 10,
+      units = "cm"
     )
-
-    run_combined_figure()
+    agg_ggs <- birth_rate_and_prev_gg_list("aggregated_data", true_birth_rate, vis_data)
+    ggsave(
+      filename = "timtam-figure-s7b.pdf",
+      plot = agg_ggs$prevalence,
+      height = 5,
+      width = 10,
+      units = "cm"
+    )
+    ggsave(
+      filename = "timtam-figure-s8b.pdf",
+      plot = agg_ggs$birth_rate,
+      height = 5,
+      width = 10,
+      units = "cm"
+    )
   } else {
-    stop("Could not get num_seeds from command line argument.")
+    stop("Could not find visualisation data JSON.")
   }
 }
 
@@ -573,5 +283,3 @@ if (!interactive()) {
   args <- commandArgs(trailingOnly = TRUE)
   main(args)
 }
-
-
