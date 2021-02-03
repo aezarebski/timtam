@@ -48,6 +48,7 @@ hand.
 # This must be run with bash!!!
 
 NUM_SEEDS=100
+VIS_JSON=out/vis-data.json
 
 Rscript src/generate-config-files.R 1 $NUM_SEEDS
 
@@ -64,7 +65,8 @@ do
     wait "${pids[@]}"
 done
 
-Rscript src/plotter.R $NUM_SEEDS
+Rscript src/summarise-results.R $NUM_SEEDS $VIS_JSON
+Rscript src/plotter.R $VIS_JSON
 #+end_src
 
 #+begin_src sh :tangle clean.sh
@@ -77,3 +79,11 @@ This uses the parameters specified in =bdscod/example/example-parameters.json=
 for the rates of unscheduled events. The timings of the scheduled events in and
 the configuration of the MCMC are hard coded in the
 =src/generate-config-files.R= script.
+
+** Visualisation
+
+Making the figures is a two step process: first, the results are summarised by
+the =summarise-results.R= script and stored in a JSON file; second, the
+=plotter.R= script uses the data in that JSON to create the figures. This means
+that the number crunching is separated from the visualisation making it easier
+to edit the figures.
