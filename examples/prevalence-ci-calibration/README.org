@@ -65,7 +65,7 @@ do
     wait "${pids[@]}"
 done
 
-Rscript src/summarise-results.R $NUM_SEEDS $VIS_JSON
+Rscript src/summarize-results.R $NUM_SEEDS $VIS_JSON
 Rscript src/plotter.R $VIS_JSON
 #+end_src
 
@@ -82,8 +82,8 @@ the configuration of the MCMC are hard coded in the
 
 ** Visualisation
 
-Making the figures is a two step process: first, the results are summarised by
-the =summarise-results.R= script and stored in a JSON file; second, the
+Making the figures is a two step process: first, the results are summarized by
+the =summarize-results.R= script and stored in a JSON file; second, the
 =plotter.R= script uses the data in that JSON to create the figures. This means
 that the number crunching is separated from the visualisation making it easier
 to edit the figures.

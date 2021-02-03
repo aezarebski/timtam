@@ -443,6 +443,7 @@ main <- function(args) {
     stop("Cannot find output directory: out.")
   }
   num_seeds <- as.integer(args[1])
+  vis_data_json <- as.character(args[2])
 
   ## include validation that a sensible number of seeds was provided from the
   ## command line.
