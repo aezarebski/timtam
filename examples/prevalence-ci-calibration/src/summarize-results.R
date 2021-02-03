@@ -478,9 +478,6 @@ main <- function(args) {
   num_seeds <- as.integer(args[1])
   vis_data_json <- as.character(args[2])
 
-  write_json(vj(), vis_data_json, auto_unbox = TRUE)
-
-  stop()
   ## include validation that a sensible number of seeds was provided from the
   ## command line.
   if (and(is.integer(num_seeds), num_seeds > 0)) {
@@ -497,6 +494,10 @@ main <- function(args) {
         ))
       }
     )
+
+    ## Create the visualisation data JSON file.
+    write_json(vj(successful_sim_seeds), vis_data_json, auto_unbox = TRUE, pretty = TRUE)
+    stop()
 
     for (sim_seed in successful_sim_seeds) {
       run_post_processing(sim_seed)
