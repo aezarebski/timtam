@@ -459,21 +459,29 @@ vj.readMCMCSamples <- function(mcmc_csv) {
   }
 }
 
+## Return an object with a single parameter's estimate.
 vj.singleParameterEstimate <- function(x_name, x_vals) {
-  quants <- quantile(x, probs = c(0.025, 0.5, 0.975))
+  quants <- quantile(x_vals, probs = c(0.025, 0.5, 0.975))
   list(name = x_name,
        estimate = quants[2],
        credibleInterval = quants[c(1,3)])
 }
 
-vj.parameterEstimates <- function(mcmc_samples) {
-  "not implemented yet"
+## Return a list of the parameter estimates.
+vj.parameterEstimates <- function(data_type, death_rate, mcmc_samples) {
+  lambda_est <- vj.singleParameterEstimate("birthRate", mcmc_samples$lambda)
+  switch(data_type,
+         regular_data = list(lambda_est,
+                             vj.singleParameterEstimate("rNaught",
+                                                        mcmc_samples$lambda / (death_rate + mcmc_samples$psi + mcmc_samples$omega))),
+         aggregated_data = list(lambda_est))
 }
 
 vj.prevalenceEstimate <- function() {
   "not implemented yet"
 }
 
+## Extract the paths to the MCMC CSV files from the configuration file.
 vj.readMcmcCsvFilepaths <- function(sim_seed) {
   config <- sprintf("out/seed-%d/config-%d.json", sim_seed, sim_seed) %>%
     read_json() %>%
@@ -491,6 +499,7 @@ vj.readMcmcCsvFilepaths <- function(sim_seed) {
   )
 }
 
+## This function summarizes the results of a single simulation.
 vj.readSingleSimulationResult <- function(sim_params, sim_seed) {
   mcmc_csv_list <- vj.readMcmcCsvFilepaths(sim_seed)
 
@@ -498,16 +507,18 @@ vj.readSingleSimulationResult <- function(sim_params, sim_seed) {
   mcmc_samples_aggregated_data <- vj.readMCMCSamples(mcmc_csv_list$aggregated_data_csv)
 
   list(simulationSeed = sim_seed,
-       regularParameterEstimates = vj.parameterEstimates(mcmc_samples_regular_data),
+       regularParameterEstimates = vj.parameterEstimates("regular_data", sim_params$deathRate, mcmc_samples_regular_data),
        regularPrevalenceEstimate = vj.prevalenceEstimate(),
-       aggregatedParameterEstimates = vj.parameterEstimates(mcmc_samples_aggregated_data),
+       aggregatedParameterEstimates = vj.parameterEstimates("aggregated_data", sim_params$deathRate, mcmc_samples_aggregated_data),
        aggregatedPrevalenceEstimate = vj.prevalenceEstimate())
 }
 
+## This function summarises the results of all of the simulations.
 vj.readSimulationResults <- function(sim_params, sim_seeds) {
   lapply(X = sim_seeds, FUN = function(ss) vj.readSingleSimulationResult(sim_params, ss))
 }
 
+## This function reads in the parameters that where used in the simulation.
 vj.readParameters <- function() {
   read_json("../example-parameters.json")
 }
