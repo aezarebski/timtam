@@ -105,7 +105,7 @@ prev_err_gg <- ggplot() +
     yintercept = mean(prev_err_plot_df$prev_err_est),
     colour = plot_colour
   ) +
-  labs(y = "Relative bias in prevalence", x = "Replicate") +
+  labs(y = "Relative bias\nin prevalence", x = "Replicate") +
   theme_classic() +
   theme(
     axis.text.x = element_blank(),
