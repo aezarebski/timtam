@@ -477,8 +477,55 @@ vj.parameterEstimates <- function(data_type, death_rate, mcmc_samples) {
          aggregated_data = list(lambda_est))
 }
 
-vj.prevalenceEstimate <- function() {
-  "not implemented yet"
+## Parse the estimate of the final 
+vj.readPrevalenceEstimate <- function(sim_seed, mcmc_samples) {
+  output_dir <- sprintf("out/seed-%d", sim_seed)
+  if (not(dir.exists(output_dir))) {
+    stop(sprintf("\n\tcannot find directory %s: No such directory", output_dir))
+  }
+
+  all_events_csv <- sprintf("%s/all-simulated-events.csv", output_dir)
+  if (not(file.exists(all_events_csv))) {
+    stop(sprintf("\n\tcannot open file %s: No such file or directory", all_events_csv))
+  }
+
+  all_events <- read.csv(all_events_csv,
+    header = FALSE,
+    stringsAsFactors = FALSE
+  ) %>%
+    select(V1, V2) %>%
+    set_names(c("event", "abs_time"))
+
+  update_prev <- function(n, e) {
+    switch(EXPR = as.character(e),
+      infection = n + 1,
+      occurrence = n - 1,
+      removal = n - 1,
+      sampling = n - 1
+    )
+  }
+
+  prev_df <- data.frame(
+    absolute_time = c(0, all_events$abs_time),
+    prevalence = accumulate(
+      .x = all_events$event,
+      .f = update_prev, .init = 1
+    )
+  ) %>% tail(1)
+
+  prevalence_est_df <- mcmc_samples %>%
+    mutate(
+      nb_min = qnbinom(p = 0.025, size = nbSize, prob = 1 - nbProb),
+      nb_med = qnbinom(p = 0.5, size = nbSize, prob = 1 - nbProb),
+      nb_max = qnbinom(p = 0.975, size = nbSize, prob = 1 - nbProb)
+    ) %>%
+    colMeans %>%
+    as.list
+
+  list(estimate = prevalence_est_df$nb_med,
+       truth = prev_df$prevalence,
+       credibleInterval = c(prevalence_est_df$nb_min,
+                            prevalence_est_df$nb_max))
 }
 
 ## Extract the paths to the MCMC CSV files from the configuration file.
@@ -508,9 +555,9 @@ vj.readSingleSimulationResult <- function(sim_params, sim_seed) {
 
   list(simulationSeed = sim_seed,
        regularParameterEstimates = vj.parameterEstimates("regular_data", sim_params$deathRate, mcmc_samples_regular_data),
-       regularPrevalenceEstimate = vj.prevalenceEstimate(),
+       regularPrevalenceEstimate = vj.readPrevalenceEstimate(sim_seed, mcmc_samples_regular_data),
        aggregatedParameterEstimates = vj.parameterEstimates("aggregated_data", sim_params$deathRate, mcmc_samples_aggregated_data),
-       aggregatedPrevalenceEstimate = vj.prevalenceEstimate())
+       aggregatedPrevalenceEstimate = vj.readPrevalenceEstimate(sim_seed, mcmc_samples_aggregated_data))
 }
 
 ## This function summarises the results of all of the simulations.
