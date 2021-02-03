@@ -7,6 +7,9 @@ library(purrr)
 library(magrittr)
 library(coda)
 
+
+summary_func <- function(x) quantile(x, probs = c(0.025, 0.5, 0.975))
+
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
@@ -186,7 +189,6 @@ run_post_processing <- function(sim_seed) {
   sim_params <- app_config$simulationParameters
   names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
 
-  summary_func <- function(x) quantile(x, probs = c(0.025, 0.5, 0.975))
 
 
   #' Summarise the parameter estimates given the regular data
