@@ -9,7 +9,113 @@ library(jsonlite)
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
-vis_data <- read_json("demo.json")
+
+birth_rate_and_prevalence_record <- function(data_type, sim_result) {
+  sim_seed <- sim_result$simulationSeed
+  param_est <- switch(data_type,
+                      regular_data = sim_result$regularParameterEstimates,
+                      aggregated_data = sim_result$aggregatedParameterEstimates)
+  birth_rate <- param_est %>% keep(~ .x$name == "birthRate") %>% flatten()
+  prev <- switch(data_type,
+                 regular_data = sim_result$regularPrevalenceEstimate,
+                 aggregated_data = sim_result$aggregatedPrevalenceEstimate
+                 )
+  data.frame(
+    seed = sim_seed,
+    birth_rate_est = birth_rate$estimate,
+    birth_rate_lower = birth_rate$credibleInterval[[1]],
+    birth_rate_upper = birth_rate$credibleInterval[[2]],
+    prev_est = prev$estimate,
+    prev_lower = prev$credibleInterval[[1]],
+    prev_upper = prev$credibleInterval[[2]],
+    prev_truth = prev$truth
+  )
+}
+
+birth_rate_and_prev_gg_list <- function(data_type, true_birth_rate, vis_data) {
+  
+plot_colour <- switch(data_type,
+                      regular_data = green_hex_colour,
+                      aggregated_data = purple_hex_colour)
+
+  birth_rate_and_prev_df <- map(
+    vis_data$simulationResults,
+    ~ birth_rate_and_prevalence_record(data_type, .x)
+  ) %>%
+    bind_rows() %>%
+    mutate(
+      prev_err_est = (prev_est - prev_truth) / prev_truth,
+      prev_err_lower = (prev_lower - prev_truth) / prev_truth,
+      prev_err_upper = (prev_upper - prev_truth) / prev_truth
+    )
+
+birth_rate_plot_df <- birth_rate_and_prev_df %>% select(seed, starts_with("birth_rate"))
+birth_rate_plot_df <- birth_rate_plot_df[order(birth_rate_plot_df$birth_rate_est),]
+birth_rate_plot_df$replicate <- 1:nrow(birth_rate_plot_df)
+
+birth_rate_gg <- ggplot() +
+  geom_point(
+    data = birth_rate_plot_df,
+    mapping = aes(x = replicate, y = birth_rate_est),
+    colour = plot_colour,
+    size = 0.5
+  ) +
+  geom_errorbar(
+    data = birth_rate_plot_df,
+    mapping = aes(x = replicate, ymin = birth_rate_lower, ymax = birth_rate_upper),
+    colour = plot_colour
+  ) +
+  geom_hline(
+    yintercept = true_birth_rate,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = mean(birth_rate_plot_df$birth_rate_est),
+    colour = plot_colour
+  ) +
+  labs(y = "Birth rate", x = "Replicate") +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+
+prev_err_plot_df <- birth_rate_and_prev_df %>% select(seed, starts_with("prev_err"))
+prev_err_plot_df <- prev_err_plot_df[order(prev_err_plot_df$prev_err_est),]
+prev_err_plot_df$replicate <- 1:nrow(prev_err_plot_df)
+
+
+prev_err_gg <- ggplot() +
+  geom_point(
+    data = prev_err_plot_df,
+    mapping = aes(x = replicate, y = prev_err_est),
+    colour = plot_colour,
+    size = 0.5
+  ) +
+  geom_errorbar(
+    data = prev_err_plot_df,
+    mapping = aes(x = replicate, ymin = prev_err_lower, ymax = prev_err_upper),
+    colour = plot_colour
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = mean(prev_err_plot_df$prev_err_est),
+    colour = plot_colour
+  ) +
+  labs(y = "Relative bias in prevalence", x = "Replicate") +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+
+  list(birth_rate = birth_rate_gg,
+       prevalence = prev_err_gg)
+}
+
 
 r_naught_and_prevalence_ci_plot <- function(vis_data) {
   true_r_naught <- vis_data$simulationParameters$birthRate / (vis_data$simulationParameters$deathRate + vis_data$simulationParameters$samplingRate + vis_data$simulationParameters$occurrenceRate)
