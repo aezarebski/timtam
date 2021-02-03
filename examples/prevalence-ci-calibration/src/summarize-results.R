@@ -451,20 +451,74 @@ vj.readGitCommit <- function() {
   "not implemented yet"
 }
 
-vj.readSimulations <- function() {
+vj.readMCMCSamples <- function(mcmc_csv) {
+  if (file.exists(mcmc_csv)) {
+    read.csv(mcmc_csv)
+  } else {
+    stop("Could not find MCMC file: ", mcmc_csv)
+  }
+}
+
+vj.singleParameterEstimate <- function(x_name, x_vals) {
+  quants <- quantile(x, probs = c(0.025, 0.5, 0.975))
+  list(name = x_name,
+       estimate = quants[2],
+       credibleInterval = quants[c(1,3)])
+}
+
+vj.parameterEstimates <- function(mcmc_samples) {
   "not implemented yet"
+}
+
+vj.prevalenceEstimate <- function() {
+  "not implemented yet"
+}
+
+vj.readMcmcCsvFilepaths <- function(sim_seed) {
+  config <- sprintf("out/seed-%d/config-%d.json", sim_seed, sim_seed) %>%
+    read_json() %>%
+    use_series("inferenceConfigurations")
+
+  .f <- function(x) {
+    x %>%
+      use_series("icMaybeMCMCConfig") %>%
+      use_series("mcmcOutputCSV")
+  }
+
+  list(
+    aggregated_data_csv = config %>% extract2(3) %>% .f,
+    regular_data_csv = config %>% extract2(2) %>% .f
+  )
+}
+
+vj.readSingleSimulationResult <- function(sim_params, sim_seed) {
+  mcmc_csv_list <- vj.readMcmcCsvFilepaths(sim_seed)
+
+  mcmc_samples_regular_data <- vj.readMCMCSamples(mcmc_csv_list$regular_data_csv)
+  mcmc_samples_aggregated_data <- vj.readMCMCSamples(mcmc_csv_list$aggregated_data_csv)
+
+  list(simulationSeed = sim_seed,
+       regularParameterEstimates = vj.parameterEstimates(mcmc_samples_regular_data),
+       regularPrevalenceEstimate = vj.prevalenceEstimate(),
+       aggregatedParameterEstimates = vj.parameterEstimates(mcmc_samples_aggregated_data),
+       aggregatedPrevalenceEstimate = vj.prevalenceEstimate())
+}
+
+vj.readSimulationResults <- function(sim_params, sim_seeds) {
+  lapply(X = sim_seeds, FUN = function(ss) vj.readSingleSimulationResult(sim_params, ss))
 }
 
 vj.readParameters <- function() {
-  "not implemented yet"
+  read_json("../example-parameters.json")
 }
 
-vj <- function() {
+vj <- function(sim_seeds) {
+  sim_params <- vj.readParameters()
   list(
     creationDate = vj.readDate(),
     gitCommit = vj.readGitCommit(),
-    simulationParameters = vj.readParameters(),
-    simulations = vj.readSimulations()
+    simulationParameters = sim_params,
+    simulationResults = vj.readSimulationResults(sim_params, sim_seeds)
   )
 }
 
