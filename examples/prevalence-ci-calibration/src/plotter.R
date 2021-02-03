@@ -15,7 +15,7 @@ birth_rate_and_prevalence_record <- function(data_type, sim_result) {
   param_est <- switch(data_type,
                       regular_data = sim_result$regularParameterEstimates,
                       aggregated_data = sim_result$aggregatedParameterEstimates)
-  birth_rate <- param_est %>% keep(~ .x$name == "birthRate") %>% flatten()
+  birth_rate <- param_est %>% keep(~ .x$name == "birthRate") %>% purrr::flatten()
   prev <- switch(data_type,
                  regular_data = sim_result$regularPrevalenceEstimate,
                  aggregated_data = sim_result$aggregatedPrevalenceEstimate
@@ -124,7 +124,7 @@ r_naught_and_prevalence_ci_plot <- function(vis_data) {
     sim_seed <- sim_result$simulationSeed
     r_naught <- sim_result$regularParameterEstimates %>%
       keep(~ .x$name == "rNaught") %>%
-      flatten()
+      purrr::flatten()
     prev <- sim_result$regularPrevalenceEstimate
     data.frame(
       seed = sim_seed,
