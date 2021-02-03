@@ -222,23 +222,53 @@ r_naught_and_prevalence_ci_plot <- function(vis_data) {
 
 ## =============================================================================
 
-make_figures <- function(vis_data) {
-  fig_1 <- r_naught_and_prevalence_ci_plot(vis_data)
-  ggsave(
-    filename = "timtam-figure-1.pdf",
-    plot = fig_1,
-    height = 10,
-    width = 10,
-    units = "cm"
-  )
-}
-
 main <- function(args) {
   vis_data_json <- as.character(args[1])
 
   if (file.exists(vis_data_json)) {
     vis_data <- read_json(vis_data_json)
-    make_figures(vis_data)
+
+    fig_1 <- r_naught_and_prevalence_ci_plot(vis_data)
+    ggsave(
+      filename = "timtam-figure-1.pdf",
+      plot = fig_1,
+      height = 10,
+      width = 10,
+      units = "cm"
+    )
+
+    true_birth_rate <- vis_data$simulationParameters$birthRate
+
+    reg_ggs <-birth_rate_and_prev_gg_list("regular_data", true_birth_rate, vis_data)
+    ggsave(
+      filename = "timtam-figure-s7a.pdf",
+      plot = reg_ggs$prevalence,
+      height = 5,
+      width = 10,
+      units = "cm"
+    )
+    ggsave(
+      filename = "timtam-figure-s8a.pdf",
+      plot = reg_ggs$birth_rate,
+      height = 5,
+      width = 10,
+      units = "cm"
+    )
+    agg_ggs <-birth_rate_and_prev_gg_list("aggregated_data", true_birth_rate, vis_data)
+    ggsave(
+      filename = "timtam-figure-s7b.pdf",
+      plot = agg_ggs$prevalence,
+      height = 5,
+      width = 10,
+      units = "cm"
+    )
+    ggsave(
+      filename = "timtam-figure-s8b.pdf",
+      plot = agg_ggs$birth_rate,
+      height = 5,
+      width = 10,
+      units = "cm"
+    )
   } else {
     stop("Could not find visualisation data JSON.")
   }
