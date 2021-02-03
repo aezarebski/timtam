@@ -438,13 +438,47 @@ run_combined_figure <- function() {
   }
 }
 
+
+
+
+vj.readDate <- function() {
+  "not implemented yet"
+}
+
+vj.readGitCommit <- function() {
+  "not implemented yet"
+}
+
+vj.readSimulations <- function() {
+  "not implemented yet"
+}
+
+vj.readParameters <- function() {
+  "not implemented yet"
+}
+
+vj <- function() {
+  list(
+    creationDate = vj.readDate(),
+    gitCommit = vj.readGitCommit(),
+    simulationParameters = vj.readParameters(),
+    simulations = vj.readSimulations()
+  )
+}
+
+
+
 main <- function(args) {
   if (not(dir.exists("out"))) {
     stop("Cannot find output directory: out.")
   }
+
   num_seeds <- as.integer(args[1])
   vis_data_json <- as.character(args[2])
 
+  write_json(vj(), vis_data_json, auto_unbox = TRUE)
+
+  stop()
   ## include validation that a sensible number of seeds was provided from the
   ## command line.
   if (and(is.integer(num_seeds), num_seeds > 0)) {
