@@ -325,6 +325,16 @@ main <- function(args) {
       width = 10,
       units = "cm"
     )
+
+    report_template <- "timtam-report-template.html"
+    report_target <- "timtam-report.html"
+    if (file.exists(report_template)) {
+      writeLines(text = whisker::whisker.render(template = readLines(report_template),
+                                                data = report_data(vis_data)),
+                 con = report_target)
+    } else {
+      stop("Could not find timtam report template.")
+    }
   } else {
     stop("Could not find visualisation data JSON.")
   }
