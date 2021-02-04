@@ -9,7 +9,28 @@ library(jsonlite)
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
+## Extract data on R0 and the prevalence and return it as a single row of a
+## dataframe.
+r_naught_and_prevalence_record <- function(sim_result) {
+  sim_seed <- sim_result$simulationSeed
+  r_naught <- sim_result$regularParameterEstimates %>%
+    keep(~ .x$name == "rNaught") %>%
+    purrr::flatten()
+  prev <- sim_result$regularPrevalenceEstimate
+  data.frame(
+    seed = sim_seed,
+    r_naught_est = r_naught$estimate,
+    r_naught_lower = r_naught$credibleInterval[[1]],
+    r_naught_upper = r_naught$credibleInterval[[2]],
+    prev_est = prev$estimate,
+    prev_lower = prev$credibleInterval[[1]],
+    prev_upper = prev$credibleInterval[[2]],
+    prev_truth = prev$truth
+  )
+}
 
+## Extract data on birth rate and the prevalence and return it as a single row
+## of a dataframe.
 birth_rate_and_prevalence_record <- function(data_type, sim_result) {
   sim_seed <- sim_result$simulationSeed
   param_est <- switch(data_type,
@@ -35,6 +56,53 @@ birth_rate_and_prevalence_record <- function(data_type, sim_result) {
   )
 }
 
+#' The report data for use with the timtam-report-template.html. Must be a list
+#' with the following entries:
+#'
+#' - numRegCovRNaught
+#' - numRegCovBirthRate
+#' - numRegCovPrev
+#' - numRegSims
+#' - numAggCovBirthRate
+#' - numAggCovPrev
+#' - numAggSims
+report_data <- function(vis_data) {
+
+  true_birth_rate <- vis_data$simulationParameters$birthRate
+  true_r_naught <- vis_data$simulationParameters$birthRate / (vis_data$simulationParameters$deathRate + vis_data$simulationParameters$samplingRate + vis_data$simulationParameters$occurrenceRate)
+
+  reg_birth_rate_and_prev_df <- map(
+  vis_data$simulationResults,
+  ~ birth_rate_and_prevalence_record("regular_data", .x)) %>%
+    bind_rows %>%
+  mutate(birth_rate_in_ci = birth_rate_lower < true_birth_rate & true_birth_rate < birth_rate_upper,
+         prev_in_ci = prev_lower < prev_truth & prev_truth < prev_upper)
+  reg_r_naught_df <- map(
+    vis_data$simulationResults,
+    ~ r_naught_and_prevalence_record(.x)) %>%
+    bind_rows %>%
+    mutate(r_naught_in_ci = r_naught_lower < true_r_naught & true_r_naught < r_naught_upper)
+
+  agg_birth_rate_and_prev_df <- map(
+    vis_data$simulationResults,
+    ~ birth_rate_and_prevalence_record("aggregated_data", .x)) %>%
+    bind_rows %>%
+    mutate(birth_rate_in_ci = birth_rate_lower < true_birth_rate & true_birth_rate < birth_rate_upper,
+           prev_in_ci = prev_lower < prev_truth & prev_truth < prev_upper)
+
+  list(
+    numRegCovRNaught = sum(reg_r_naught_df$r_naught_in_ci),
+    numRegCovBirthRate = sum(reg_birth_rate_and_prev_df$birth_rate_in_ci),
+    numRegCovPrev = sum(reg_birth_rate_and_prev_df$prev_in_ci),
+    numRegSims = nrow(reg_birth_rate_and_prev_df),
+    numAggCovBirthRate = sum(agg_birth_rate_and_prev_df$birth_rate_in_ci),
+    numAggCovPrev = sum(agg_birth_rate_and_prev_df$prev_in_ci),
+    numAggSims = nrow(agg_birth_rate_and_prev_df)
+  )
+}
+
+## The supplementary figures for the birth rate and the the prevalence across
+## replicates.
 birth_rate_and_prev_gg_list <- function(data_type, true_birth_rate, vis_data) {
   plot_colour <- switch(data_type,
     regular_data = green_hex_colour,
@@ -121,27 +189,10 @@ birth_rate_and_prev_gg_list <- function(data_type, true_birth_rate, vis_data) {
   )
 }
 
-
+## The main text figure for the R0 and the prevalence across replicates with the
+## regular data.
 r_naught_and_prevalence_ci_plot <- function(vis_data) {
   true_r_naught <- vis_data$simulationParameters$birthRate / (vis_data$simulationParameters$deathRate + vis_data$simulationParameters$samplingRate + vis_data$simulationParameters$occurrenceRate)
-
-  r_naught_and_prevalence_record <- function(sim_result) {
-    sim_seed <- sim_result$simulationSeed
-    r_naught <- sim_result$regularParameterEstimates %>%
-      keep(~ .x$name == "rNaught") %>%
-      purrr::flatten()
-    prev <- sim_result$regularPrevalenceEstimate
-    data.frame(
-      seed = sim_seed,
-      r_naught_est = r_naught$estimate,
-      r_naught_lower = r_naught$credibleInterval[[1]],
-      r_naught_upper = r_naught$credibleInterval[[2]],
-      prev_est = prev$estimate,
-      prev_lower = prev$credibleInterval[[1]],
-      prev_upper = prev$credibleInterval[[2]],
-      prev_truth = prev$truth
-    )
-  }
 
   #' This is the data frame that produces the figure in the main text. The
   #' definition of relative bias is the one taken from here:
@@ -274,6 +325,16 @@ main <- function(args) {
       width = 10,
       units = "cm"
     )
+
+    report_template <- "timtam-report-template.html"
+    report_target <- "timtam-report.html"
+    if (file.exists(report_template)) {
+      writeLines(text = whisker::whisker.render(template = readLines(report_template),
+                                                data = report_data(vis_data)),
+                 con = report_target)
+    } else {
+      stop("Could not find timtam report template.")
+    }
   } else {
     stop("Could not find visualisation data JSON.")
   }
