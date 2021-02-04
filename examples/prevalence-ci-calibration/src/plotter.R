@@ -9,7 +9,28 @@ library(jsonlite)
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
 
+## Extract data on R0 and the prevalence and return it as a single row of a
+## dataframe.
+r_naught_and_prevalence_record <- function(sim_result) {
+  sim_seed <- sim_result$simulationSeed
+  r_naught <- sim_result$regularParameterEstimates %>%
+    keep(~ .x$name == "rNaught") %>%
+    purrr::flatten()
+  prev <- sim_result$regularPrevalenceEstimate
+  data.frame(
+    seed = sim_seed,
+    r_naught_est = r_naught$estimate,
+    r_naught_lower = r_naught$credibleInterval[[1]],
+    r_naught_upper = r_naught$credibleInterval[[2]],
+    prev_est = prev$estimate,
+    prev_lower = prev$credibleInterval[[1]],
+    prev_upper = prev$credibleInterval[[2]],
+    prev_truth = prev$truth
+  )
+}
 
+## Extract data on birth rate and the prevalence and return it as a single row
+## of a dataframe.
 birth_rate_and_prevalence_record <- function(data_type, sim_result) {
   sim_seed <- sim_result$simulationSeed
   param_est <- switch(data_type,
@@ -121,27 +142,10 @@ birth_rate_and_prev_gg_list <- function(data_type, true_birth_rate, vis_data) {
   )
 }
 
-
+## The main text figure for the R0 and the prevalence across replicates with the
+## regular data.
 r_naught_and_prevalence_ci_plot <- function(vis_data) {
   true_r_naught <- vis_data$simulationParameters$birthRate / (vis_data$simulationParameters$deathRate + vis_data$simulationParameters$samplingRate + vis_data$simulationParameters$occurrenceRate)
-
-  r_naught_and_prevalence_record <- function(sim_result) {
-    sim_seed <- sim_result$simulationSeed
-    r_naught <- sim_result$regularParameterEstimates %>%
-      keep(~ .x$name == "rNaught") %>%
-      purrr::flatten()
-    prev <- sim_result$regularPrevalenceEstimate
-    data.frame(
-      seed = sim_seed,
-      r_naught_est = r_naught$estimate,
-      r_naught_lower = r_naught$credibleInterval[[1]],
-      r_naught_upper = r_naught$credibleInterval[[2]],
-      prev_est = prev$estimate,
-      prev_lower = prev$credibleInterval[[1]],
-      prev_upper = prev$credibleInterval[[2]],
-      prev_truth = prev$truth
-    )
-  }
 
   #' This is the data frame that produces the figure in the main text. The
   #' definition of relative bias is the one taken from here:
