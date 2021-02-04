@@ -56,6 +56,53 @@ birth_rate_and_prevalence_record <- function(data_type, sim_result) {
   )
 }
 
+#' The report data for use with the timtam-report-template.html. Must be a list
+#' with the following entries:
+#'
+#' - numRegCovRNaught
+#' - numRegCovBirthRate
+#' - numRegCovPrev
+#' - numRegSims
+#' - numAggCovBirthRate
+#' - numAggCovPrev
+#' - numAggSims
+report_data <- function(vis_data) {
+
+  true_birth_rate <- vis_data$simulationParameters$birthRate
+  true_r_naught <- vis_data$simulationParameters$birthRate / (vis_data$simulationParameters$deathRate + vis_data$simulationParameters$samplingRate + vis_data$simulationParameters$occurrenceRate)
+
+  reg_birth_rate_and_prev_df <- map(
+  vis_data$simulationResults,
+  ~ birth_rate_and_prevalence_record("regular_data", .x)) %>%
+    bind_rows %>%
+  mutate(birth_rate_in_ci = birth_rate_lower < true_birth_rate & true_birth_rate < birth_rate_upper,
+         prev_in_ci = prev_lower < prev_truth & prev_truth < prev_upper)
+  reg_r_naught_df <- map(
+    vis_data$simulationResults,
+    ~ r_naught_and_prevalence_record(.x)) %>%
+    bind_rows %>%
+    mutate(r_naught_in_ci = r_naught_lower < true_r_naught & true_r_naught < r_naught_upper)
+
+  agg_birth_rate_and_prev_df <- map(
+    vis_data$simulationResults,
+    ~ birth_rate_and_prevalence_record("aggregated_data", .x)) %>%
+    bind_rows %>%
+    mutate(birth_rate_in_ci = birth_rate_lower < true_birth_rate & true_birth_rate < birth_rate_upper,
+           prev_in_ci = prev_lower < prev_truth & prev_truth < prev_upper)
+
+  list(
+    numRegCovRNaught = sum(reg_r_naught_df$r_naught_in_ci),
+    numRegCovBirthRate = sum(reg_birth_rate_and_prev_df$birth_rate_in_ci),
+    numRegCovPrev = sum(reg_birth_rate_and_prev_df$prev_in_ci),
+    numRegSims = nrow(reg_birth_rate_and_prev_df),
+    numAggCovBirthRate = sum(agg_birth_rate_and_prev_df$birth_rate_in_ci),
+    numAggCovPrev = sum(agg_birth_rate_and_prev_df$prev_in_ci),
+    numAggSims = nrow(agg_birth_rate_and_prev_df)
+  )
+}
+
+## The supplementary figures for the birth rate and the the prevalence across
+## replicates.
 birth_rate_and_prev_gg_list <- function(data_type, true_birth_rate, vis_data) {
   plot_colour <- switch(data_type,
     regular_data = green_hex_colour,
