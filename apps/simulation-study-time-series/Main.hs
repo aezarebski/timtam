@@ -19,14 +19,16 @@ import qualified Data.Csv as Csv
 import Data.List (intercalate, intersperse,nub)
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector.Unboxed as Unboxed
-import qualified Epidemic.BDSCOD as SimBDSCOD
+import qualified Epidemic.Model.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
   ( EpidemicEvent(..)
-  , asNewickString
   , eventTime
   , maybeEpidemicTree
-  , maybeReconstructedTree
   )
+import Epidemic (allEvents)
+import Epidemic.Types.Newick (asNewickString)
+import Epidemic.Types.Observations (maybeReconstructedTree,observedEvents)
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population (Person(..), Identifier(..))
 import qualified Epidemic.Utility as SimUtil
@@ -97,8 +99,8 @@ data ParameterKind
 -- environment.
 bdscodConfiguration = do
   simParams <- asks simulationParameters
-  (TimeDelta simDurDouble) <- asks simulationDuration
-  let bdscodConfig = SimBDSCOD.configuration (AbsoluteTime simDurDouble) (unpackParameters simParams)
+  simDurDouble <- asks simulationDuration
+  let bdscodConfig = SimBDSCOD.configuration simDurDouble (unpackParameters simParams)
   case bdscodConfig of
     Nothing -> throwError "Could not construct BDSCOD configuration"
     (Just config) -> return config
@@ -116,7 +118,7 @@ partialSimulatedEpidemic bdscodConfig =
   do
     let randomSeed = Unboxed.fromList [1,2,3]
     gen <- liftIO $ initialize randomSeed
-    simEvents <- liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents gen
+    simEvents <- liftIO $ SimUtil.simulation' bdscodConfig (allEvents SimBDSCOD.randomEvent) gen
     (sizeLowerBound,sizeUpperBound) <- asks simulationSizeBounds
     if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound
       then do infTimes <- map inferenceTime <$> asks inferenceConfigurations
@@ -132,8 +134,12 @@ simulatedObservations :: InferenceConfiguration
                       -> [EpidemicEvent]
                       -> Simulation (InferenceConfiguration,[Observation])
 simulatedObservations infConfig@InferenceConfiguration{..} simEvents = do
-  let Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
-      maybeObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+  let either2Maybe e = case e of
+        (Left _) -> Nothing
+        (Right x) -> Just x
+      eitherReconTree = maybeReconstructedTree =<< maybeEpidemicTree simEvents
+      Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< (either2Maybe eitherReconTree)
+      maybeObs = either2Maybe $ eventsAsObservations <$> observedEvents simEvents
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles
   case maybeObs of
     (Just obs) -> do liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)

@@ -48,14 +48,10 @@ import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
 import Data.List (intersperse)
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 import GHC.Generics (Generic)
 import GHC.Word (Word32(..))
-
--- | TODO Remove this once the version of @epi-sim@ has been updated to the
--- latest one on github.
-instance Ord TimeDelta where
-  (TimeDelta a) <= (TimeDelta b) = a <= b
 
 -- | Alias for the type used to seed the MWC PRNG.
 type MWCSeed = Word32

@@ -15,7 +15,16 @@ import qualified Data.Csv as Csv
 import Data.List (intercalate)
 import Data.Maybe (fromJust, fromMaybe, isJust)
 import Epidemic
-import Epidemic.InhomogeneousBDS
+import Epidemic.Model.InhomogeneousBDS (configuration,randomEvent)
+import Epidemic.Types.Events
+  ( EpidemicEvent(..)
+  , eventTime
+  , maybeEpidemicTree
+  )
+import Epidemic (allEvents)
+import Epidemic.Types.Newick (asNewickString)
+import Epidemic.Types.Observations (maybeReconstructedTree,observedEvents)
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 import Epidemic.Types.Events
 import Epidemic.Utility
@@ -63,9 +72,9 @@ writeLlhdVals llhdEvals fp =
 
 getSimEvents :: Maybe TimeDelta -> Maybe InhomParams -> IO (Maybe [EpidemicEvent])
 getSimEvents (Just (TimeDelta duration)) (Just (InhomParams (Timed brts, mu, psi))) =
-  do conf <- pure $ configuration (AbsoluteTime duration) (brts,mu,psi)
+  do conf <- pure $ configuration (TimeDelta duration) (brts,mu,psi)
      if isJust conf
-       then do sim <- simulation True (fromJust conf) allEvents
+       then do sim <- simulation True (fromJust conf) (allEvents randomEvent)
                return $ Just sim
        else return Nothing
 getSimEvents _ _ =
@@ -89,7 +98,11 @@ main =
     simOutputFile <- pure $ simulationEventsFile <$> config
     let
       infParams = inferenceParameters <$> config
-      obs = (eventsAsObservations . observedEvents) <$> simEvents
+      either2Maybe e = case e of
+        (Left _) -> Nothing
+        (Right x) -> Just x
+      (Just justSimEvents) = simEvents
+      obs = either2Maybe $ eventsAsObservations <$> observedEvents justSimEvents
       llhdVals = (liftM2 llhdEvaluations) obs infParams
       infOutputFile = inferenceLlhdFile <$> config
       in do fromMaybe (return ()) $ (liftM (writeSimEvents simEvents)) simOutputFile

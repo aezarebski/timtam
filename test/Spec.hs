@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 
--- import BDSCOD.Conditioning
 import BDSCOD.Aggregation
 import qualified BDSCOD.InhomogeneousBDSLlhd as InhomBDSLlhd
 import BDSCOD.Llhd
@@ -12,9 +11,16 @@ import Data.Maybe (fromJust, isJust)
 import Data.Tuple (swap)
 import qualified Data.Vector.Unboxed as Unboxed
 import qualified Epidemic as EpiSim
-import qualified Epidemic.BirthDeathSampling as EpiBDS
-import qualified Epidemic.BDSCOD as EpiBDSCOD
+import qualified Epidemic.Model.BDSCOD as EpiBDSCOD
 import Epidemic.Types.Events
+  ( EpidemicEvent(..)
+  , eventTime
+  , maybeEpidemicTree
+  )
+import Epidemic (allEvents)
+import Epidemic.Types.Newick (asNewickString)
+import qualified Epidemic.Types.Observations as EpiObs
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
@@ -492,15 +498,16 @@ testConversion = do
           p4 = Person (Identifier 4)
           p5 = Person (Identifier 5)
           p6 = Person (Identifier 6)
-          simObsEvents =
+          simEpiEvents =
             [ Infection (AbsoluteTime 1) p1 p2
-            , Sampling (AbsoluteTime 3) p1
+            , IndividualSample (AbsoluteTime 3) p1 True
             , Infection (AbsoluteTime 4) p2 p4
-            , Sampling (AbsoluteTime 6) p4
-            , Occurrence (AbsoluteTime 8) p2
-            , Occurrence (AbsoluteTime 11) p6
-            , Sampling (AbsoluteTime 12) p5
+            , IndividualSample (AbsoluteTime 6) p4 True
+            , IndividualSample (AbsoluteTime 8) p2 False
+            , IndividualSample (AbsoluteTime 11) p6 False
+            , IndividualSample (AbsoluteTime 12) p5 True
             ]
+          simObsEvents = map EpiObs.Observation simEpiEvents
           llhdObsEvents =
             [ (TimeDelta 1.0, OBirth)
             , (TimeDelta 2.0, ObsUnscheduledSequenced)
@@ -557,7 +564,7 @@ testImpossibleParameters = do
 
 tmpIsSampling :: EpidemicEvent -> Bool
 tmpIsSampling e = case e of
-  Sampling{} -> True
+  IndividualSample _ _ isSeq -> isSeq
   _ -> False
 
 testHmatrixUsage :: SpecWith ()

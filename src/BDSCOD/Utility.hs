@@ -1,14 +1,41 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module BDSCOD.Utility where
 
 import qualified Data.Vector as V
 
+import qualified Data.ByteString as B
 import qualified Data.Csv as Csv
 import Epidemic.Types.Parameter
+import Epidemic.Types.Time
 import Epidemic.Types.Events
 import Epidemic.Types.Population
+import qualified Epidemic.Types.Observations as EpiObs
 import BDSCOD.Types
--- import BDSCOD.Llhd --
 
+instance Csv.ToRecord EpidemicEvent where
+  toRecord e = case e of
+    (Infection t p1 p2) -> Csv.record ["infection", Csv.toField t, Csv.toField p1, Csv.toField p2]
+    (Removal time person) -> Csv.record ["removal", Csv.toField time, Csv.toField person, "NA"]
+    (IndividualSample t p isSeq) -> Csv.record [l, Csv.toField t, Csv.toField p, "NA"]
+      where l = if isSeq then "sampling" else "occurrence"
+    (PopulationSample t ps isSeq) -> Csv.record [l, Csv.toField t, Csv.toField ps, "NA"]
+      where l = if isSeq then "catastrophe" else "disaster"
+    Extinction -> Csv.record ["extinction", "NA", "NA", "NA"]
+    StoppingTime -> Csv.record ["stop", "NA", "NA", "NA"]
+
+instance Csv.ToField People where
+  toField (People persons) =
+    B.intercalate ":" $ V.toList $ V.map Csv.toField persons
+
+instance Csv.ToField Identifier where
+  toField (Identifier idNum) = Csv.toField idNum
+
+instance Csv.ToField Person where
+  toField (Person pid) = Csv.toField pid
+
+instance Csv.ToField AbsoluteTime where
+  toField (AbsoluteTime td) = Csv.toField td
 
 instance Csv.ToField TimeDelta where
   toField (TimeDelta td) = Csv.toField td
@@ -18,25 +45,25 @@ instance Csv.ToField TimeDelta where
 timesWithinEpsilon :: AbsoluteTime -> AbsoluteTime -> Bool
 timesWithinEpsilon (AbsoluteTime a) (AbsoluteTime b) = abs (a - b) < 1e-13
 
--- | Convert simulation events to observation events, this assumes that the
--- epidemic events have already been filtered by to only include the observable
--- events. Since this is model specific functions such as `observedEvents` are
--- provided to do this.
-eventsAsObservations :: [EpidemicEvent] -> [Observation]
+-- | Convert @epi-sim@ observations events into 'Observation's from @timtam@,
+-- this assumes that the epidemic events have already been filtered by to only
+-- include the observable events. Since this is model specific functions such as
+-- `observedEvents` are provided to do this.
+eventsAsObservations :: [EpiObs.Observation] -> [Observation]
 eventsAsObservations epiSimEvents =
   drop 1 . map fst $ scanl processEvent' ((TimeDelta 0, OBirth), AbsoluteTime 0) epiSimEvents
 
-processEvent' :: (Observation, AbsoluteTime) -> EpidemicEvent -> (Observation, AbsoluteTime)
-processEvent' (_, currTime) epiSimEvent =
+processEvent' :: (Observation, AbsoluteTime) -> EpiObs.Observation -> (Observation, AbsoluteTime)
+processEvent' (_, currTime) (EpiObs.Observation epiSimEvent) =
   case epiSimEvent of
-    (Infection absTime _ _) ->
-      ((timeDelta currTime absTime, OBirth), absTime)
-    (Sampling absTime _) -> ((timeDelta currTime absTime, ObsUnscheduledSequenced), absTime)
-    (Catastrophe absTime (People persons)) -> ((timeDelta currTime absTime, OCatastrophe . fromIntegral $ V.length persons), absTime)
-    (Occurrence absTime _) ->
-      ((timeDelta currTime absTime, OOccurrence), absTime)
-    (Disaster absTime (People persons)) -> ((timeDelta currTime absTime, ODisaster . fromIntegral $ V.length persons), absTime)
-    (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
+    (Infection absTime _ _) -> ((timeDelta currTime absTime, OBirth), absTime)
+    (IndividualSample absTime _ True) -> ((timeDelta currTime absTime, ObsUnscheduledSequenced), absTime)
+    (PopulationSample absTime people True) -> ((timeDelta currTime absTime, OCatastrophe . fromIntegral . numPeople $ people), absTime)
+    (IndividualSample absTime _ False) -> ((timeDelta currTime absTime, OOccurrence), absTime)
+    (PopulationSample absTime people False) -> ((timeDelta currTime absTime, ODisaster . fromIntegral . numPeople $ people), absTime)
+    (Removal _ _) -> error "A removal event encountered in processEvent', this should never happen!"
+    Extinction -> error "A extinction event encountered in processEvent', this should never happen!"
+    StoppingTime -> error "A stopping time event encountered in processEvent', this should never happen!"
 
 nbFromMAndV :: (Double, Double) -> NegativeBinomial
 nbFromMAndV (0, 0) = Zero

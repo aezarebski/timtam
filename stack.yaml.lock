@@ -6,18 +6,18 @@
 packages:
 - completed:
     name: epi-sim
-    version: 0.3.0.0
+    version: 0.4.0.0
     git: https://github.com/aezarebski/epi-sim.git
     pantry-tree:
-      size: 1213
-      sha256: 1809f70efb384b3d2e0f1d8f4d2e660b1548b2bb063e2d37913b7d46fee03651
-    commit: b4496e1ca529c702939429a2a757c3a9581a4323
+      size: 1501
+      sha256: 6c8f4f6fa7ae0d79c4999b42443026712310ef65d5e94f1a00a938a7f5209dd3
+    commit: 4f2701cf375550798911600da4d02348351a45f7
   original:
     git: https://github.com/aezarebski/epi-sim.git
-    commit: b4496e1ca529c702939429a2a757c3a9581a4323
+    commit: 4f2701cf375550798911600da4d02348351a45f7
 snapshots:
 - completed:
-    size: 532386
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/17.yaml
-    sha256: d3ee1ae797cf63189c95cf27f00700304946c5cb3c1e6a82001cd6584a221e1b
-  original: lts-16.17
+    size: 563099
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/2.yaml
+    sha256: 92b1a17e31d0a978fca4bf270305d4d1dd8092271bf60eafbc9349c890854026
+  original: lts-17.2

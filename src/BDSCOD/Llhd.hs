@@ -3,6 +3,7 @@ module BDSCOD.Llhd where
 import Data.List (find)
 import BDSCOD.Types
 import BDSCOD.Utility
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 
 
@@ -27,16 +28,16 @@ arePlausible obs (Parameters (l, m, r, _, o, _))
 --
 -- In Zarebski /et al/ (2020) the net event rate is \(\gamma\).
 --
-eventRate :: Parameters -> Double
-eventRate (Parameters (lam, mu, psi, _, om, _)) = lam + mu + psi + om
+totalEventRate :: Parameters -> Double
+totalEventRate (Parameters (lam, mu, psi, _, om, _)) = lam + mu + psi + om
 
 discriminant :: Parameters -> Double
 discriminant params@(Parameters (lam, mu, _, _, _, _)) =
-  eventRate params ** 2.0 - 4.0 * lam * mu
+  totalEventRate params ** 2.0 - 4.0 * lam * mu
 
 x1and2 :: Parameters -> (Double, Double)
 x1and2 params@(Parameters (lam, _, _, _, _, _)) =
-  let gam = eventRate params
+  let gam = totalEventRate params
       sqrtDisc = sqrt $ discriminant params
    in ((gam - sqrtDisc) / (2 * lam), (gam + sqrtDisc) / (2 * lam))
 

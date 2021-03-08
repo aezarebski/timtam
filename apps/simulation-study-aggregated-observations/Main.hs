@@ -51,14 +51,17 @@ import Data.ByteString.Lazy.Char8 (pack, singleton)
 import qualified Data.Csv as Csv
 import Data.List (intercalate)
 import qualified Data.Vector.Unboxed as Unboxed
-import qualified Epidemic.BDSCOD as SimBDSCOD
+import qualified Epidemic.Model.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
   ( EpidemicEvent(..)
-  , asNewickString
+  , eventTime
   , maybeEpidemicTree
-  , maybeReconstructedTree
   )
-import Epidemic.Types.Parameter (Probability, Rate, AbsoluteTime(..), TimeDelta(..), Timed(..))
+import Epidemic (allEvents)
+import Epidemic.Types.Newick (asNewickString)
+import Epidemic.Types.Observations (maybeReconstructedTree,observedEvents)
+import Epidemic.Types.Time
+import Epidemic.Types.Parameter (Probability, Rate)
 import Epidemic.Types.Population (People(..), Person(..), numPeople, Identifier(..))
 import Epidemic.Utility
 import qualified Epidemic.Utility as SimUtil
@@ -158,13 +161,15 @@ bdscodConfiguration = do
     then do
       (TimeDelta simDur) <- asks simulationDuration
       let bdscodConfig =
-            SimBDSCOD.configuration (AbsoluteTime simDur) (unpackParameters simParams)
+            SimBDSCOD.configuration (TimeDelta simDur) (unpackParameters simParams)
       case bdscodConfig of
         Nothing -> throwError "Could not construct BDSCOD configuration"
         (Just config) -> return config
     else throwError "Simulation parameters not acceptable for this program..."
 
--- | Check if the LTT ever returns to 1 after being larger than 1.
+-- | Check if the LTT ever returns to 1 after being larger than 1. This
+-- corresponds to a situation in which the origin has a slightly less clear
+-- interpretation so we want to be able to recognise this.
 pMultipleOrigins :: [EpidemicEvent] -> Bool
 pMultipleOrigins epiEvents = go 1 epiEvents
   where
@@ -173,10 +178,8 @@ pMultipleOrigins epiEvents = go 1 epiEvents
     go :: NumLineages -> [EpidemicEvent] -> Bool
     go _ [] = False
     go n (Removal _ _:ees) = (n < 3) || go (n-1) ees
-    go n (Sampling _ _:ees) = (n < 3) || go (n-1) ees
-    go n (Occurrence _ _:ees) = (n < 3) || go (n-1) ees
-    go n (Catastrophe _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
-    go n (Disaster _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
+    go n (IndividualSample _ _ _:ees) = (n < 3) || go (n-1) ees
+    go n (PopulationSample _ people _:ees) = if m > 1 then go m ees else True where m = n - numLineage people
     go n (Infection _ _ _:ees) = go (n+1) ees
 
 
@@ -186,7 +189,7 @@ simulateEpidemic seedInt bdscodConfig = do
   ifVerbosePutStrLn "Running simulateEpidemic..."
   genIO <- liftIO $ prngGen seedInt
   simEvents <-
-    liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
+    liftIO $ SimUtil.simulation' bdscodConfig (allEvents SimBDSCOD.randomEvent) genIO
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
   if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound && (not (pMultipleOrigins simEvents))
     then do
@@ -204,7 +207,7 @@ simulateEpidemic seedInt bdscodConfig = do
 
 _isSamplingEE :: EpidemicEvent -> Bool
 _isSamplingEE e = case e of
-  (Sampling _ _) -> True
+  (IndividualSample _ _ isSeq) -> isSeq
   _ -> False
 
 -- | Take a simulated epidemic and generate the observations, first with full
@@ -228,16 +231,19 @@ observeEpidemicThrice simEvents' = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
   let simEvents =
         reverse . dropWhile (not . _isSamplingEE) . reverse $ simEvents'
-      maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+      either2Maybe e = case e of
+        (Left _) -> Nothing
+        (Right x) -> Just x
+      maybeRegObs = either2Maybe $ eventsAsObservations <$> observedEvents simEvents
       maybeAggTimes =
         icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
       maybeAggObs =
         liftM2 aggregateUnscheduledObservations maybeAggTimes maybeRegObs
       (reconNewickTxt, reconNewickCsv) =
         reconstructedTreeOutputFiles regInfConfig
+      eitherReconTree = maybeReconstructedTree =<< maybeEpidemicTree simEvents
       maybeNewickData =
-        asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<<
-        maybeReconstructedTree =<< maybeEpidemicTree simEvents
+        asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< (either2Maybe eitherReconTree)
   case maybeNewickData of
     Just (newickBuilder, newickMetaData) -> do
       ifVerbosePutStrLn $

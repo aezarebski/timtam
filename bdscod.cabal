@@ -31,7 +31,7 @@ library
                   , bytestring >= 0.10
                   , cassava >= 0.5
                   , deepseq >= 1.4.4.0
-                  , epi-sim >= 0.3.0.0
+                  , epi-sim >= 0.4.0.0
                   , hspec-core >= 2.7.4
                   , vector
   default-language:    Haskell2010
@@ -133,7 +133,7 @@ executable timing-evaluation
                 , aeson
                 , bdscod
                 , bytestring
-                , criterion        == 1.5.7.0
+                , criterion        == 1.5.9.0
                 , cassava
                 , deepseq
                 , epi-sim

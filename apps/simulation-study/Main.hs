@@ -15,8 +15,16 @@ import qualified Data.Csv as Csv
 import Data.List (intercalate, intersperse)
 import Data.Maybe
 import Data.Map.Strict (Map(),fromList,toList)
-import qualified Epidemic.BDSCOD as SimBDSCOD
+import qualified Epidemic.Model.BDSCOD as SimBDSCOD
 import Epidemic.Types.Events
+  ( EpidemicEvent(..)
+  , eventTime
+  , maybeEpidemicTree
+  )
+import Epidemic (allEvents)
+import Epidemic.Types.Newick (asNewickString)
+import Epidemic.Types.Observations (maybeReconstructedTree,observedEvents)
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 import Epidemic.Types.Population
 import qualified Epidemic.Utility as SimUtil
@@ -127,33 +135,40 @@ main = do
       simParams = (simLambda, simMu, simPsi, [(rt,simRho) | rt <- simRhoTimes], simOmega, [(nt,simNu) | nt <- simNuTimes])
       infParamss = inferenceParameters simStudyParams
       (TimeDelta simDurDouble) = simDuration
-      simConfig = SimBDSCOD.configuration (AbsoluteTime simDurDouble) simParams
+      simConfig = SimBDSCOD.configuration (TimeDelta simDurDouble) simParams
       conditionUponObservation = True
    in if isNothing simConfig
       then
         return ()
       else
         do putStrLn appMessage
-           simEvents <- SimUtil.simulation True (fromJust simConfig) SimBDSCOD.allEvents
+           simEvents <- SimUtil.simulation True (fromJust simConfig) (allEvents SimBDSCOD.randomEvent)
            Prelude.writeFile outputEventsFile $ intercalate "\n" (map show simEvents)
            L.writeFile outputEventsCsv $ Csv.encode simEvents
              -- Generate the Newick representations so we can have a tree view of the whole simulation.
-           let maybeEpiTree = maybeEpidemicTree simEvents
-           let Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeEpiTree
-           L.writeFile "demo-newick-string-epitree.txt" $ BBuilder.toLazyByteString newickBuilder
-           L.writeFile "demo-newick-metadata-epitree.csv" $ Csv.encode newickMetaData
+           let either2Maybe e = case e of
+                 (Left _) -> Nothing
+                 (Right x) -> Just x
+               maybeEpiTree = maybeEpidemicTree simEvents
+               fromRight (Right x) = x
+               isRight (Right _) = True
+               isRight (Left _) = False
+           --     Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< (either2Maybe maybeEpiTree)
+           -- L.writeFile "demo-newick-string-epitree.txt" $ BBuilder.toLazyByteString newickBuilder
+           -- L.writeFile "demo-newick-metadata-epitree.csv" $ Csv.encode newickMetaData
            let obs =
                  eventsAsObservations <$>
-                 SimBDSCOD.observedEvents simEvents
+                 observedEvents simEvents
                numSimEvents = length simEvents
                numObs = length obs
              -- Generate the Newick representations of the observed data
-           let Just (newickBuilder',newickMetaData') = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeReconstructedTree =<< maybeEpiTree
+           let eitherReconTree = maybeReconstructedTree =<< maybeEpiTree
+           let Just (newickBuilder',newickMetaData') = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< (either2Maybe eitherReconTree)
            L.writeFile "demo-newick-string-recontree.txt" $ BBuilder.toLazyByteString newickBuilder'
            L.writeFile "demo-newick-metadata-recontree.csv" $ Csv.encode newickMetaData'
-           fromJust $ Prelude.writeFile outputObservationsFile . intersperse '\n' <$> (fmap show obs)
+           fromRight $ Prelude.writeFile outputObservationsFile . intersperse '\n' <$> (fmap show obs)
            putStrLn $ "Number of events in the simulation: " ++ show numSimEvents
            putStrLn $ "Number of events in the dataset: " ++ show numObs
-           if isJust obs
-             then llhdsWriteFile outputLlhdFile (fromJust obs) infParamss simDuration conditionUponObservation
+           if isRight obs
+             then llhdsWriteFile outputLlhdFile (fromRight obs) infParamss simDuration conditionUponObservation
              else putStrLn "The observations are nothing!"

@@ -12,6 +12,7 @@ module BDSCOD.Aggregation
 import BDSCOD.Types
 import Data.List (sort,sortBy)
 import GHC.Generics (Generic)
+import Epidemic.Types.Time
 import Epidemic.Types.Parameter
 
 -- | The times at which unscheduled samples are aggregated up to as part of the

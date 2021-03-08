@@ -13,13 +13,21 @@ import BDSCOD.Utility
 import Criterion.Main
 
 import Data.Aeson as JSON
-import qualified Data.ByteString.Builder as BBuilder
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Csv as CSV
-import Data.List (find, intercalate)
+import Data.List (find)
 import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust)
-import qualified Epidemic.BDSCOD as BDSCOD
-import Epidemic.Types.Parameter hiding (Parameters(..))
+import qualified Epidemic.Model.BDSCOD as BDSCOD
+import Epidemic.Types.Events
+  ( EpidemicEvent(..)
+  , eventTime
+  , maybeEpidemicTree
+  )
+import Epidemic (allEvents)
+import Epidemic.Types.Newick (asNewickString)
+import Epidemic.Types.Observations (maybeReconstructedTree,observedEvents)
+import Epidemic.Types.Time
+import Epidemic.Types.Parameter hiding (Parameters(..), ModelParameters(..))
 import Epidemic.Utility (simulationWithSystemRandom)
 -- import Criterion.Types
 import GHC.Generics (Generic)
@@ -28,7 +36,7 @@ import Text.Printf (printf)
 -- | This is the parameters of the likelihood function and the duration of the
 -- simulation.
 data ModelParameters = ModelParameters {mpParameters :: Parameters,
-                                        mpDuration :: AbsoluteTime }
+                                        mpDuration :: TimeDelta }
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 -- | The record of a computation including the size of the data set processed,
@@ -69,8 +77,11 @@ getObservations :: ModelParameters -> Int -> IO Simulation
 getObservations ModelParameters{..} simId =
   let simConfig = BDSCOD.configuration mpDuration (unpackParameters mpParameters)
     in if isJust simConfig
-       then do simEvents <- simulationWithSystemRandom True (fromJust simConfig) BDSCOD.allEvents
-               let maybeObs = eventsAsObservations <$> BDSCOD.observedEvents simEvents
+       then do simEvents <- simulationWithSystemRandom True (fromJust simConfig) (allEvents BDSCOD.randomEvent)
+               let either2Maybe e = case e of
+                     (Left _) -> Nothing
+                     (Right x) -> Just x
+                   maybeObs = either2Maybe $ eventsAsObservations <$> observedEvents simEvents
                return (fromMaybe [] maybeObs, simId)
        else return ([],simId)
 
