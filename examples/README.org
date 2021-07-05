@@ -30,11 +30,4 @@ set of parameters are used for the unscheduled events.
 These values are stored in =example-parameters.json= so they can be read from a
 single source.
 
-#+begin_src json :tangle example-parameters.json
-{
-    "birthRate": 1.7,
-    "deathRate": 0.9,
-    "samplingRate": 0.05,
-    "occurrenceRate": 0.25
-}
-#+end_src
+#+INCLUDE: "example-parameters.json" src emacs-lisp
