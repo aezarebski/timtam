@@ -236,9 +236,43 @@ associated with the final observation.
     }]
 #+end_src
 
+As a sanity check you can count the number of births is one less than the number
+of sequenced samples using the following snippet of code
+
+#+begin_src R
+  library(magrittr)
+  library(purrr)
+  library(jsonlite)
+
+  ## You will need to set this value to an existing observations file.
+  input_file <- "simulated-observations-00001.json"
+
+  x <- read_json(input_file)
+
+  num_births <- x %>% keep(~ .x[[2]]$tag == "OBirth") %>% length
+
+  num_unscheduled_sequenced <- x %>%
+    keep(~ .x[[2]]$tag == "ObsUnscheduledSequenced") %>%
+    length
+
+  num_scheduled_sequenced <- x %>%
+    keep(~ .x[[2]]$tag == "OCatastrophe") %>%
+    map(~ .x[[2]]$contents) %>%
+    as_vector
+
+  stopifnot(num_births + 1 == num_unscheduled_sequenced + num_scheduled_sequenced)
+  cat("\n There are ", num_births, " births.\n",
+      "There are ", num_unscheduled_sequenced, " sequenced samples at random times.\n",
+      "There are ", num_scheduled_sequenced, " sequenced samples at scheduled times.\n")
+#+end_src
+
 *** =popsize-distribution= output example
 
-The reformated observations are written to a JSON file with the following
+=popsize-distribution= considers a smaller range of datatypes than =timtam=, so
+the data can be represented in a simpler format. There is a script included
+which does this, but as a result of the simplification, some information is lost
+(although it is not necessary for the calculation of the likelihood in this
+case). The reformated observations are written to a JSON file with the following
 structure.
 
 #+begin_src json
@@ -250,7 +284,8 @@ structure.
 }
 #+end_src
 
-Each list contains the times at which this type of event was observed. For
-example, the list of values for =OBirth= contains the times at which birth
-events occurred in the reconstructed tree. *NOTE* that these times are all
-backwards from the present which is given time 0.
+Each list contains the (backward) times at which this type of event was
+observed. For example, the list of values associated with the key ="OBirth"=
+contains the times at which birth events occurred in the reconstructed tree.
+*NOTE* that these times are all backwards from the present which is given
+time 0.
