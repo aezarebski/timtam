@@ -26,6 +26,13 @@ reformat_observations <- function(input_json,
                             ~ filter(simulation_data, event == .x)$reverse_time) %>%
         set_names(event_types)
 
+    ## Add an additional birth time because popsize-distribution uses the first
+    ## element of the branch time list as the origin time.
+    event_times_list$OBirth <- c(
+      simulation_duration,
+      event_times_list$OBirth
+    )
+
     write_json(x = event_times_list,
                path = output_json,
                pretty = TRUE)
