@@ -6,17 +6,17 @@ Call:
 lm(formula = popSimLlhd ~ bdscodLlhd, data = plot_df)
 
 Residuals:
-     Min       1Q   Median       3Q      Max 
--10.1501  -1.8010   0.2044   2.2805   6.3407 
+    Min      1Q  Median      3Q     Max 
+-5.7260 -0.8152  0.8413  1.4090  2.9509 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  5.54427    1.24856   4.441 0.000106 ***
-bdscodLlhd   1.09557    0.02805  39.060  < 2e-16 ***
+(Intercept) -1.36450    0.86547  -1.577    0.128    
+bdscodLlhd   1.00820    0.02526  39.913   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 3.58 on 31 degrees of freedom
-Multiple R-squared:  0.9801,	Adjusted R-squared:  0.9794 
-F-statistic:  1526 on 1 and 31 DF,  p-value: < 2.2e-16
+Residual standard error: 2.103 on 24 degrees of freedom
+Multiple R-squared:  0.9852,	Adjusted R-squared:  0.9845 
+F-statistic:  1593 on 1 and 24 DF,  p-value: < 2.2e-16
 
