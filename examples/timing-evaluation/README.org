@@ -34,12 +34,20 @@ rm -f fibber.html
 rm -f fobber.csv 
 
 stack exec -- timing-evaluation --output fibber.html --csv fobber.csv --time-limit 5 
-Rscript src/prepare-simulations-for-popsize.R 
 #+END_SRC
 
 The files =fibber.html= and =fobber.csv= are used by =criterion= to write output
 to. At this point you can open =fibber.html= in a browser to see the results.
 The next steps are used to do the analogous timing in python.
+
+To put these simulations into a format that is easy to use with Manceau's code
+we run the following script
+
+#+BEGIN_SRC sh :tangle main.sh
+Rscript src/prepare-simulations-for-popsize.R
+#+END_SRC
+
+*NOTE* that =popsize-distribution= appears to treat the origin as birth event.
 
 ** Running Manceau's approximation
 

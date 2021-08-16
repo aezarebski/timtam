@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.1.5
+
+- Fix subtle bug in the way that `popsize-distribution` code was being used and
+  update the results after regenerating them.
+
 ## 0.1.4.0
 
 - When looking for scheduled events at a particular time, search for times less
