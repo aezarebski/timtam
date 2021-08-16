@@ -1,6 +1,13 @@
+> print("================================================================================\n")
 [1] "================================================================================\n"
+> cat("Linear model comparing LLHD values\n")
 Linear model comparing LLHD values
+> cat("================================================================================\n")
 ================================================================================
+> summary(lm(
++   formula = popSimLlhd ~ bdscodLlhd,
++   data = plot_df
++ ))
 
 Call:
 lm(formula = popSimLlhd ~ bdscodLlhd, data = plot_df)
@@ -20,3 +27,57 @@ Residual standard error: 2.103 on 24 degrees of freedom
 Multiple R-squared:  0.9852,	Adjusted R-squared:  0.9845 
 F-statistic:  1593 on 1 and 24 DF,  p-value: < 2.2e-16
 
+> sink()
+> print("================================================================================\n")
+[1] "================================================================================\n"
+> cat("Comparing differences in LLHD values\n")
+Comparing differences in LLHD values
+> cat("================================================================================\n")
+================================================================================
+> summary(lm(
++   formula = value ~ size,
++   data = plot_df_2[plot_df_2$variable == "error", ]
++ ))
+
+Call:
+lm(formula = value ~ size, data = plot_df_2[plot_df_2$variable == 
+    "error", ])
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.0246 -1.0256 -0.4584  0.4655  6.9413 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)  
+(Intercept) 0.086698   0.763957   0.113   0.9106  
+size        0.021088   0.009209   2.290   0.0311 *
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 1.91 on 24 degrees of freedom
+Multiple R-squared:  0.1793,	Adjusted R-squared:  0.1451 
+F-statistic: 5.244 on 1 and 24 DF,  p-value: 0.03111
+
+> summary(lm(
++   formula = value ~ size,
++   data = plot_df_2[plot_df_2$variable == "prop_error", ]
++ ))
+
+Call:
+lm(formula = value ~ size, data = plot_df_2[plot_df_2$variable == 
+    "prop_error", ])
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.25226 -0.11246 -0.04484  0.02640  1.52193 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)
+(Intercept) -0.0472583  0.1319314  -0.358    0.723
+size         0.0008857  0.0015903   0.557    0.583
+
+Residual standard error: 0.3298 on 24 degrees of freedom
+Multiple R-squared:  0.01276,	Adjusted R-squared:  -0.02838 
+F-statistic: 0.3102 on 1 and 24 DF,  p-value: 0.5827
+
+> sink()

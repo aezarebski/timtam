@@ -112,9 +112,23 @@ plot_df_2 <- plot_df %>%
   select(size, error, prop_error) %>%
   melt(id.vars = "size")
 
+sink(file = "out/llhd-fit-summary.txt", append = TRUE)
+print("================================================================================\n")
+cat("Comparing differences in LLHD values\n")
+cat("================================================================================\n")
+summary(lm(
+  formula = value ~ size,
+  data = plot_df_2[plot_df_2$variable == "error", ]
+))
+summary(lm(
+  formula = value ~ size,
+  data = plot_df_2[plot_df_2$variable == "prop_error", ]
+))
+sink()
+
 facet_labels <- c(
-  error = "Error",
-  prop_error = "Proportional error"
+  error = "Difference (BDSCOD - ODE)",
+  prop_error = "Proportional difference"
 )
 
 llhd_comparison_2 <- ggplot(
@@ -134,7 +148,7 @@ llhd_comparison_2 <- ggplot(
     name = "Number of observed events",
   ) +
   scale_y_continuous(
-    name = TeX("Log-likelihood error")
+    name = "Log-likelihood"
   ) +
   facet_wrap(~variable, scales = "free_y", labeller = labeller(variable = facet_labels)) +
   theme_classic() +
