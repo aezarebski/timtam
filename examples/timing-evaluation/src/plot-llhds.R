@@ -101,7 +101,49 @@ llhd_comparison <- ggplot(
 ## manually.
 ggsave("out/llhd-comparison.png", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
 ggsave("out/llhd-comparison.pdf", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
-ggsave("out/llhd-comparison.svg", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
+## ggsave("out/llhd-comparison.svg", llhd_comparison, height = 7.5, width = 7.4, units = "cm")
+
+## It would be interesting to see if there is a relationship between the size of
+## the dataset being analysed and the difference in the likelihood values
+## calculated by the two methods both in absolute terms and as a proportion.
+plot_df_2 <- plot_df %>%
+  mutate(error = bdscodLlhd - popSimLlhd,
+         prop_error = (bdscodLlhd - popSimLlhd) / popSimLlhd) %>%
+  select(size, error, prop_error) %>%
+  melt(id.vars = "size")
+
+facet_labels <- c(
+  error = "Error",
+  prop_error = "Proportional error"
+)
+
+llhd_comparison_2 <- ggplot(
+  data = plot_df_2,
+  mapping = aes(x = size, y = value)
+) +
+  geom_smooth(method = "lm",
+              linetype = "solid",
+              colour = "black",
+              size = 0.3
+              ) +
+  geom_point(
+    shape = 1,
+    size = 1
+  ) +
+  scale_x_continuous(
+    name = "Number of observed events",
+  ) +
+  scale_y_continuous(
+    name = TeX("Log-likelihood error")
+  ) +
+  facet_wrap(~variable, scales = "free_y", labeller = labeller(variable = facet_labels)) +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"),
+        strip.background = element_blank(),
+        strip.text = element_text(face = "bold"))
+
+ggsave("out/llhd-comparison-2.png", llhd_comparison_2, height = 7.5, width = 14.8, units = "cm")
+ggsave("out/llhd-comparison-2.pdf", llhd_comparison_2, height = 7.5, width = 14.8, units = "cm")
 
 truncation_parameter_trend <-
   ggplot(
@@ -133,4 +175,4 @@ truncation_parameter_trend <-
 ## manually.
 ggsave("out/truncation-comparison.png", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
 ggsave("out/truncation-comparison.pdf", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
-ggsave("out/truncation-comparison.svg", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
+## ggsave("out/truncation-comparison.svg", truncation_parameter_trend, height = 7.5, width = 7.4, units = "cm")
