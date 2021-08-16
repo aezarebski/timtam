@@ -9,7 +9,10 @@ $ python timing.py demo-data.json demo-output.json demo-config.jso
 """
 
 import algo1
-
+# algo1 is the required algorithm we need from the popsize-distribution
+# repository. Looking at one of the plotting scripts we see the following
+# example of how to use it.
+#
 # Second subplot
 # Comparison to the density values when r = 1
 # lista = [7, 6, 4, 3]            # births
@@ -19,7 +22,6 @@ import algo1
 # liste = []
 # listf = [5, 1]                  # occurrence
 # obs = [lista, listb, listc, listd, liste, listf]
-
 import sys
 import json
 import timeit
@@ -41,7 +43,6 @@ if os.path.isfile(config_json):
 else:
     raise FileNotFoundError
 
-
 print(input_json)
 with open(input_json) as data_json:
     input_data = json.load(data_json)
@@ -56,9 +57,9 @@ prev_llhd = -1e6
 curr_llhd = -1e4
 has_converged = False
 iter_count = 0
-max_iters = 15                  # maximum number of iterations prior to giving up
+max_iters = 20                  # maximum number of iterations prior to giving up
 truncation_param = 10
-truncation_delta = 5            # how much to change delta per loop
+truncation_delta = 10            # how much to change delta per loop
 prop_change_thresh = 1e-3       # threshold for proportion difference to have converged.
 
 while iter_count < max_iters and (not has_converged):
