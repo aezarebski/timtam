@@ -178,7 +178,7 @@ diff_by_size <- ggplot(
   theme_classic() +
   theme(axis.title = element_text(face = "bold"))
 
-llhd_comparison_2 <- plot_grid(bland_altman, diff_by_size, ncol = 1)
+llhd_comparison_2 <- plot_grid(bland_altman, diff_by_size, ncol = 1, labels = c("A", "B"))
 
 ggsave("out/llhd-comparison-2.png", llhd_comparison_2, height = 16.0, width = 8.4, units = "cm")
 ggsave("out/llhd-comparison-2.pdf", llhd_comparison_2, height = 16.0, width = 8.4, units = "cm")
