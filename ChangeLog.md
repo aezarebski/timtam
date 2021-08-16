@@ -2,6 +2,9 @@
 
 ## 0.1.5
 
+- Include a new figure, `examples/timing-evaluation/out/llhd-comparison-2.png`
+  which looks at the actual and proportional difference in the log-likelihood as
+  calculated by each method as a function of the size of the dataset.
 - Fix subtle bug in the way that `popsize-distribution` code was being used and
   update the results after regenerating them.
 
