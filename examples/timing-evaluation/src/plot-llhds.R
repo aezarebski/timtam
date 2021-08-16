@@ -124,6 +124,11 @@ summary(lm(
   formula = difference ~ mean_val,
   data = plot_df_2
 ))
+
+summary(lm(
+  formula = mean_val ~ size,
+  data = plot_df_2
+))
 sink()
 
 
@@ -182,6 +187,27 @@ llhd_comparison_2 <- plot_grid(bland_altman, diff_by_size, ncol = 1, labels = c(
 
 ggsave("out/llhd-comparison-2.png", llhd_comparison_2, height = 16.0, width = 8.4, units = "cm")
 ggsave("out/llhd-comparison-2.pdf", llhd_comparison_2, height = 16.0, width = 8.4, units = "cm")
+
+## Final comparison to explain difference in correlations.
+llhd_comparison_3 <- ggplot(data = plot_df_2, mapping = aes(x = size, y = mean_val)) +
+  geom_point(
+    shape = 1,
+    size = 1
+  ) +
+  geom_smooth(
+    method = "lm",
+    linetype = "solid",
+    colour = "black",
+    se = TRUE,
+    size = 0.3
+  ) +
+  labs(x = "Number of observed events",
+       y = "Average of TimTam and\n(numeric) ODE method") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold"))
+
+ggsave("out/llhd-comparison-3.png", llhd_comparison_3, height = 7.5, width = 7.4, units = "cm")
+ggsave("out/llhd-comparison-3.pdf", llhd_comparison_3, height = 7.5, width = 7.4, units = "cm")
 
 ## We also want to look at the values of the truncation parameter selected as a
 ## function of the size of the simulation.

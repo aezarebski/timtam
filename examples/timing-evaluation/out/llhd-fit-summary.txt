@@ -80,4 +80,27 @@ Residual standard error: 5.028 on 27 degrees of freedom
 Multiple R-squared:  0.0107,	Adjusted R-squared:  -0.02594 
 F-statistic: 0.2921 on 1 and 27 DF,  p-value: 0.5933
 
+> summary(lm(
++   formula = mean_val ~ size,
++   data = plot_df_2
++ ))
+
+Call:
+lm(formula = mean_val ~ size, data = plot_df_2)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-44.942 -18.531   2.041  16.676  54.604 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -40.02470   10.76598  -3.718 0.000929 ***
+size          0.07298    0.06077   1.201 0.240197    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 27.2 on 27 degrees of freedom
+Multiple R-squared:  0.05071,	Adjusted R-squared:  0.01555 
+F-statistic: 1.442 on 1 and 27 DF,  p-value: 0.2402
+
 > sink()
