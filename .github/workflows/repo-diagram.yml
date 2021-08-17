@@ -7,7 +7,7 @@ jobs:
       - name: Update diagram
         uses: "githubocto/repo-visualizer@0.5.0"
         with:
-          excluded_paths: "out,.github"
+          excluded_paths: "out,.github,.repo-diagram.dhall,.repo-diagram.svg,diagram.svg,.stack-work,Setup.hs,shell.nix,examples/prevalence-ci-calibration/out,examples/simulation-study/out,examples/simulation-study-aggregated-observations/out,examples/simulation-study-time-dependent-rates/out,examples/simulation-study-time-series/out,examples/timing-evaluation/out,examples/prevalence-ci-calibration/timtam-figure-1.pdf,examples/prevalence-ci-calibration/timtam-figure-s7a.pdf,examples/prevalence-ci-calibration/timtam-figure-s7b.pdf,examples/prevalence-ci-calibration/timtam-figure-s8a.pdf,examples/prevalence-ci-calibration/timtam-figure-s8b.pdf,examples/prevalence-ci-calibration/timtam-report-template.html,examples/prevalence-ci-calibration/timtam-report.html"
           output_file: ".repo-diagram.svg"
 name: Create diagram
 on:
