@@ -1,19 +1,28 @@
 #+title: Examples
 
-* Simulation studies
+* Examples
 
 There are a couple of simulation studies. See the following files for details.
 
-- =examples/simulation-study/README.md=
-- =examples/simulation-study-time-series/README.org=
-- =examples/simulation-study-aggregated-observations/README.org=
-- =examples/prevalence-ci-calibration/README.org=
+** Prevalence CI Calibration
 
-* Measuring evaluation times
+Generates point estimates and credible intervals for a set of simulations and
+looks at the bias in the point estimates and the coverage of the credible
+intervals. This is useful for assessing the utility of the approximation.
 
-See =examples/timing-evaluation/README.org= for details of a simulation study in
-which the evaluation speed of the likelihood is measured for a range of data
-sets.
+** Simulation Study Aggregated Observations
+
+Explores how much information is lost when the data is aggregated, ie when
+multiple unscheduled observations are aggregated into a single observation and
+treated as a scheduled observation. This is useful for assessing the impact of
+model misspecification.
+
+** Timing Evaluation
+
+Generates the figures in which the log-likelihood function is compared to
+existing methods both in terms of the values calculated and the computational
+complexity. This is useful for assessing the potential to use this likelihood in
+practise on large datasets.
 
 * Parameters
 
