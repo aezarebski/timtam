@@ -1,18 +1,23 @@
 #+title: BDSCOD
 
 This repository contains an implementation of the approximate likelihood of a
-birth-death process with various observation processes described [[https://doi.org/10.1101/2020.10.21.349068][here]]. See
-=examples/README.org= for a description of some of the examples included in this
-repository.
-
-* Computational environment
-
-R is used for visualisation and some scripting. See the =shell.nix= file to
-recreate the R environment. In the evaluation of the computation time there are
-some python scripts that need to be run. There is a =requirements.txt= file
-which specifies a python virtual environment for that.
+birth-death process with various observation processes described [[https://doi.org/10.1101/2020.10.21.349068][here]]. An
+overview of the organisation of the code in this repository is given below.
 
 * Architecture
+
+The diagram below shows the main source and documentation files in this
+repository. The computation is split up into several /examples/, for more
+details on the examples see the [[file:./examples/README.org][README]]. The main directories are
+
+- =src= which contains the library code which implements the likelihood
+  calculation, ie the code you might want to look at if you wanted to apply the
+  method to your own data,
+- =apps= which contains the application code for each example, ie the code
+  specific to the examples presented in the manuscript linked above,
+- and =examples= which contains the documentation and scripts needed to run each
+  example, ie the scripts you will need to run on your machine to replicate the
+  results.
 
 [[.repo-diagram.svg]]
 
