@@ -10,7 +10,9 @@ let exampleOutDirs =
       map
         Text
         Text
-        (\(exampleName : Text) -> "examples/${exampleName}/out")
+        ( \(exampleName : Text) ->
+            "examples/${exampleName}/out,examples/${exampleName}/.gitignore"
+        )
         [ "prevalence-ci-calibration"
         , "simulation-study"
         , "simulation-study-aggregated-observations"
