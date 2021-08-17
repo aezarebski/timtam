@@ -1,0 +1,10 @@
+- name: Repo Visualizer
+  uses: githubocto/repo-visualizer@7916b5978020b326e0561a56e3af02506e9322e7
+  with:
+    output_file: .diagram.svg
+    # A list of paths to exclude from the diagram, separated by commas. For example: dist,node_modules
+    excluded_paths: # optional
+    root_path: ./
+    max_depth: 9
+
+    commit_message: repo-visualiser update reporsitory diagram
