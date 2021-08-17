@@ -12,6 +12,10 @@ recreate the R environment. In the evaluation of the computation time there are
 some python scripts that need to be run. There is a =requirements.txt= file
 which specifies a python virtual environment for that.
 
+* Architecture
+
+[[.repo-diagram.svg]]
+
 * Acknowledgements
 
 - This project was done in collaboration with my co-authors: [[https://github.com/laduplessis][Louis du Plessis]],
