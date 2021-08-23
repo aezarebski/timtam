@@ -31,3 +31,64 @@ set of parameters are used for the unscheduled events. These values are stored
 in =example-parameters.json= so they can be read from a single source.
 
 #+INCLUDE: "example-parameters.json" src emacs-lisp
+
+The parameters used come from [[https://doi.org/10.1101/2020.09.12.20193284][Vaughan /et al/ (2020)]] which estimated \(R_0\) for
+several outbreaks of SARS-CoV-2 early on in the pandemic. Only genomic data was
+used in this analysis so a minor adjustment has been made to allow for the
+possibility of occurrence data.
+
+** Calculation
+
+The largest outbreak considered by [[https://doi.org/10.1101/2020.09.12.20193284][Vaughan /et al/ (2020)]] occurred in WA State
+(USA) and consisted of 217 sequences sampled over 20 days. Their analysis
+assumed an average infectious duration of 10 days. Using [[https://automeris.io/WebPlotDigitizer/][WebPlotDigitizer V4.5]]
+we extracted the values of \(R_0\) and the sampling proportion associated with
+this outbreak which were 2.28 and 0.48 respectively. We add the assumption that
+half of the unsequenced cases are occurrences. The calculation makes use of the
+following equations assuming we are working in units of days. From the average
+duration of being infectious we have
+
+\[
+\mu + \psi + \omega = \frac{1}{10}.
+\]
+
+From the extracted values we have
+
+\[
+R_0 = \frac{\lambda}{\mu + \psi + \omega} = 2.28
+\]
+
+and
+
+\[
+\frac{\psi}{\mu + \psi + \omega} = 0.48.
+\]
+
+The assumption that half the unsampled infections are occurrences gives us
+
+\[
+\mu = \psi
+\]
+
+#+begin_src bibtex
+@article{vaughan2020estimates,
+  author =       {Vaughan, Timothy G and Scir{\'e}, J{\'e}r{\'e}mie and Nadeau,
+                  Sarah A and Stadler, Tanja},
+  title =        {{Estimates of outbreak-specific SARS-CoV-2 epidemiological
+                  parameters from genomic data}},
+  year =         2020,
+  doi =          {10.1101/2020.09.12.20193284},
+  publisher =    {Cold Spring Harbor Laboratory Press},
+  URL =
+                  {https://www.medrxiv.org/content/early/2020/09/14/2020.09.12.20193284},
+  journal =      {medRxiv}
+}
+
+@misc{Rohatgi2020,
+  url = {https://automeris.io/WebPlotDigitizer},
+  author = {Rohatgi, Ankit},
+  title = {Webplotdigitizer: Version 4.5},
+  year = {2021}
+}
+#+end_src
+
