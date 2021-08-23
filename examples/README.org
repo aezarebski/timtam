@@ -18,16 +18,7 @@ sets.
 * Parameters
 
 In =aggregated-observations=, =ci-calibration= and =timing-evaluation= a common
-set of parameters are used for the unscheduled events.
-
-| Parameter       | Value |
-|-----------------+-------|
-| birth rate      |   1.7 |
-| death rate      |   0.9 |
-| sampling rate   |  0.05 |
-| occurrence rate |  0.25 |
-
-These values are stored in =example-parameters.json= so they can be read from a
-single source.
+set of parameters are used for the unscheduled events. These values are stored
+in =example-parameters.json= so they can be read from a single source.
 
 #+INCLUDE: "example-parameters.json" src emacs-lisp
