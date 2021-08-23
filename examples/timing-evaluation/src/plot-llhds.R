@@ -8,6 +8,7 @@ library(purrr)
 library(jsonlite)
 library(latex2exp)
 
+axis_title_font_size <- 9
 
 bdscod_llhds <- read.csv("out/simulation-sizes-and-llhds.csv", header = FALSE) %>%
   set_names(c("size", "bdscodLlhd", "name"))
@@ -94,7 +95,7 @@ llhd_comparison <- ggplot(
   ) +
   coord_fixed() +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold"))
+  theme(axis.title = element_text(face = "bold", size = axis_title_font_size))
 
 ## Using cowplot to combine the figures did not work very well so we save the
 ## figures to every useful format and then we use inkscape to combine them
@@ -107,57 +108,122 @@ ggsave("out/llhd-comparison.pdf", llhd_comparison, height = 7.5, width = 7.4, un
 ## the dataset being analysed and the difference in the likelihood values
 ## calculated by the two methods both in absolute terms and as a proportion.
 plot_df_2 <- plot_df %>%
-  mutate(error = bdscodLlhd - popSimLlhd,
-         prop_error = (bdscodLlhd - popSimLlhd) / popSimLlhd) %>%
-  select(size, error, prop_error) %>%
-  melt(id.vars = "size")
+  mutate(difference = bdscodLlhd - popSimLlhd,
+         mean_val = 0.5 * (bdscodLlhd + popSimLlhd)) %>%
+  select(size, difference, mean_val)
 
 sink(file = "out/llhd-fit-summary.txt", append = TRUE)
 print("================================================================================\n")
-cat("Comparing differences in LLHD values\n")
+cat("Comparing LLHD values\n")
 cat("================================================================================\n")
 summary(lm(
-  formula = value ~ size,
-  data = plot_df_2[plot_df_2$variable == "error", ]
+  formula = difference ~ size,
+  data = plot_df_2
 ))
+
 summary(lm(
-  formula = value ~ size,
-  data = plot_df_2[plot_df_2$variable == "prop_error", ]
+  formula = difference ~ mean_val,
+  data = plot_df_2
+))
+
+summary(lm(
+  formula = mean_val ~ size,
+  data = plot_df_2
 ))
 sink()
 
-facet_labels <- c(
-  error = "Difference (BDSCOD - ODE)",
-  prop_error = "Proportional difference"
-)
 
-llhd_comparison_2 <- ggplot(
+bland_altman <- ggplot(
   data = plot_df_2,
-  mapping = aes(x = size, y = value)
-) +
-  geom_smooth(method = "lm",
-              linetype = "solid",
-              colour = "black",
-              size = 0.3
-              ) +
+  mapping = aes(x = mean_val, y = difference)) +
   geom_point(
     shape = 1,
     size = 1
   ) +
-  scale_x_continuous(
-    name = "Number of observed events",
+  geom_hline(
+    mapping = aes(yintercept = mean(difference))) +
+  geom_hline(
+    mapping = aes(yintercept = mean(difference) + 1.96 * sqrt(var(difference))),
+    linetype = "dashed",
+    colour = "grey"
   ) +
-  scale_y_continuous(
-    name = "Log-likelihood"
+  geom_hline(
+    mapping = aes(yintercept = mean(difference) - 1.96 * sqrt(var(difference))),
+    linetype = "dashed",
+    colour = "grey"
   ) +
-  facet_wrap(~variable, scales = "free_y", labeller = labeller(variable = facet_labels)) +
+  geom_smooth(
+    method = "lm",
+    linetype = "solid",
+    colour = "black",
+    se = TRUE,
+    size = 0.3
+  ) +
+  labs(x = "Average of TimTam and\n(numeric) ODE method",
+       y = "Difference between TimTam\nand (numeric) ODE method") +
   theme_classic() +
-  theme(axis.title = element_text(face = "bold"),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold"))
+  theme(axis.title = element_text(face = "bold", size = axis_title_font_size))
 
-ggsave("out/llhd-comparison-2.png", llhd_comparison_2, height = 7.5, width = 14.8, units = "cm")
-ggsave("out/llhd-comparison-2.pdf", llhd_comparison_2, height = 7.5, width = 14.8, units = "cm")
+diff_by_size <- ggplot(
+  data = plot_df_2,
+  mapping = aes(x = size, y = difference)
+) +
+  geom_point(
+    shape = 1,
+    size = 1
+  ) +
+  geom_smooth(
+    method = "lm",
+    linetype = "solid",
+    colour = "black",
+    se = TRUE,
+    size = 0.3
+  ) +
+  labs(x = "Number of observed events",
+       y = "Difference between TimTam\nand (numeric) ODE method") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold", size = axis_title_font_size))
+
+llhd_comparison_2 <- plot_grid(bland_altman, diff_by_size, ncol = 1, labels = c("A", "B"))
+
+ggsave("out/llhd-comparison-2.png", llhd_comparison_2, height = 16.0, width = 8.4, units = "cm")
+ggsave("out/llhd-comparison-2.pdf", llhd_comparison_2, height = 16.0, width = 8.4, units = "cm")
+
+## Final comparison to explain difference in correlations.
+llhd_comparison_3 <- ggplot(data = plot_df_2, mapping = aes(x = size, y = mean_val)) +
+  geom_point(
+    shape = 1,
+    size = 1
+  ) +
+  geom_smooth(
+    method = "lm",
+    linetype = "solid",
+    colour = "black",
+    se = TRUE,
+    size = 0.3
+  ) +
+  labs(x = "Number of observed events",
+       y = "Average of TimTam and\n(numeric) ODE method") +
+  theme_classic() +
+  theme(axis.title = element_text(face = "bold", size = axis_title_font_size))
+
+ggsave("out/llhd-comparison-3.png", llhd_comparison_3, height = 7.5, width = 7.4, units = "cm")
+ggsave("out/llhd-comparison-3.pdf", llhd_comparison_3, height = 7.5, width = 7.4, units = "cm")
+
+llhd_comparison_4 <- plot_grid(
+  llhd_comparison,
+  bland_altman,
+  diff_by_size,
+  ncol = 1,
+  hjust = 0.0,
+  labels = LETTERS[1:3]
+)
+
+ggsave("out/llhd-comparison-4.png", llhd_comparison_4, height = 22.5, width = 8.4, units = "cm")
+ggsave("out/llhd-comparison-4.pdf", llhd_comparison_4, height = 22.5, width = 8.4, units = "cm")
+
+## We also want to look at the values of the truncation parameter selected as a
+## function of the size of the simulation.
 
 truncation_parameter_trend <-
   ggplot(

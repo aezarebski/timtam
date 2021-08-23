@@ -55,6 +55,8 @@ main <- function() {
        output_filepaths,
        reformat_observations,
        SIMULATION_DURATION)
+
+  return(NULL)
 }
 
 if (!interactive()) {
