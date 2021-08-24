@@ -5,8 +5,7 @@
 
 module Main where
 
--- import BDSCOD.Conditioning
-import BDSCOD.Llhd
+import BDSCOD.Llhd (llhdAndNB,initLlhdState,verboseLlhdAndNB)
 import BDSCOD.Types
 import BDSCOD.Utility
 import Control.Monad (zipWithM)
