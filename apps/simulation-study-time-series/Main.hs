@@ -114,7 +114,7 @@ bdscodConfiguration = do
 -- present.
 partialSimulatedEpidemic bdscodConfig =
   do
-    let randomSeed = Unboxed.fromList [1,2,3]
+    let randomSeed = Unboxed.fromList [1,2,3,4]
     gen <- liftIO $ initialize randomSeed
     simEvents <- liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents gen
     (sizeLowerBound,sizeUpperBound) <- asks simulationSizeBounds
