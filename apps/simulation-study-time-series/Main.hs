@@ -263,10 +263,14 @@ partialEvaluations obs = do
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
+  liftIO $ putStrLn "\tRunning epidemic simulation"
   pEpi <- partialSimulatedEpidemic bdscodConfig
   infConfigs <- asks inferenceConfigurations
+  liftIO $ putStrLn "\tExtracting observations from full simulation"
   pObs <- zipWithM simulatedObservations infConfigs pEpi
+  liftIO $ putStrLn "\tEvaluating LLHD on cross-sections about true parameters"
   mapM_ (uncurry evaluateLLHD) pObs
+  liftIO $ putStrLn "\tEvaluating LLHD on cross-sections about estimated parameters"
   mapM_ (uncurry estimateLLHD) pObs
   let completeObs = snd $ head pObs
   partialEvaluations completeObs
@@ -279,6 +283,7 @@ main = do
     Nothing ->
       putStrLn $ "Could not get configuration from file: " ++ configFilePath
     Just config -> do
+      putStrLn $ "Succeeded in reading configuration from file: " ++ configFilePath
       result <- runExceptT (runReaderT simulationStudy config)
       case result of
         Left errMsg -> putStrLn errMsg
