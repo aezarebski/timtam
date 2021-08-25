@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 module BDSCOD.Llhd where
 
 import Data.List (find)
@@ -166,11 +167,13 @@ logPdeGF params delay (PDESol Zero 1) z = log rz
   where
     rz = rr params delay z
 logPdeGF params delay (PDESol nb k) z =
-  logF p0z + k * log rz
-  where
+  let
     logF = logNbPGF nb
     p0z = p0 params delay z
     rz = rr params delay z
+  in if | k > 0 -> logF p0z + k * log rz
+        | k == 0 -> logF p0z
+        | otherwise -> error "negative k in logPdeGF"
 
 -- | The partial derivative of the generating function solution to the PDE.
 --
@@ -199,19 +202,22 @@ logPdeGF' params delay (PDESol Zero 1) z = log rdashz
   where
     rdashz = rr' params delay z
 logPdeGF' params delay (PDESol nb k) z =
-  logSumExp [firstTerm,secondTerm]
-  where
-    p0z = p0 params delay z
-    logP0DashZ = logP0' params delay z
-    rz = rr params delay z
-    rdashz = rr' params delay z
-    firstTerm = logNbPGF' nb p0z +
-      logP0DashZ +
-      k * log rz
-    secondTerm = log k +
-      (k-1) * log rz +
-      log rdashz +
-      logNbPGF nb p0z
+  if | k > 0 -> let p0z = p0 params delay z
+                    logP0DashZ = logP0' params delay z
+                    rz = rr params delay z
+                    rdashz = rr' params delay z
+                    firstTerm = logNbPGF' nb p0z +
+                      logP0DashZ +
+                      k * log rz
+                    secondTerm = log k +
+                      (k-1) * log rz +
+                      log rdashz +
+                      logNbPGF nb p0z
+                in logSumExp [firstTerm,secondTerm]
+     | k == 0 -> let p0z = p0 params delay z
+                     logP0DashZ = logP0' params delay z
+                     in logNbPGF' nb p0z + logP0DashZ
+     | otherwise -> error "negative k in logPdeGF'"
 
 -- | The second partial derivative of the generating function solution to the
 -- PDE.
@@ -247,25 +253,28 @@ logPdeGF'' params delay (PDESol Zero 1) z = log rdashdashz
   where
     rdashdashz = rr'' params delay z
 logPdeGF'' params delay (PDESol nb k) z =
-  logSumExp [term1, term2, term3, term4, term5]
-  where
-    -- f = nbPGF nb
-    -- fdash = nbPGF' nb
-    -- fdashdash = nbPGF'' nb
-    p0z = p0 params delay z
-    logP0DashZ = logP0' params delay z
-    logP0DashDashZ = logP0'' params delay z
-    rz = rr params delay z
-    rdashz = rr' params delay z
-    rdashdashz = rr'' params delay z
-    term1 = logNbPGF'' nb p0z + 2 * logP0DashZ + k * log rz
-    term2 = logNbPGF' nb p0z + logP0DashDashZ + k * log rz
-    term3 = log 2 + logNbPGF' nb p0z + logP0DashZ + log k + (k-1) * log rz + log rdashz
-    term4 = logNbPGF nb p0z + log k + log (k-1) + (k-2) * log rz + 2 * log rdashz
-    term5 = logNbPGF nb p0z + log k + (k-1) * log rz + log rdashdashz
-
-
-
+  if | k > 0 -> let -- f = nbPGF nb
+                    -- fdash = nbPGF' nb
+                    -- fdashdash = nbPGF'' nb
+                    p0z = p0 params delay z
+                    logP0DashZ = logP0' params delay z
+                    logP0DashDashZ = logP0'' params delay z
+                    rz = rr params delay z
+                    rdashz = rr' params delay z
+                    rdashdashz = rr'' params delay z
+                    term1 = logNbPGF'' nb p0z + 2 * logP0DashZ + k * log rz
+                    term2 = logNbPGF' nb p0z + logP0DashDashZ + k * log rz
+                    term3 = log 2 + logNbPGF' nb p0z + logP0DashZ + log k + (k-1) * log rz + log rdashz
+                    term4 = logNbPGF nb p0z + log k + log (k-1) + (k-2) * log rz + 2 * log rdashz
+                    term5 = logNbPGF nb p0z + log k + (k-1) * log rz + log rdashdashz
+                in logSumExp [term1, term2, term3, term4, term5]
+     | k == 0 -> let p0z = p0 params delay z
+                     logP0DashZ = logP0' params delay z
+                     logP0DashDashZ = logP0'' params delay z
+                     term1 = logNbPGF'' nb p0z + 2 * logP0DashZ
+                     term2 = logNbPGF' nb p0z + logP0DashDashZ
+                 in logSumExp [term1, term2]
+     | otherwise -> error "negative k in logPdeGF''"
 
 
 -- | The PDE statistics: the normalisation factor and the mean and variance of
@@ -390,7 +399,7 @@ updatedLlhdCalcState :: Parameters
                      -> LlhdCalcState
                      -> LlhdCalcState
 updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
-  if k > 0
+  if k >= 0
   then ((l+l'+l'',nb''),t',k'')
   else error $ "bad k in updatedLlhdCalcState: k = " ++ show k
   where

@@ -40,7 +40,7 @@ run_total_mcmc_diagnostics <- function(sim_seeds, data_type) {
   ## We want to know that the MCMC has a sufficient sample size so we check
   ## the effective sample size for each parameter in each iteration.
   .ess <- function(sim_seed) {
-    read.csv(sprintf("out/seed-%d/mcmc-effective-size-%d-%s.csv", sim_seed, sim_seed, data_type))
+    read.csv(sprintf("out/seed-%03d/mcmc-effective-size-%03d-%s.csv", sim_seed, sim_seed, data_type))
   }
   tmp <- lapply(sim_seeds, .ess) %>%
     bind_rows() %>%
@@ -61,7 +61,7 @@ run_mcmc_diagnostics_for_aggregated_data <- function(output_dir, sim_seed, mcmc_
     mcmc_obj <- read.csv(mcmc_csv) %>%
       select(lambda, rho, nu) %>%
       as.mcmc()
-    png(sprintf("%s/mcmc-trace-%d-aggregated-data.png", output_dir, sim_seed))
+    png(sprintf("%s/mcmc-trace-%03d-aggregated-data.png", output_dir, sim_seed))
     plot(mcmc_obj)
     dev.off()
 
@@ -72,7 +72,7 @@ run_mcmc_diagnostics_for_aggregated_data <- function(output_dir, sim_seed, mcmc_
       mutate(sim_seed = sim_seed)
     write.table(
       x = tmp,
-      file = sprintf("%s/mcmc-effective-size-%d-aggregated_data.csv", output_dir, sim_seed),
+      file = sprintf("%s/mcmc-effective-size-%03d-aggregated_data.csv", output_dir, sim_seed),
       sep = ",",
       row.names = FALSE
     )
@@ -90,7 +90,7 @@ run_mcmc_diagnostics_for_regular_data <- function(output_dir, sim_seed, mcmc_csv
     mcmc_obj <- read.csv(mcmc_csv) %>%
       select(lambda, psi, omega) %>%
       as.mcmc()
-    png(sprintf("%s/mcmc-trace-%d-regular-data.png", output_dir, sim_seed))
+    png(sprintf("%s/mcmc-trace-%03d-regular-data.png", output_dir, sim_seed))
     plot(mcmc_obj)
     dev.off()
 
@@ -101,7 +101,7 @@ run_mcmc_diagnostics_for_regular_data <- function(output_dir, sim_seed, mcmc_csv
       mutate(sim_seed = sim_seed)
     write.table(
       x = tmp,
-      file = sprintf("%s/mcmc-effective-size-%d-regular_data.csv", output_dir, sim_seed),
+      file = sprintf("%s/mcmc-effective-size-%03d-regular_data.csv", output_dir, sim_seed),
       sep = ",",
       row.names = FALSE
     )
@@ -119,7 +119,7 @@ run_mcmc_diagnostics_for_regular_data <- function(output_dir, sim_seed, mcmc_csv
 run_post_processing <- function(sim_seed) {
   cat("Running post-processing for ", sim_seed, "\n")
 
-  output_dir <- sprintf("out/seed-%d", sim_seed)
+  output_dir <- sprintf("out/seed-%03d", sim_seed)
   if (not(dir.exists(output_dir))) {
     stop(sprintf("\n\tcannot find directory %s: No such directory", output_dir))
   }
@@ -153,7 +153,7 @@ run_post_processing <- function(sim_seed) {
     )
   )
 
-  app_config <- read_json(sprintf("%s/config-%d.json", output_dir, sim_seed))
+  app_config <- read_json(sprintf("%s/config-%03d.json", output_dir, sim_seed))
   sim_duration <- app_config$simulationDuration
 
   mcmc_csv_list <- list()
@@ -203,7 +203,7 @@ run_post_processing <- function(sim_seed) {
   )
   write.table(
     x = tmp,
-    file = sprintf("%s/param-summary-%d-regular_data.csv", output_dir, sim_seed),
+    file = sprintf("%s/param-summary-%03d-regular_data.csv", output_dir, sim_seed),
     sep = ",",
     row.names = FALSE
   )
@@ -220,7 +220,7 @@ run_post_processing <- function(sim_seed) {
   )
   write.table(
     x = tmp,
-    file = sprintf("%s/param-summary-%d-aggregated_data.csv", output_dir, sim_seed),
+    file = sprintf("%s/param-summary-%03d-aggregated_data.csv", output_dir, sim_seed),
     sep = ",",
     row.names = FALSE
   )
@@ -257,8 +257,8 @@ run_post_processing <- function(sim_seed) {
       colour = green_hex_colour
     )
 
-  ggsave(sprintf("%s/summary-figure-%d-regular-data.png", output_dir, sim_seed), g)
-  ggsave(sprintf("%s/summary-figure-%d-log-scale-regular-data.png", output_dir, sim_seed), g + scale_y_log10())
+  ggsave(sprintf("%s/summary-figure-%03d-regular-data.png", output_dir, sim_seed), g)
+  ggsave(sprintf("%s/summary-figure-%03d-log-scale-regular-data.png", output_dir, sim_seed), g + scale_y_log10())
 
   for (data_type in c("regular_data", "aggregated_data")) {
     result <- nb_summary_list[[data_type]]
@@ -266,7 +266,7 @@ run_post_processing <- function(sim_seed) {
 
     write.table(
       x = result,
-      file = sprintf("%s/summary-seed-%d-%s.csv", output_dir, sim_seed, data_type),
+      file = sprintf("%s/summary-seed-%03d-%s.csv", output_dir, sim_seed, data_type),
       sep = ",",
       row.names = FALSE
     )
@@ -297,7 +297,7 @@ run_prevalence_plotting <- function(sim_seeds, data_type) {
 
   .read_csv_from_seed <- function(sim_seed) {
     read.csv(sprintf(
-      "out/seed-%d/summary-seed-%d-%s.csv",
+      "out/seed-%03d/summary-seed-%03d-%s.csv",
       sim_seed, sim_seed, data_type
     )) %>% mutate(sim_seed = sim_seed)
   }
@@ -384,7 +384,7 @@ birth_on_death_ggplot <- function(true_birth_on_death, sim_seeds, data_type) {
   }
 
   .read_birth_on_death <- function(sim_seed) {
-    csv_name <- sprintf("out/seed-%d/param-summary-%d-%s.csv", sim_seed, sim_seed, data_type)
+    csv_name <- sprintf("out/seed-%03d/param-summary-%03d-%s.csv", sim_seed, sim_seed, data_type)
     if (file.exists(csv_name)) {
       read.csv(csv_name)
     }
@@ -479,7 +479,7 @@ vj.parameterEstimates <- function(data_type, death_rate, mcmc_samples) {
 
 ## Parse the estimate of the final 
 vj.readPrevalenceEstimate <- function(sim_seed, mcmc_samples) {
-  output_dir <- sprintf("out/seed-%d", sim_seed)
+  output_dir <- sprintf("out/seed-%03d", sim_seed)
   if (not(dir.exists(output_dir))) {
     stop(sprintf("\n\tcannot find directory %s: No such directory", output_dir))
   }
@@ -530,7 +530,7 @@ vj.readPrevalenceEstimate <- function(sim_seed, mcmc_samples) {
 
 ## Extract the paths to the MCMC CSV files from the configuration file.
 vj.readMcmcCsvFilepaths <- function(sim_seed) {
-  config <- sprintf("out/seed-%d/config-%d.json", sim_seed, sim_seed) %>%
+  config <- sprintf("out/seed-%03d/config-%03d.json", sim_seed, sim_seed) %>%
     read_json() %>%
     use_series("inferenceConfigurations")
 
@@ -596,9 +596,9 @@ main <- function(args) {
     successful_sim_seeds <- keep(
       1:num_seeds,
       function(n) {
-        fp1 <- sprintf("out/seed-%d/all-simulated-events.csv", n)
-        fp2 <- sprintf("out/seed-%d/regular-data-mcmc-samples.csv", n)
-        fp3 <- sprintf("out/seed-%d/aggregated-data-mcmc-samples.csv", n)
+        fp1 <- sprintf("out/seed-%03d/all-simulated-events.csv", n)
+        fp2 <- sprintf("out/seed-%03d/regular-data-mcmc-samples.csv", n)
+        fp3 <- sprintf("out/seed-%03d/aggregated-data-mcmc-samples.csv", n)
         all(c(
           file.exists(fp1),
           file.exists(fp2),
@@ -609,7 +609,6 @@ main <- function(args) {
 
     ## Create the visualisation data JSON file.
     write_json(vj(successful_sim_seeds), vis_data_json, auto_unbox = TRUE, pretty = TRUE)
-    stop()
 
     for (sim_seed in successful_sim_seeds) {
       run_post_processing(sim_seed)
@@ -618,12 +617,12 @@ main <- function(args) {
     run_prevalence_plotting(successful_sim_seeds, "aggregated_data")
 
 
-    config <- read_json("out/seed-1/config-1.json")
+    config <- read_json("out/seed-001/config-001.json")
     sim_params <- config$simulationParameters
     names(sim_params) <- c("lambda", "mu", "psi", "rhoProbs", "omega", "nuProbs")
 
     .read_csv_param_summary <- function(sim_seed) {
-      param_summary_csv <- sprintf("out/seed-%d/param-summary-%d-regular_data.csv", sim_seed, sim_seed)
+      param_summary_csv <- sprintf("out/seed-%03d/param-summary-%03d-regular_data.csv", sim_seed, sim_seed)
       if (file.exists(param_summary_csv)) {
         read.csv(param_summary_csv)
       } else {

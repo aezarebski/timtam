@@ -5,8 +5,7 @@
 
 module Main where
 
--- import BDSCOD.Conditioning
-import BDSCOD.Llhd
+import BDSCOD.Llhd (llhdAndNB,initLlhdState,verboseLlhdAndNB)
 import BDSCOD.Types
 import BDSCOD.Utility
 import Control.Monad (zipWithM)
@@ -114,7 +113,7 @@ bdscodConfiguration = do
 -- present.
 partialSimulatedEpidemic bdscodConfig =
   do
-    let randomSeed = Unboxed.fromList [1,2,3]
+    let randomSeed = Unboxed.fromList [1,2,3,4]
     gen <- liftIO $ initialize randomSeed
     simEvents <- liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents gen
     (sizeLowerBound,sizeUpperBound) <- asks simulationSizeBounds
@@ -263,10 +262,14 @@ partialEvaluations obs = do
 simulationStudy :: Simulation ()
 simulationStudy = do
   bdscodConfig <- bdscodConfiguration
+  liftIO $ putStrLn "\tRunning epidemic simulation"
   pEpi <- partialSimulatedEpidemic bdscodConfig
   infConfigs <- asks inferenceConfigurations
+  liftIO $ putStrLn "\tExtracting observations from full simulation"
   pObs <- zipWithM simulatedObservations infConfigs pEpi
+  liftIO $ putStrLn "\tEvaluating LLHD on cross-sections about true parameters"
   mapM_ (uncurry evaluateLLHD) pObs
+  liftIO $ putStrLn "\tEvaluating LLHD on cross-sections about estimated parameters"
   mapM_ (uncurry estimateLLHD) pObs
   let completeObs = snd $ head pObs
   partialEvaluations completeObs
@@ -279,6 +282,7 @@ main = do
     Nothing ->
       putStrLn $ "Could not get configuration from file: " ++ configFilePath
     Just config -> do
+      putStrLn $ "Succeeded in reading configuration from file: " ++ configFilePath
       result <- runExceptT (runReaderT simulationStudy config)
       case result of
         Left errMsg -> putStrLn errMsg
