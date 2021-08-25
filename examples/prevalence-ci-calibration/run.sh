@@ -4,7 +4,7 @@
 #
 # This must be run with bash!!!
 
-NUM_SEEDS=30
+NUM_SEEDS=100                   # total number of replicates
 PAR_SIZE=15                     # number of processes to run in parallel.
 VIS_JSON=out/vis-data.json
 
