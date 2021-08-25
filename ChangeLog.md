@@ -2,11 +2,14 @@
 
 ## 0.1.6
 
+- Minor changes made to some of the example scripts to make them easier to run
+  and tweak.
 - Allow for the number of lineages in the reconstructed tree to hit zero
   provided that after this point there are no more sequenced samples. This means
   that a wider range of data sets can have their likelihood evaluated but
   introduces a bit more complexity into the code because the expressions are
-  slightly different in some cases if the LTT is zero.
+  slightly different in some cases if the LTT is zero. The code will still error
+  out if the LTT goes negative.
 
 ## 0.1.5
 
