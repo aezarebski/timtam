@@ -55,4 +55,5 @@ Making the figures is a two step process: first, the results are summarized by
 the =summarize-results.R= script and stored in a JSON file; second, the
 =plotter.R= script uses the data in that JSON to create the figures. This means
 that the number crunching is separated from the visualisation making it easier
-to edit the figures.
+to edit the figures. The =plotter.R= script also produces an HTML file with some
+summary statistics about how the simulations went.
