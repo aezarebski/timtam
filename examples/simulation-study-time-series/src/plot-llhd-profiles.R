@@ -257,7 +257,7 @@ main <- function() {
                          header = FALSE,
                          stringsAsFactors = FALSE) %>%
     set_names(c("event", "time", "primary", "secondary")) %>%
-    mutate(delta = primary_count(primary),
+    mutate(delta = primary_count(ifelse(is.na(primary), "", as.character(primary))),
            delta_sign = ifelse(event == "infection", +1, -1),
            population_size = 1 + cumsum(delta * delta_sign)) %>%
     select(event,time,population_size)
