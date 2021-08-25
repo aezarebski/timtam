@@ -10,12 +10,12 @@ if (not(dir.exists("out"))) {
 output_file <- "ts-config.json"
 
 
-simulation_duration <- 17
+simulation_duration <- 35
 
 ## We want to see how the inference changes over times so we set several time
 ## points at which to generate estimates. This vector is used to specify when
 ## they occur.
-inference_times <- seq(from = 12, to = simulation_duration, by = 4)
+inference_times <- seq(from = 21, to = simulation_duration, by = 7)
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
@@ -35,10 +35,10 @@ if (not(file.exists(example_params_json))) {
 ## are not in the sared JSON so we define them here. Then we need to construct
 ## the list which specifies when these occur in a way that the executable
 ## understands.
-catastrophe_prob <- 0.05
-disaster_prob <- 0.05
+catastrophe_prob <- 0.01
+disaster_prob <- 0.01
 
-disaster_times <- seq(from = 2, to = simulation_duration, by = 1.5)
+disaster_times <- seq(from = 20, to = simulation_duration, by = 2)
 num_disasters <- length(disaster_times)
 disaster_probs <- rep(disaster_prob, num_disasters)
 disaster_params <- map2(disaster_times, disaster_probs, list)
@@ -77,13 +77,13 @@ sim_params <- list(birth_rate,
 ## parameter and the mesh size refers to the number of points to evaluate the
 ## likelihood at for each profile.
 llhd_profile_mesh <- list(
-  lpmLambdaBounds = c(1.5, 2.0),
-  lpmMuBounds = c(0.5, 1.5),
+  lpmLambdaBounds = c(0.1,0.3),
+  lpmMuBounds = c(0.01, 0.2),
   lpmPsiBounds = c(0.01,0.1),
-  lpmOmegaBounds = c(0.1,0.5),
+  lpmOmegaBounds = c(0.01,0.1),
   lpmMeshSize = 100,
-  lpmRhoBounds = c(0.01, 0.1),
-  lpmNuBounds = c(0.01, 0.1)
+  lpmRhoBounds = c(0.01, 0.2),
+  lpmNuBounds = c(0.01, 0.2)
 )
 
 
