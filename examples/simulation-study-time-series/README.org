@@ -13,11 +13,13 @@ construction is managed by =src/make-json-config.R=.
 
 ** Example
 
+#+ATTR_ORG: :width 600
 [[./out/prevalence-profiles.png]]
 
 The estimates of the prevalence through time based on both the true parameters
 used in the simulation and the estimated values.
 
+#+ATTR_ORG: :width 600
 [[./out/llhd-profiles-16p00.png]]
 
 The LLHD profiles based on the final data set collected.
@@ -25,15 +27,5 @@ The LLHD profiles based on the final data set collected.
 ** Running this simulation study
 
 To build the executable use =stack build=. The rest of the computation is driven
-by =run.sh=.
-
-#+BEGIN_SRC sh :tangle run.sh
-Rscript src/make-json-config.R
-
-stack exec -- simulation-study-time-series ts-config.json
-
-Rscript src/plot-simulated-data.R
-Rscript src/plot-llhd-profiles.R
-#+END_SRC
-
-To clean up remove the contents of =out/= and remove =ts-config.json=.
+by =run.sh=. To clean up remove the contents of =out/= and remove
+=ts-config.json= there is a =clean.sh= script.

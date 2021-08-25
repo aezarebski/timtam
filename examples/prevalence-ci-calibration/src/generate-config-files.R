@@ -116,8 +116,8 @@ sim_params <- list(
 
 
 make_config_file <- function(sim_seed) {
-  output_dir <- sprintf("out/seed-%d", sim_seed)
-  config_file <- sprintf("%s/config-%d.json", output_dir, sim_seed)
+  output_dir <- sprintf("out/seed-%03d", sim_seed)
+  config_file <- sprintf("%s/config-%03d.json", output_dir, sim_seed)
 
   if (not(dir.exists(output_dir))) {
     message("Making output directory: ", output_dir)
@@ -158,8 +158,12 @@ make_config_file <- function(sim_seed) {
         output_dir
       )
     ),
-    isVerbose = TRUE,
-    configSimulationSeed = 100 * sim_seed
+    isVerbose = FALSE,                       # toggle output from the simulation
+                                            # and MCMC.
+    configSimulationSeed = 10000 * sim_seed # magic number here to ensure
+                                            # different seeds even if the seed
+                                            # needs to be reset up to 9999
+                                            # times.
   )
 
   write_json(result,

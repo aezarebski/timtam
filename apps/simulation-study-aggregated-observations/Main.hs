@@ -202,10 +202,6 @@ simulateEpidemic seedInt bdscodConfig = do
       ifVerbosePutStrLn $ "\trepeating the simulation with seed: " ++ show seedInt
       simulateEpidemic (succ seedInt) bdscodConfig
 
-_isSamplingEE :: EpidemicEvent -> Bool
-_isSamplingEE e = case e of
-  (Sampling _ _) -> True
-  _ -> False
 
 -- | Take a simulated epidemic and generate the observations, first with full
 -- resolution of the event times and the true epidemic parameters, second with
@@ -213,22 +209,14 @@ _isSamplingEE e = case e of
 -- times aggregated as defined in the inference configuration. This is done all
 -- at the same time because the raw epidemic events are needed to genereate the
 -- observations and the aggregated observations.
---
--- NOTE that this observation model assumes that it is acceptable to remove
--- every occurrence from the raw events that happens after the last unscheduled
--- sequenced sample.
---
 observeEpidemicThrice ::
      [EpidemicEvent] -- ^ the raw simulated epidemic events
   -> Simulation ( (InferenceConfiguration, [Observation])
                 , (InferenceConfiguration, [Observation])
-                , (InferenceConfiguration, AggregatedObservations) -- ^ a triplet of data sets ready for analysis.
-                 )
-observeEpidemicThrice simEvents' = do
+                , (InferenceConfiguration, AggregatedObservations))
+observeEpidemicThrice simEvents = do
   (regInfConfig, regInfConfig', aggInfConfig) <- asks inferenceConfigurations
-  let simEvents =
-        reverse . dropWhile (not . _isSamplingEE) . reverse $ simEvents'
-      maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
+  let maybeRegObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       maybeAggTimes =
         icMaybeTimesForAgg aggInfConfig >>= uncurry maybeAggregationTimes
       maybeAggObs =
