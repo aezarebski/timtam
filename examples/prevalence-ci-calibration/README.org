@@ -2,8 +2,8 @@
 
 This simulation study tests the coverage of the CI under the NB approximation.
 It does this using the application =simulation-study-aggregated-observations=
-with a set of suitable configuration files which each live in a subdirectory or
-=out=.
+with a set of suitable configuration files which each live in their own
+subdirectory of =./out=.
 
 ** Example results
 
@@ -42,43 +42,12 @@ want to change the settings.
 *WARNING* if you have not compiled, you will need to run =stack build= before
 hand.
 
-#+begin_src sh :tangle run.sh
-# run.sh
-#
-# This must be run with bash!!!
-
-NUM_SEEDS=100
-VIS_JSON=out/vis-data.json
-
-Rscript src/generate-config-files.R 1 $NUM_SEEDS
-
-for ix in 00 10 20 30 40 50 60 70 80 90;
-do
-    pids=()
-
-    for jx in {1..10};
-    do
-        kx=$(($ix + $jx))
-        stack exec -- simulation-study-aggregated-observations out/seed-$kx/config-$kx.json && echo "Finished $kx" & pids+=($!)
-    done
-
-    wait "${pids[@]}"
-done
-
-Rscript src/summarize-results.R $NUM_SEEDS $VIS_JSON
-Rscript src/plotter.R $VIS_JSON
-#+end_src
-
-#+begin_src sh :tangle clean.sh
-rm -f -r out/*
-#+end_src
-
 ** Parameters
 
 This uses the parameters specified in =bdscod/example/example-parameters.json=
-for the rates of unscheduled events. The timings of the scheduled events in and
-the configuration of the MCMC are hard coded in the
-=src/generate-config-files.R= script.
+for the rates of unscheduled events. The timings of the scheduled events and the
+configuration of the MCMC are hard coded in the =src/generate-config-files.R=
+script.
 
 ** Visualisation
 
@@ -86,4 +55,5 @@ Making the figures is a two step process: first, the results are summarized by
 the =summarize-results.R= script and stored in a JSON file; second, the
 =plotter.R= script uses the data in that JSON to create the figures. This means
 that the number crunching is separated from the visualisation making it easier
-to edit the figures.
+to edit the figures. The =plotter.R= script also produces an HTML file with some
+summary statistics about how the simulations went.
