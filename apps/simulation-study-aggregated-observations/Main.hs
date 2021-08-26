@@ -458,7 +458,6 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
                  (chainAsByteString' variableNames chainVals)
-             return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
 runScheduledObservationMCMC ::
