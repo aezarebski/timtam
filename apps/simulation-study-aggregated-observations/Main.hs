@@ -69,6 +69,7 @@ import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
 import Numeric.MCMC.Metropolis
 import System.Environment (getArgs)
 import System.Random.MWC (initialize)
+import Data.Maybe (fromJust)
 
 
 -- | Record of the scheduled observation times.
@@ -301,10 +302,10 @@ estimateLLHD :: InferenceConfiguration
 estimateLLHD infConfig obs = do
   ifVerbosePutStrLn "Running estimateLLHD..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let mleParams = estimateRegularParameters deathRate obs
+  let mleParams@(Parameters (estBirthRate, _, _, _, _, _)) = estimateRegularParameters deathRate obs
       annotatedMLE = EstimatedParametersRegularData mleParams
   ifVerbosePutStrLn "\tUsing non-aggregated data the computed MLE is..."
-  ifVerbosePutStrLn $ "\t" ++ show annotatedMLE
+  ifVerbosePutStrLn $ "\tThe estimated birth rates is" ++ show estBirthRate
   recordPresentPrevalenceEstimate infConfig obs annotatedMLE
   runUnscheduledObservationMCMC infConfig deathRate obs annotatedMLE
 
@@ -343,17 +344,17 @@ estimateLLHDAggregated infConfig (AggregatedObservations _ obs) = do
 -- __NOTE__ The @energyFunc@ uses a regularisation cost to prevent the
 -- parameters from wandering off which can occur with smaller data sets.
 --
--- TODO Fix the stupid settings on this!!!
---
 estimateAggregatedParameters :: Rate -- ^ the known death rate
                              -> ScheduledTimes -- ^ the time of scheduled observations
                              -> [Observation] -- ^ the aggregated observations
                              -> Parameters
 estimateAggregatedParameters deathRate ScheduledTimes{..} obs =
-  let maxIters = 100
-      desiredPrec = 1e-4
-      initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
-      randInit = fromList ([0.1, -0.1, 0.1] :: [Rate])
+  let maxIters = 20
+      desiredPrec = 1e-1
+      initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho and nu (because mu, psi, omega are fixed)
+      randInit = fromList $ exp <$> [-1,-2,-2]
+
+      vecAsParams :: Vector Rate -> Maybe Parameters
       vecAsParams x =
         let [lnR1, lnP1, lnP2] = toList x
             p1 = invLogit lnP1
@@ -361,13 +362,19 @@ estimateAggregatedParameters deathRate ScheduledTimes{..} obs =
             r = exp lnR1
             rts = [(t, p1) | t <- stRhoTimes]
             nts = [(t, p2) | t <- stNuTimes]
-          in packParameters (r, deathRate, 0, rts, 0, nts)
-      energyFunc x =
-        let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-            regCost = 10 * dot x x
-          in negLlhd + regCost
+            packedParams = packParameters (r, deathRate, 0, rts, 0, nts)
+          in if r < 5
+             then Just packedParams
+             else Nothing
+
+      negLlhd :: Parameters -> LogLikelihood
+      negLlhd ps = negate . fst $ llhdAndNB obs ps initLlhdState
+
+      energyFunc :: Vector Rate -> Double
+      energyFunc x = maybe 1e6 negLlhd $ vecAsParams x
+
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-   in vecAsParams est
+   in fromJust $ vecAsParams est
 
 
 -- | This is the main entry point to the actual simulation study, it is its own
@@ -417,20 +424,35 @@ estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
 estimateRegularParameters deathRate obs =
   let maxIters = 100
-      desiredPrec = 1e-4
-      initBox = fromList [0.2, 0.2, 0.2] -- lambda, psi (because mu, rho, omega and nu are fixed)
-      randInit = fromList [0.1, 0.0, 0.0]
+      desiredPrec = 1e-2
+      -- the only parameters are lambda, psi and omega (because mu, rho and nu
+      -- are fixed)
+      initBox = fromList [0.1, 0.1, 0.1]
+      randInit = fromList $ exp <$> [-1,-2,-2]
+
+      vecAsParams :: Vector Rate -> Maybe Parameters
       vecAsParams x =
         let [lnR1, lnR2, lnR3] = toList x
             r1 = exp lnR1
             r2 = exp lnR2
             r3 = exp lnR3
-           in packParameters (r1, deathRate, r2, [], r3, [])
-      energyFunc x =
-        let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-         in negLlhd
-      (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-   in vecAsParams est
+            packedParams = packParameters (r1, deathRate, r2, [], r3, [])
+            rNaught = r1 / (deathRate + r2 + r3)
+        in if r1 < 5 && 1 < rNaught && rNaught < 6
+              -- constrain the R0 to be less than 5 and a sensible birth rate.
+           then Just packedParams
+           else Nothing
+
+      negLlhd :: Parameters -> LogLikelihood
+      negLlhd ps = negate . fst $ llhdAndNB obs ps initLlhdState
+
+      energyFunc :: Vector Rate -> Double
+      energyFunc x = maybe 1e6 negLlhd $ vecAsParams x
+
+      (est, path) =
+        minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
+
+   in fromJust (vecAsParams est)
 
 -- | Action to run an MCMC analysis based on regular unscheduled observations.
 runUnscheduledObservationMCMC :: InferenceConfiguration
