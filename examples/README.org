@@ -70,6 +70,14 @@ The assumption that half the unsampled infections are occurrences gives us
 \mu = \psi
 \]
 
+** Prior distribution
+
+The prior distribution used by Vaughan /et al/ is \(\text{LogNormal}(0.8,0.5)\)
+on \(R_0\). This comes very close to putting \(95\%\) of the prior probability
+between 1 and 6. The prior on the sampling proportion was \(\text{Beta}(1,4)\)
+which puts approximately \(95\%\) of the prior probability on values below
+\(0.6\).
+
 #+begin_src bibtex
 @article{vaughan2020estimates,
   author =       {Vaughan, Timothy G and Scir{\'e}, J{\'e}r{\'e}mie and Nadeau,
