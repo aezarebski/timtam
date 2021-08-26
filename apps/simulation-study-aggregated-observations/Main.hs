@@ -457,7 +457,7 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
-                 (chainAsByteString' variableNames chainVals)
+                 (chainAsByteString variableNames chainVals)
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
 runScheduledObservationMCMC ::
@@ -499,25 +499,15 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
-                 (chainAsByteString' variableNames chainVals)
+                 (chainAsByteString variableNames chainVals)
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
 -- | A bytestring representation of the MCMC samples.
 chainAsByteString :: [String] -- ^ the names of the elements of the chain
-                  -> [Chain [Double] b] -- ^ the samples in the chain
-                  -> L.ByteString
-chainAsByteString varNames chainVals =
-  let header = pack $ intercalate "," ("llhd" : varNames)
-      records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
-      linebreak = singleton '\n'
-   in mconcat [header, linebreak, records]
-
--- | A bytestring representation of the MCMC samples.
-chainAsByteString' :: [String] -- ^ the names of the elements of the chain
                   -> [Chain [Double] NegativeBinomial] -- ^ the samples in the chain
                   -> L.ByteString
-chainAsByteString' varNames chainVals =
+chainAsByteString varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
       nbParams cv =
         case chainTunables cv of
