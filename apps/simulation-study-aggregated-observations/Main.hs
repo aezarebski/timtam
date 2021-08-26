@@ -384,24 +384,6 @@ simulationStudy = do
   uncurry estimateLLHD regObs'
   uncurry estimateLLHDAggregated aggObs
 
--- =============================================================================
--- The following can be used in the REPL to test things out.
---
--- TODO This comment section needs to be deleted once the application has been
--- finished and tested.
---
-replMain :: IO ()
-replMain = do
-  let configFilePath = "agg-app-config.json"
-  maybeConfig <- Json.decode <$> L.readFile configFilePath
-  case maybeConfig of
-    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
-    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
-                        case result of
-                          Right () -> return ()
-                          Left errMsg -> do putStrLn errMsg; return ()
---
--- =============================================================================
 
 -- | We use an external file to configure the simulation so that it is easier to
 -- try different parameter values and random seeds. The @simulationStudy@
