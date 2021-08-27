@@ -423,14 +423,16 @@ main = do
 estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
 estimateRegularParameters deathRate obs =
-  let maxIters = 100
+  let maxIters = 50
       desiredPrec = 1e-2
       -- the only parameters are lambda, psi and omega (because mu, rho and nu
       -- are fixed)
       initBox = fromList [0.1, 0.1, 0.1]
-      randInit = fromList $ exp <$> [-1,-2,-2]
 
-      vecAsParams :: Vector Rate -> Maybe Parameters
+      randInit :: Vector Double
+      randInit = fromList [-1.5,-2.5,-2.5]
+
+      vecAsParams :: Vector Double -> Maybe Parameters
       vecAsParams x =
         let [lnR1, lnR2, lnR3] = toList x
             r1 = exp lnR1
@@ -446,9 +448,10 @@ estimateRegularParameters deathRate obs =
       negLlhd :: Parameters -> LogLikelihood
       negLlhd ps = negate . fst $ llhdAndNB obs ps initLlhdState
 
-      energyFunc :: Vector Rate -> Double
+      energyFunc :: Vector Double -> Double
       energyFunc x = maybe 1e6 negLlhd $ vecAsParams x
 
+      est :: Vector Double
       (est, path) =
         minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
 
