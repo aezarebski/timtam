@@ -151,7 +151,7 @@ bdscodConfiguration = do
 
 -- | Check if the LTT ever returns to 1 after being larger than 1.
 pMultipleOrigins :: [EpidemicEvent] -> Bool
-pMultipleOrigins epiEvents = go 1 epiEvents
+pMultipleOrigins = go 1
   where
     numLineage :: People -> NumLineages
     numLineage = fromIntegral . numPeople
@@ -162,7 +162,7 @@ pMultipleOrigins epiEvents = go 1 epiEvents
     go n (Occurrence _ _:ees)       = (n < 3) || go (n-1) ees
     go n (Catastrophe _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
     go n (Disaster _ people:ees)    = if m > 1 then go m ees else True where m = n - numLineage people
-    go n (Infection _ _ _:ees)      = go (n+1) ees
+    go n (Infection {}:ees)      = go (n+1) ees
 
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
@@ -173,7 +173,7 @@ simulateEpidemic seedInt bdscodConfig = do
   simEvents <-
     liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
-  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound && (not (pMultipleOrigins simEvents))
+  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound && not (pMultipleOrigins simEvents)
     then do
       ifVerbosePutStrLn "simulated an acceptable epidemic..."
       simEventsCsv <- asks simulatedEventsOutputCsv
