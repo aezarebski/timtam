@@ -21,6 +21,7 @@ library
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd
+                   Statistics.Distribution.Lognormal
   hs-source-dirs:
       src
   build-depends:
@@ -33,6 +34,8 @@ library
                   , deepseq >= 1.4.4.0
                   , epi-sim >= 0.3.0.0
                   , hspec-core >= 2.7.4
+                  , math-functions
+                  , statistics
                   , vector
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs -Wmissing-signatures -O2 -fwarn-incomplete-patterns
@@ -100,6 +103,7 @@ executable simulation-study-aggregated-observations
     , mighty-metropolis >= 2.0.0
     , mtl
     , mwc-random
+    , statistics
     , vector
   default-language: Haskell2010
 
