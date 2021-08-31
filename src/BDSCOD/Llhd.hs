@@ -1,10 +1,31 @@
 {-# LANGUAGE MultiWayIf #-}
-module BDSCOD.Llhd where
+module BDSCOD.Llhd (llhdAndNB
+                   ,intervalLlhd
+                   ,eventLlhd
+                   ,initLlhdState
+                   ,logPdeStatistics
+                   ,pdeStatistics
+                   , logPdeGF
+                   , logPdeGF'
+                   , logPdeGF''
+                   , odeHelpers
+                   , p0
+                   , logP0'
+                   , p0'
+                   , logP0''
+                   , p0''
+                   ,pdeGF
+                   ,pdeGF'
+                   ,pdeGF''
+                   ,rr
+                   ,rr'
+                   ,rr''
+                   ) where
 
-import Data.List (find)
-import BDSCOD.Types
-import BDSCOD.Utility
-import Epidemic.Types.Parameter
+import           BDSCOD.Types
+import           BDSCOD.Utility
+import           Data.List                (find)
+import           Epidemic.Types.Parameter
 
 
 -- | Predicate for whether the parameters could possibly have given rise to the
