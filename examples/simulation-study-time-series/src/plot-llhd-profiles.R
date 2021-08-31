@@ -234,6 +234,9 @@ main <- function() {
       boxed_estimated_values$omega_rate,
       unboxer_helper(boxed_estimated_values$maybe_nu_prob)
     )
+    if (length(true_parameters$parameter_name) != length(estimated_values)) {
+      stop("you appear to have more estimates than parameters. you may need to remove old files.")
+    }
     estimated_parameters <- data.frame(parameter_name = true_parameters$parameter_name,
                                        parameter_value = estimated_values)
 
