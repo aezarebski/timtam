@@ -72,7 +72,6 @@ data AppConfiguration =
     , simulationDuration :: TimeDelta
     , simulationSizeBounds :: (Int,Int)
     , inferenceConfigurations :: [InferenceConfiguration]
-    , partialEvaluationOutputCsv :: FilePath
     , acLlhdProfileMesh :: LlhdProfileMesh
     }
   deriving (Show, Generic)
@@ -248,16 +247,6 @@ adjustedEvaluationParameters LlhdProfileMesh{..} ps =
       [rPs,nPs] = zipWith apply [putRhos,putNus] [rhoMesh,nuMesh]
   in concat [lPs,mPs,pPs,rPs,oPs,nPs]
 
--- | Record the partial results of the LLHD and NB to a CSV at the parameters
--- used in the simulation.
-partialEvaluations :: [Observation] -> Simulation ()
-partialEvaluations obs = do
-  simParams <- asks simulationParameters
-  partialEvalsCsv <- asks partialEvaluationOutputCsv
-  let partialResults = snd $ verboseLlhdAndNB obs simParams initLlhdState
-      records = [show l ++ "," ++ show nb | (l,nb) <- partialResults]
-  liftIO $ Prelude.writeFile partialEvalsCsv (intercalate "\n" records)
-
 -- | Definition of the complete simulation study.
 simulationStudy :: Simulation ()
 simulationStudy = do
@@ -271,8 +260,6 @@ simulationStudy = do
   mapM_ (uncurry evaluateLLHD) pObs
   liftIO $ putStrLn "\tEvaluating LLHD on cross-sections about estimated parameters"
   mapM_ (uncurry estimateLLHD) pObs
-  let completeObs = snd $ head pObs
-  partialEvaluations completeObs
 
 main :: IO ()
 main = do

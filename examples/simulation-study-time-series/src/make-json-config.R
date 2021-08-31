@@ -99,7 +99,6 @@ result <- list(
   simulationDuration = simulation_duration,
   simulationSizeBounds = c(100,100000),
   inferenceConfigurations = inference_configurations,
-  partialEvaluationOutputCsv = "out/partial-evaluations.csv",
   acLlhdProfileMesh = llhd_profile_mesh
 )
 
