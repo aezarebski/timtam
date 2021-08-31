@@ -424,16 +424,23 @@ testPdeStatistics = do
 testLlhd = do
   describe "Test llhd" $ do
     it "Manceau example" $
-      let obs = [(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OOccurrence),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,ObsUnscheduledSequenced),(TimeDelta 1.0,OOccurrence),(TimeDelta 1.0,OCatastrophe 3)]
-          (llhdVal1,_) = llhdAndNB obs (Parameters (1.1,1.0,0.3, Timed [(AbsoluteTime 7.0,0.5)],0.6,Timed [])) initLlhdState
-          (llhdVal2,_) = llhdAndNB obs (Parameters (1.2,1.0,0.3, Timed [(AbsoluteTime 7.0,0.5)],0.6,Timed [])) initLlhdState
-          (llhdVal3,_) = llhdAndNB obs (Parameters (1.3,1.0,0.3, Timed [(AbsoluteTime 7.0,0.5)],0.6,Timed [])) initLlhdState
-          (llhdVal9,_) = llhdAndNB obs (Parameters (1.9,1.0,0.3, Timed [(AbsoluteTime 7.0,0.5)],0.6,Timed [])) initLlhdState
+      let obs = [ (TimeDelta 1.0, OBirth)
+                , (TimeDelta 1.0, OOccurrence)
+                , (TimeDelta 1.0, OBirth)
+                , (TimeDelta 1.0, OBirth)
+                , (TimeDelta 1.0, ObsUnscheduledSequenced)
+                , (TimeDelta 1.0, OOccurrence)
+                , (TimeDelta 1.0, OCatastrophe 3) ]
+          params lam = Parameters (lam,1.0,0.3, Timed [(AbsoluteTime 7.0,0.5)],0.6,Timed [])
+          (llhdVal1,_) = llhdAndNB obs (params 1.1) initLlhdState
+          (llhdVal2,_) = llhdAndNB obs (params 1.2) initLlhdState
+          (llhdVal3,_) = llhdAndNB obs (params 1.3) initLlhdState
+          (llhdVal9,_) = llhdAndNB obs (params 1.9) initLlhdState
        in do
-        llhdVal1 `shouldSatisfy` (withinDeltaOf 3e-1 (-40.5))
-        llhdVal2 `shouldSatisfy` (withinDeltaOf 3e-1 (-41.0))
-        llhdVal3 `shouldSatisfy` (withinDeltaOf 3e-1 (-41.5))
-        llhdVal9 `shouldSatisfy` (withinDeltaOf 3e-1 (-46.0))
+        llhdVal1 `shouldSatisfy` (withinDeltaOf 1e-1 (-40.5))
+        llhdVal2 `shouldSatisfy` (withinDeltaOf 2e-1 (-41.0))
+        llhdVal3 `shouldSatisfy` (withinDeltaOf 2e-1 (-41.5))
+        llhdVal9 `shouldSatisfy` (withinDeltaOf 2e-1 (-46.0))
 
 testInhomBDSLlhd = do
   describe "Test inhomogeneous BDS LLHD" $ do
