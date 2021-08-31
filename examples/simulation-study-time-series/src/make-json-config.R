@@ -98,6 +98,7 @@ result <- list(
                                    nu = disaster_prob),
   simulationDuration = simulation_duration,
   simulationSizeBounds = c(100,100000),
+  simulationSeed = 100,
   inferenceConfigurations = inference_configurations,
   acLlhdProfileMesh = llhd_profile_mesh
 )
