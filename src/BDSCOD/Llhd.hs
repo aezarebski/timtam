@@ -24,7 +24,7 @@ module BDSCOD.Llhd (llhdAndNB
 
 import           BDSCOD.Types
 import           BDSCOD.Utility
-import           Data.List                (find)
+import           Data.List                (find, scanl')
 import           Epidemic.Types.Parameter
 
 
@@ -192,8 +192,8 @@ logPdeGF params delay (PDESol nb k) z =
     logF = logNbPGF nb
     p0z = p0 params delay z
     rz = rr params delay z
-  in if | k > 0 -> logF p0z + k * log rz
-        | k == 0 -> logF p0z
+  in if | k > 0     -> logF p0z + k * log rz
+        | k == 0    -> logF p0z
         | otherwise -> error "negative k in logPdeGF"
 
 -- | The partial derivative of the generating function solution to the PDE.
@@ -412,8 +412,11 @@ verboseLlhdAndNB :: [Observation]  -- ^ The observed events
                  -> (LlhdAndNB,[LlhdAndNB])
 verboseLlhdAndNB obs params state0 =
   if arePlausible obs params
-  then verboseLlhdAndNB' obs params state0 mempty
-  else ((-1 / 0, Zero),mempty)
+  then let fstTrpl (a,_,_) = a
+           go cs o = updatedLlhdCalcState params o cs
+           results = fstTrpl <$> scanl' go state0 obs
+       in (last results, results)
+  else ((-1 / 0, Zero),[])
 
 updatedLlhdCalcState :: Parameters
                      -> Observation
@@ -427,18 +430,6 @@ updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
     t' = timeAfterDelta t delay
     (l',nb') = intervalLlhd params delay k nb
     (l'',k'',nb'') = eventLlhd t' params event k nb'
-
--- | Compute the log-likelihood and distribution of the prevalence along with
--- their partial values assuming plausible parameters.
-verboseLlhdAndNB' :: [Observation]  -- ^ The observed events
-                  -> Parameters     -- ^ The parameters
-                  -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
-                  -> [LlhdAndNB]    -- ^ The accumulator of the partial results
-                  -> (LlhdAndNB,[LlhdAndNB])
-verboseLlhdAndNB' [] _ (lnb,_,_) partialResult = (lnb,lnb:partialResult)
-verboseLlhdAndNB' (o:obs) params calcState partialResult =
-  let calcState'@(lnb,_,_) = updatedLlhdCalcState params o calcState
-  in verboseLlhdAndNB' obs params calcState' (lnb:partialResult)
 
 -- | Compute the log-likelihood and distribution of prevalence assuming
 -- plausible parameters.
