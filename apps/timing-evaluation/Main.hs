@@ -59,7 +59,7 @@ recordSimulationOutput :: ModelParameters
                        -> IO LlhdAndData
 recordSimulationOutput (ModelParameters params _) sim@(obs,simNum) =
   let obsJson = observationsJsonFilePath simNum
-      obsLlhd = fst $ llhdAndNB obs params initLlhdState
+      obsLlhd = fst $ unsafeLlhdAndNB obs params initLlhdState
       in do L.writeFile obsJson $ JSON.encode obs
             return $ LlhdAndData (simulationSize sim) obsLlhd obsJson
 
@@ -83,7 +83,7 @@ benchmarkableLlhdEvaluations :: ModelParameters
                              -> Benchmark
 benchmarkableLlhdEvaluations (ModelParameters params _) (obs,simId) =
   let simName = observationsJsonFilePath simId
-  in bench simName $ nf (\o -> fst (llhdAndNB o params initLlhdState)) obs
+  in bench simName $ nf (\o -> fst (unsafeLlhdAndNB o params initLlhdState)) obs
 
 -- | Return a list of the first element of a list satisfying each predicate
 -- allowing duplicates.

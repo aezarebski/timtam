@@ -53,7 +53,7 @@ llhdsWriteFile' fp d paramName ps duration conditionLlhd =
     [] -> return ()
     (p:ps') -> do
       -- let x = condLlhdAndNB d p duration conditionLlhd
-      let x = llhdAndNB d p initLlhdState
+      let x = unsafeLlhdAndNB d p initLlhdState
       appendFile fp $ output p x
       llhdsWriteFile' fp d paramName ps' duration conditionLlhd
       where output (Parameters (x1, x2, x3, Timed ((_, x4):_), x5, Timed ((_, x6):_))) (x7, x8) =

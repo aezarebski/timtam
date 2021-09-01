@@ -28,6 +28,7 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Gen
 import Test.Hspec.Core.QuickCheck (modifyMaxDiscardRatio)
+import Data.Either.Combinators (fromRight', isLeft)
 
 -- | Check if @y@ is withing @delta@ of @x@
 withinDeltaOf :: (Ord a, Num a)
@@ -45,7 +46,7 @@ allWithinDeltaOf delta (y:ys) (x:xs) = withinDeltaOf delta y x && allWithinDelta
 allWithinDeltaOf _ _ _ = False
 
 
-
+unsafeNBFromMAndV x = fromRight' $ nbFromMAndV x
 
 
 -- | Approximate the derivative of @f@ at @x@ with a step of size @h@.
@@ -178,7 +179,7 @@ testLogPdeGF2 = do
                      (nbVar > nbMean) ==>
                      withinDeltaOf 1e-3 (log $ pdeGF (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z) (logPdeGF (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z)
                      where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed []))
-                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           pdeSol nbStats = (PDESol (unsafeNBFromMAndV nbStats) 1)
                            scaledDelay d = TimeDelta $ d / 10
 
 
@@ -218,7 +219,7 @@ testLogPdeGFDash2 = do
                      (nbVar > nbMean) ==>
                      withinDeltaOf 1e-3 (log $ pdeGF' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z) (logPdeGF' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z)
                      where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed []))
-                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           pdeSol nbStats = (PDESol (unsafeNBFromMAndV nbStats) 1)
                            scaledDelay d = TimeDelta $ d / 50
 
 testLogPdeGFDashDash1 = do
@@ -257,7 +258,7 @@ testLogPdeGFDashDash2 = do
                      (nbVar > nbMean) ==>
                      withinDeltaOf 1e-3 (log $ pdeGF'' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z) (logPdeGF'' (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)) z)
                      where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed []))
-                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           pdeSol nbStats = (PDESol (unsafeNBFromMAndV nbStats) 1)
                            scaledDelay d = TimeDelta $ d / 50
 
 
@@ -279,7 +280,7 @@ testLogPdeStatistics = do
                      withinDeltaOf 1e-3 (log . snd' $ fooUnlogged lam (TimeDelta delay) nbMean nbVar) (snd' $ fooLogged lam (TimeDelta delay) nbMean nbVar) &&
                      withinDeltaOf 1e-3 (log . thd' $ fooUnlogged lam (TimeDelta delay) nbMean nbVar) (thd' $ fooLogged lam (TimeDelta delay) nbMean nbVar)
                      where params lam = (Parameters (lam / 10, 0.3, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed []))
-                           pdeSol nbStats = (PDESol (nbFromMAndV nbStats) 1)
+                           pdeSol nbStats = (PDESol (unsafeNBFromMAndV nbStats) 1)
                            scaledDelay d = TimeDelta $ d / 50
                            fooUnlogged lam (TimeDelta delay) nbMean nbVar = pdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar))
                            fooLogged lam (TimeDelta delay) nbMean nbVar  = (logPdeStatistics (params lam) (scaledDelay delay) (pdeSol (nbMean,nbVar)))
@@ -364,20 +365,20 @@ testPdeGF = do
       pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol Zero 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol Zero 1) z) 0.9))
       pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) z) 0.7))
       pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) z) 0.9))
-      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.7))
-      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.9))
-      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.7))
-      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.9))
+      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.7))
+      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.9))
+      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.7))
+      pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.9))
 
     it "Second partial derivative seems correct 1" $ do
       pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol Zero 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol Zero 1) z) 0.7))
       pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol Zero 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol Zero 1) z) 0.9))
       pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) z) 0.7))
       pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol Zero 1) z) 0.9))
-      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.7))
-      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-6 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.9))
-      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.7))
-      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (nbFromMAndV (3.0,9.0)) 1) z) 0.9))
+      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.7))
+      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-6 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 1.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.9))
+      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.7 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.7))
+      pdeGF'' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) 0.9 `shouldSatisfy` (withinDeltaOf 1e-4 (finiteDifference 1e-5 (\z -> pdeGF' (Parameters (2.3, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) (TimeDelta 2.0) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 1) z) 0.9))
 
 testPdeStatistics = do
   describe "Test pdeStatistics" $ do
@@ -398,9 +399,9 @@ testPdeStatistics = do
         m'' < v'' `shouldBe` True
 
     it "Properties 2" $
-      let (c,m,v) = pdeStatistics (Parameters (2.3, 1.2, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1) (PDESol (nbFromMAndV (3.0,9.0)) 2)
-          (c',m',v') = pdeStatistics (Parameters (2.3, 1.2, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2) (PDESol (nbFromMAndV (3.0,9.0)) 2)
-          (c'',m'',v'') = pdeStatistics (Parameters (2.3, 1.2, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 20) (PDESol (nbFromMAndV (3.0,9.0)) 2)
+      let (c,m,v) = pdeStatistics (Parameters (2.3, 1.2, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 1) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 2)
+          (c',m',v') = pdeStatistics (Parameters (2.3, 1.2, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 2) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 2)
+          (c'',m'',v'') = pdeStatistics (Parameters (2.3, 1.2, 0.3, Timed [(AbsoluteTime 1000,0.5)], 0.6, Timed [])) (TimeDelta 20) (PDESol (unsafeNBFromMAndV (3.0,9.0)) 2)
        in do
         c > c' `shouldBe` True
         c' > c'' `shouldBe` True
@@ -432,10 +433,10 @@ testLlhd = do
                 , (TimeDelta 1.0, OOccurrence)
                 , (TimeDelta 1.0, OCatastrophe 3) ]
           params lam = Parameters (lam,1.0,0.3, Timed [(AbsoluteTime 7.0,0.5)],0.6,Timed [])
-          (llhdVal1,_) = llhdAndNB obs (params 1.1) initLlhdState
-          (llhdVal2,_) = llhdAndNB obs (params 1.2) initLlhdState
-          (llhdVal3,_) = llhdAndNB obs (params 1.3) initLlhdState
-          (llhdVal9,_) = llhdAndNB obs (params 1.9) initLlhdState
+          (llhdVal1,_) = unsafeLlhdAndNB obs (params 1.1) initLlhdState
+          (llhdVal2,_) = unsafeLlhdAndNB obs (params 1.2) initLlhdState
+          (llhdVal3,_) = unsafeLlhdAndNB obs (params 1.3) initLlhdState
+          (llhdVal9,_) = unsafeLlhdAndNB obs (params 1.9) initLlhdState
        in do
         llhdVal1 `shouldSatisfy` (withinDeltaOf 1e-1 (-40.5))
         llhdVal2 `shouldSatisfy` (withinDeltaOf 2e-1 (-41.0))
@@ -458,9 +459,9 @@ testInhomBDSLlhd = do
           (llhdValXXX3,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'',1.0,0.3)) InhomBDSLlhd.initLlhdState
           (llhdValXXX4,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams''',1.0,0.3)) InhomBDSLlhd.initLlhdState
           (llhdValXXX5,_) = InhomBDSLlhd.inhomLlhdAndNB obs (InhomBDSLlhd.InhomParams (tlams'''',1.0,0.3)) InhomBDSLlhd.initLlhdState
-          (llhdValYYY1,_) = llhdAndNB obs (Parameters (lam,1.0,0.3,Timed [],0.0,Timed [])) initLlhdState
-          (llhdValYYY2,_) = llhdAndNB obs (Parameters (lam'',1.0,0.3,Timed [],0.0,Timed [])) initLlhdState
-          (llhdValYYY3,_) = llhdAndNB obs (Parameters (lam'' + 0.1,1.0,0.3,Timed [],0.0,Timed [])) initLlhdState
+          (llhdValYYY1,_) = unsafeLlhdAndNB obs (Parameters (lam,1.0,0.3,Timed [],0.0,Timed [])) initLlhdState
+          (llhdValYYY2,_) = unsafeLlhdAndNB obs (Parameters (lam'',1.0,0.3,Timed [],0.0,Timed [])) initLlhdState
+          (llhdValYYY3,_) = unsafeLlhdAndNB obs (Parameters (lam'' + 0.1,1.0,0.3,Timed [],0.0,Timed [])) initLlhdState
        in do
         llhdValXXX1 `shouldSatisfy` (withinDeltaOf 1e-3 (llhdValYYY1))
         llhdValXXX2 `shouldSatisfy` (withinDeltaOf 1e-3 (llhdValYYY1))
@@ -526,41 +527,34 @@ testImpossibleParameters = do
   describe "Test correct handling of impossible parameters" $ do
     it "Test negative birth rate is impossible" $
       let obs = [(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OOccurrence),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,ObsUnscheduledSequenced),(TimeDelta 1.0,OOccurrence)]
-          llhd1 = fst $ llhdAndNB obs (Parameters (0.0000000001,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
-          llhd2 = fst $ llhdAndNB obs (Parameters (0.0000000000,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
-          llhd3 = fst $ llhdAndNB obs (Parameters (-0.0000000001,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
+          llhd1 = fst $ unsafeLlhdAndNB obs (Parameters (0.0000000001,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
+          llhd2 = llhdAndNB obs (Parameters (0.0000000000,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
+          llhd3 = llhdAndNB obs (Parameters (-0.0000000001,1.0,0.3,Timed [],0.6,Timed [])) initLlhdState
        in do
         isNaN llhd1 `shouldBe` False
-        isNaN llhd2 `shouldBe` False
-        isNaN llhd3 `shouldBe` False
         isInfinite llhd1 `shouldBe` False
-        isInfinite llhd2 `shouldBe` True
-        isInfinite llhd3 `shouldBe` True
         llhd1 < 0 `shouldBe` True
-        llhd2 < 0 `shouldBe` True
-        llhd3 < 0 `shouldBe` True
+        isLeft llhd2 `shouldBe` True
+        isLeft llhd3 `shouldBe` True
     it "Test negative sampling rate is impossible" $
       let obs1 = [(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OOccurrence),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,ObsUnscheduledSequenced),(TimeDelta 1.0,OOccurrence)]
           obs2 = [(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OOccurrence),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OBirth),(TimeDelta 1.0,OOccurrence)]
-          llhd11 = fst $ llhdAndNB obs1 (Parameters (1.0,1.0,0.1,Timed [],0.6,Timed [])) initLlhdState
-          llhd12 = fst $ llhdAndNB obs1 (Parameters (1.0,1.0,0.0,Timed [],0.6,Timed [])) initLlhdState
-          llhd13 = fst $ llhdAndNB obs1 (Parameters (1.0,1.0,-0.1,Timed [],0.6,Timed [])) initLlhdState
-          llhd21 = fst $ llhdAndNB obs2 (Parameters (1.0,1.0,0.1,Timed [],0.6,Timed [])) initLlhdState
-          llhd22 = fst $ llhdAndNB obs2 (Parameters (1.0,1.0,0.0,Timed [],0.6,Timed [])) initLlhdState
-          llhd23 = fst $ llhdAndNB obs2 (Parameters (1.0,1.0,-0.1,Timed [],0.6,Timed [])) initLlhdState
+          llhd11 = fst $ unsafeLlhdAndNB obs1 (Parameters (1.0,1.0,0.1,Timed [],0.6,Timed [])) initLlhdState
+          llhd12 = llhdAndNB obs1 (Parameters (1.0,1.0,0.0,Timed [],0.6,Timed [])) initLlhdState
+          llhd13 = llhdAndNB obs1 (Parameters (1.0,1.0,-0.1,Timed [],0.6,Timed [])) initLlhdState
+          llhd21 = fst $ unsafeLlhdAndNB obs2 (Parameters (1.0,1.0,0.1,Timed [],0.6,Timed [])) initLlhdState
+          llhd22 = fst $ unsafeLlhdAndNB obs2 (Parameters (1.0,1.0,0.0,Timed [],0.6,Timed [])) initLlhdState
+          llhd23 = llhdAndNB obs2 (Parameters (1.0,1.0,-0.1,Timed [],0.6,Timed [])) initLlhdState
        in do
         isNaN llhd11 `shouldBe` False
-        isNaN llhd12 `shouldBe` False
-        isNaN llhd13 `shouldBe` False
+        isLeft llhd12 `shouldBe` True
+        isLeft llhd13 `shouldBe` True
         isNaN llhd21 `shouldBe` False
         isNaN llhd22 `shouldBe` False
-        isNaN llhd23 `shouldBe` False
+        isLeft llhd23 `shouldBe` True
         isInfinite llhd11 `shouldBe` False
-        isInfinite llhd12 `shouldBe` True
-        isInfinite llhd13 `shouldBe` True
         isInfinite llhd21 `shouldBe` False
         isInfinite llhd22 `shouldBe` False
-        isInfinite llhd23 `shouldBe` True
 
 tmpIsSampling :: EpidemicEvent -> Bool
 tmpIsSampling e = case e of
@@ -877,7 +871,7 @@ testIntervalLlhd :: SpecWith ()
 testIntervalLlhd =
   describe "Testing the intervalLlhd function" $ do
     let propertyNBNotNaN (params, delay, k, nb) =
-          let (_, nb') = intervalLlhd params delay k nb
+          let (_, nb') = fromRight' $ intervalLlhd params delay k nb
               (m, _) = mAndVFromNb nb'
            in not $ isNaN m
         absTimeZero = AbsoluteTime 0

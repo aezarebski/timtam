@@ -7,6 +7,7 @@ import Epidemic.Types.Parameter
 import Epidemic.Types.Events
 import Epidemic.Types.Population
 import BDSCOD.Types
+import Data.List (scanl')
 -- import BDSCOD.Llhd --
 
 
@@ -144,3 +145,10 @@ logit p = log (p / (1 - p))
 logSumExp :: (Floating a, Ord a) => [a] -> a
 logSumExp xs = x' + log (sum [exp (x - x') | x <- xs])
                where x' = maximum xs
+
+-- | Monadic (left) scan over the elements of a list.
+scanlM :: Monad m => (b -> a -> m b) -> b -> [a] -> m [b]
+scanlM f z0 xs = sequence $ scanl' g (return z0) xs
+  where
+    g my x = my >>= \y -> f y x
+
