@@ -34,19 +34,13 @@ llhd_profile_figure <- function(infConfig,
         map(parse_doubles, sep = ",") %>%
         pluck(1)
 
-    make_plot_df <- function(llhds,param_kind) {
+    make_plot_df <- function(llhds, param_kind) {
         if (!is.element(el = param_kind, set = c("Simulation", "Estimated"))) {
             stop("Bad parameter kind: ", param_kind)
         }
-
-        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "rho", "omega", "nu"),
+        data.frame(parameter_name = rep(true_parameters$parameter_name,
                                         each = length(param_mesh$lambda_mesh)),
-                   parameter_value = c(param_mesh$lambda_mesh,
-                                       param_mesh$mu_mesh,
-                                       param_mesh$psi_mesh,
-                                       param_mesh$rho_mesh,
-                                       param_mesh$omega_mesh,
-                                       param_mesh$nu_mesh),
+                   parameter_value = unlist(param_mesh),
                    parameter_kind = param_kind,
                    llhd = llhds)
     }
@@ -58,7 +52,7 @@ llhd_profile_figure <- function(infConfig,
 
     estimated_hex_colour <- "#7fc97f"
     true_hex_colour <- "#beaed4"
-    
+
     ggplot(plot_df,
            aes(x = parameter_value, y = llhd, colour = parameter_kind)) +
       geom_line() +
@@ -169,13 +163,13 @@ instantaneous_prevalence <- function(inf_config) {
 
 
 main <- function() {
-
   ## To avoid hardcoding the files to read data from we use the configuration JSON
   ## used by the application. The way the simulation parameters are encoded is
   ## suited to the haskell application but is messy for R so we also construct the
   ## \code{true_parameters} object to hold these values in a dataframe.
   config <- read_json("ts-config.json")
-  true_parameters <- config$simulationParametersClean %>%
+  true_parameters <- config$r_simulationParametersClean %>%
+    discard(is.null) %>%
     as.data.frame %>%
     (function(.x) melt(data = .x,
                        variable.name = "parameter_name",
@@ -192,17 +186,32 @@ main <- function() {
     psi_mesh = seq(from = config$acLlhdProfileMesh$lpmPsiBounds[[1]],
                    to = config$acLlhdProfileMesh$lpmPsiBounds[[2]],
                    length = config$acLlhdProfileMesh$lpmMeshSize),
-    rho_mesh = seq(from = config$acLlhdProfileMesh$lpmRhoBounds[[1]],
-                   to = config$acLlhdProfileMesh$lpmRhoBounds[[2]],
-                   length = config$acLlhdProfileMesh$lpmMeshSize),
     omega_mesh = seq(from = config$acLlhdProfileMesh$lpmOmegaBounds[[1]],
                      to = config$acLlhdProfileMesh$lpmOmegaBounds[[2]],
-                     length = config$acLlhdProfileMesh$lpmMeshSize),
-    nu_mesh = seq(from = config$acLlhdProfileMesh$lpmNuBounds[[1]],
-                  to = config$acLlhdProfileMesh$lpmNuBounds[[2]],
-                  length = config$acLlhdProfileMesh$lpmMeshSize)
+                     length = config$acLlhdProfileMesh$lpmMeshSize)
   )
 
+  if (is.element("rho", true_parameters$parameter_name)) {
+    param_mesh <- c(
+      param_mesh,
+      list(
+        rho_mesh = seq(from = config$acLlhdProfileMesh$lpmRhoBounds[[1]],
+                       to = config$acLlhdProfileMesh$lpmRhoBounds[[2]],
+                       length = config$acLlhdProfileMesh$lpmMeshSize)
+        )
+    )
+  }
+
+  if (is.element("nu", true_parameters$parameter_name)) {
+    param_mesh <- c(
+      param_mesh,
+      list(
+        nu_mesh = seq(from = config$acLlhdProfileMesh$lpmNuBounds[[1]],
+                       to = config$acLlhdProfileMesh$lpmNuBounds[[2]],
+                       length = config$acLlhdProfileMesh$lpmMeshSize)
+        )
+    )
+  }
 
   ## Loop over all the inference configurations and generate the LLHD profiles
   ## so that we can see how they change through time as more data becomes
@@ -224,7 +233,11 @@ main <- function() {
       filter(parameter_kind == "EstimatedParameters") %>%
       select(matches("(prob|rate)$"))
     unboxer_helper <- function(x) {
-      as.numeric(strsplit(x = x, split = " ")[[1]][2])
+      if (x == "Nothing") {
+        NaN
+      } else {
+        as.numeric(strsplit(x = x, split = " ")[[1]][2])
+      }
     }
     estimated_values <- c(
       boxed_estimated_values$lambda_rate,
@@ -233,7 +246,7 @@ main <- function() {
       unboxer_helper(boxed_estimated_values$maybe_rho_prob),
       boxed_estimated_values$omega_rate,
       unboxer_helper(boxed_estimated_values$maybe_nu_prob)
-    )
+    ) %>% discard(is.nan)
     if (length(true_parameters$parameter_name) != length(estimated_values)) {
       stop("you appear to have more estimates than parameters. you may need to remove old files.")
     }
@@ -279,7 +292,7 @@ main <- function() {
   dodge_obj <- position_dodge(width = 0.5)
 
   prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time, colour = parameter_kind)) +
-    geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
+    geom_step(data = all_events, mapping = aes(y = population_size), colour = "black") +
     geom_errorbar(mapping = aes(ymin = lower, ymax = upper), width = 0.7, size = 0.7, position = dodge_obj) +
     geom_line(mapping = aes(y = mid), size = 0.7, position = dodge_obj) +
     geom_point(mapping = aes(y = mid), size = 1.5, position = dodge_obj) +
