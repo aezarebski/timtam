@@ -10,7 +10,7 @@ if (not(dir.exists("out"))) {
 output_file <- "ts-config.json"
 
 
-simulation_duration <- 30
+simulation_duration <- 33
 
 ## We want to see how the inference changes over times so we set several time
 ## points at which to generate estimates. This vector is used to specify when
@@ -30,23 +30,30 @@ if (not(file.exists(example_params_json))) {
   occurrence_rate <- example_params_list$occurrenceRate
 }
 
-## In this example we also want to have some scheduled observations and these
-## are not in the sared JSON so we define them here. Then we need to construct
-## the list which specifies when these occur in a way that the executable
-## understands.
-sched_interval <- 4
-catastrophe_prob <- 0.5 * example_params_list$samplingRate
-disaster_prob <- 0.5 * example_params_list$occurrenceRate
+## This toggle can be used to switch between the example with or without
+## scheduled samples.
+include_scheduled_observations <- FALSE
+if (include_scheduled_observations) {
+  sched_interval <- 4
+  catastrophe_prob <- 0.5 * example_params_list$samplingRate
+  disaster_prob <- 0.5 * example_params_list$occurrenceRate
 
-disaster_times <- seq(from = sched_interval, to = simulation_duration, by = sched_interval)
-num_disasters <- length(disaster_times)
-disaster_probs <- rep(disaster_prob, num_disasters)
-disaster_params <- map2(disaster_times, disaster_probs, list)
+  disaster_times <- seq(from = sched_interval, to = simulation_duration, by = sched_interval)
+  num_disasters <- length(disaster_times)
+  disaster_probs <- rep(disaster_prob, num_disasters)
+  disaster_params <- map2(disaster_times, disaster_probs, list)
 
-catastrophe_times <- disaster_times + 0.5
-num_catastrophes <- length(catastrophe_times)
-catastrophe_probs <- rep(catastrophe_prob, num_catastrophes)
-catastrophe_params <- map2(catastrophe_times, catastrophe_probs, list)
+  catastrophe_times <- disaster_times + 0.5
+  num_catastrophes <- length(catastrophe_times)
+  catastrophe_probs <- rep(catastrophe_prob, num_catastrophes)
+  catastrophe_params <- map2(catastrophe_times, catastrophe_probs, list)
+} else {
+  catastrophe_params <- list()
+  catastrophe_prob <- NA
+
+  disaster_params <- list()
+  disaster_prob <- NA
+}
 
 #' Return a list describing the inference based on a the data available at the
 #' \code{inf_time}. This is applied to the inference times defined above.
@@ -62,8 +69,6 @@ inference_configuration <- function(inf_time) {
          pointEstimatesCsv = sprintf("out/final-negative-binomial-%.2f.csv",
                                      inf_time))
 }
-inference_configurations <- map(inference_times,
-                                inference_configuration)
 
 sim_params <- list(birth_rate,
                    death_rate,
@@ -90,17 +95,19 @@ llhd_profile_mesh <- list(
 result <- list(
   simulatedEventsOutputCsv = "out/all-simulated-events.csv",
   simulationParameters = sim_params,
-  simulationParametersClean = list(lambda = birth_rate,
-                                   mu = death_rate,
-                                   psi = sampling_rate,
-                                   rho = catastrophe_prob,
-                                   omega = occurrence_rate,
-                                   nu = disaster_prob),
   simulationDuration = simulation_duration,
   simulationSizeBounds = c(100,10000),
-  simulationSeed = 100,
-  inferenceConfigurations = inference_configurations,
-  acLlhdProfileMesh = llhd_profile_mesh
+  simulationSeed = 10,
+  inferenceConfigurations = map(inference_times, inference_configuration),
+  acLlhdProfileMesh = llhd_profile_mesh,
+  # used for visualisation.
+  r_simulationParametersClean =
+    list(lambda = birth_rate,
+         mu = death_rate,
+         psi = sampling_rate,
+         rho = catastrophe_prob,
+         omega = occurrence_rate,
+         nu = disaster_prob)
 )
 
 write_json(result,
