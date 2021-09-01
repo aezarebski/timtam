@@ -430,16 +430,3 @@ updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
     t' = timeAfterDelta t delay
     (l',nb') = intervalLlhd params delay k nb
     (l'',k'',nb'') = eventLlhd t' params event k nb'
-
--- | Compute the log-likelihood and distribution of prevalence assuming
--- plausible parameters.
---
--- __WARNING__ This function is deprecated in favour of @llhdAndNB@.
---
-llhdAndNB' :: [Observation]
-           -> Parameters
-           -> LlhdCalcState
-           -> LlhdAndNB
-llhdAndNB' [] _ (lnb,_,_) = lnb
-llhdAndNB' ((delay,event):events) params ((l,nb),t,k) =
-  llhdAndNB' events params (updatedLlhdCalcState params (delay,event) ((l,nb),t,k))
