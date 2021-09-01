@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module BDSCOD.Types
@@ -39,18 +39,18 @@ module BDSCOD.Types
   , MWCSeed
   ) where
 
-import Control.DeepSeq
-import Data.Aeson
-import qualified Data.Aeson as Json
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Builder as BBuilder
-import Data.ByteString.Char8 (pack)
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.Csv as Csv
-import Data.List (intersperse)
-import Epidemic.Types.Parameter
-import GHC.Generics (Generic)
-import GHC.Word (Word32(..))
+import           Control.DeepSeq
+import           Data.Aeson
+import qualified Data.Aeson               as Json
+import qualified Data.ByteString          as B
+import qualified Data.ByteString.Builder  as BBuilder
+import           Data.ByteString.Char8    (pack)
+import qualified Data.ByteString.Lazy     as BL
+import qualified Data.Csv                 as Csv
+import           Data.List                (intersperse)
+import           Epidemic.Types.Parameter
+import           GHC.Generics             (Generic)
+import           GHC.Word                 (Word32 (..))
 
 -- | TODO Remove this once the version of @epi-sim@ has been updated to the
 -- latest one on github.
@@ -66,11 +66,11 @@ data MCMCConfiguration =
     { -- | Where to write MCMC samples
       mcmcOutputCSV :: FilePath
       -- | The number of samples to generate
-    , mcmcNumIters :: Int
+    , mcmcNumIters  :: Int
       -- | The standard deviation of the step size
-    , mcmcStepSD :: Double
+    , mcmcStepSD    :: Double
       -- | The seed for the PRNG
-    , mcmcSeed :: MWCSeed
+    , mcmcSeed      :: MWCSeed
     }
   deriving (Show, Generic)
 
@@ -152,8 +152,7 @@ packParameters (pLambda, pMu, pPsi, pRhos, pOmega, pNus) =
 -- | Return the times of scheduled events: catastrophes and disasters.
 scheduledTimes :: Parameters -> ([AbsoluteTime], [AbsoluteTime])
 scheduledTimes (Parameters (_, _, _, Timed pRhos, _, Timed pNus)) =
-  let times = map fst
-   in (times pRhos, times pNus)
+  (fst <$> pRhos, fst <$> pNus)
 
 -- | The number of lineages that exist in a phylogeny
 type NumLineages = Double
@@ -224,21 +223,21 @@ isOccurrence = (== OOccurrence) . snd
 numUnsequenced :: Observation -> NumLineages
 numUnsequenced obs =
   case snd obs of
-    OBirth -> 0
+    OBirth                  -> 0
     ObsUnscheduledSequenced -> 0
-    OOccurrence -> 1
-    (OCatastrophe _) -> 0
-    (ODisaster n) -> n
+    OOccurrence             -> 1
+    (OCatastrophe _)        -> 0
+    (ODisaster n)           -> n
 
 -- | The number of /sequenced/ lineages that were observed.
 numSequenced :: Observation -> NumLineages
 numSequenced obs =
   case snd obs of
-    OBirth -> 0
+    OBirth                  -> 0
     ObsUnscheduledSequenced -> 1
-    OOccurrence -> 0
-    (OCatastrophe n) -> n
-    (ODisaster _) -> 0
+    OOccurrence             -> 0
+    (OCatastrophe n)        -> n
+    (ODisaster _)           -> 0
 
 -- | The negative binomial distribution extended to include the limiting case of
 -- a point mass at zero. The parameterisation is in terms of a positive
@@ -284,7 +283,7 @@ instance Csv.ToField NegativeBinomial where
       (NegBinomMeanVar _ _) ->
         case nbMV2SP nb of
           Right negbinom -> Csv.toField negbinom
-          Left errMssg -> pack errMssg
+          Left errMssg   -> pack errMssg
 
 data PDESolution =
   PDESol NegativeBinomial NumLineages
