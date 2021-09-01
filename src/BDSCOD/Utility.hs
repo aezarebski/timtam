@@ -38,15 +38,19 @@ processEvent' (_, currTime) epiSimEvent =
     (Disaster absTime (People persons)) -> ((timeDelta currTime absTime, ODisaster . fromIntegral $ V.length persons), absTime)
     (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
 
-nbFromMAndV :: (Double, Double) -> NegativeBinomial
-nbFromMAndV (0, 0) = Zero
+-- | When possible return a negative binomial distribution with the specified
+-- mean and variance. If the result is likely to lead to under/overflow then
+-- this returns an error message as a string.
+nbFromMAndV :: (Double, Double) -> Either String NegativeBinomial
+nbFromMAndV (0, 0) = Right Zero
 nbFromMAndV (m, v) =
-  if m > 0 && v >= m
-    then NegBinomSizeProb r p
-    else error $ "nbFromMAndV received bad values: " ++ show (m,v)
-  where
+  let
     r = (m ** 2) / (v - m)
     p = (v - m) / v
+    postCond = m > 0 && v >= m && p > 1e-14 && p < 1 - 1e-14
+  in if postCond
+     then Right $ NegBinomSizeProb r p
+     else Left $ "nbFromMAndV received bad input: (m,v) = " ++ show (m,v)
 
 mAndVFromNb :: NegativeBinomial -> (Double, Double)
 mAndVFromNb (NegBinomSizeProb r p) = (m, v)
