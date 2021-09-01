@@ -10,12 +10,12 @@ if (not(dir.exists("out"))) {
 output_file <- "ts-config.json"
 
 
-simulation_duration <- 35
+simulation_duration <- 30
 
 ## We want to see how the inference changes over times so we set several time
 ## points at which to generate estimates. This vector is used to specify when
 ## they occur.
-inference_times <- seq(from = 21, to = simulation_duration, by = 7)
+inference_times <- seq(from = 25, to = simulation_duration, by = 1)
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
@@ -28,17 +28,17 @@ if (not(file.exists(example_params_json))) {
   death_rate <- example_params_list$deathRate
   sampling_rate <- example_params_list$samplingRate
   occurrence_rate <- example_params_list$occurrenceRate
-  rm(example_params_list,example_params_json)
 }
 
 ## In this example we also want to have some scheduled observations and these
 ## are not in the sared JSON so we define them here. Then we need to construct
 ## the list which specifies when these occur in a way that the executable
 ## understands.
-catastrophe_prob <- 0.01
-disaster_prob <- 0.01
+sched_interval <- 4
+catastrophe_prob <- 0.5 * example_params_list$samplingRate
+disaster_prob <- 0.5 * example_params_list$occurrenceRate
 
-disaster_times <- seq(from = 20, to = simulation_duration, by = 2)
+disaster_times <- seq(from = sched_interval, to = simulation_duration, by = sched_interval)
 num_disasters <- length(disaster_times)
 disaster_probs <- rep(disaster_prob, num_disasters)
 disaster_params <- map2(disaster_times, disaster_probs, list)
@@ -77,13 +77,13 @@ sim_params <- list(birth_rate,
 ## parameter and the mesh size refers to the number of points to evaluate the
 ## likelihood at for each profile.
 llhd_profile_mesh <- list(
-  lpmLambdaBounds = c(0.1,0.3),
+  lpmLambdaBounds = c(0.1, 0.5),
   lpmMuBounds = c(0.01, 0.2),
-  lpmPsiBounds = c(0.01,0.1),
-  lpmOmegaBounds = c(0.01,0.1),
+  lpmPsiBounds = c(0.01, 0.1),
+  lpmOmegaBounds = c(0.01, 0.1),
   lpmMeshSize = 100,
-  lpmRhoBounds = c(0.01, 0.2),
-  lpmNuBounds = c(0.01, 0.2)
+  lpmRhoBounds = c(0.01, 0.6),
+  lpmNuBounds = c(0.01, 0.6)
 )
 
 
@@ -97,7 +97,7 @@ result <- list(
                                    omega = occurrence_rate,
                                    nu = disaster_prob),
   simulationDuration = simulation_duration,
-  simulationSizeBounds = c(100,100000),
+  simulationSizeBounds = c(100,10000),
   simulationSeed = 100,
   inferenceConfigurations = inference_configurations,
   acLlhdProfileMesh = llhd_profile_mesh

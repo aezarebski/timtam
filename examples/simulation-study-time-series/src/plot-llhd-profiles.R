@@ -54,11 +54,11 @@ llhd_profile_figure <- function(infConfig,
     plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "Simulation"),
                      make_plot_df(all_llhd_vals[[2]], "Estimated"))
 
-    my_ylims <- max(plot_df$llhd) + c(-10, 2)
+    my_ylims <- c(min(plot_df$llhd) - 10, max(plot_df$llhd) + 10)
 
     estimated_hex_colour <- "#7fc97f"
     true_hex_colour <- "#beaed4"
-
+    
     ggplot(plot_df,
            aes(x = parameter_value, y = llhd, colour = parameter_kind)) +
       geom_line() +
@@ -286,6 +286,7 @@ main <- function() {
     labs(x = "Time", y = "Infection prevalence", colour = "Parameter Kind") +
     scale_color_manual(values = c("#7fc97f", "#beaed4")) +
     theme_classic() +
+    scale_y_log10() +
     theme(
       legend.position = c(0.2,0.9),
       legend.title = element_text(face = "bold"),
