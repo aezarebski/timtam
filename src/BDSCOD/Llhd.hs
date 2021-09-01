@@ -26,6 +26,7 @@ import           BDSCOD.Types
 import           BDSCOD.Utility
 import           Data.List                (find, scanl')
 import           Epidemic.Types.Parameter
+import Control.Exception (assert)
 
 
 -- | Predicate for whether the parameters could possibly have given rise to the
@@ -423,9 +424,7 @@ updatedLlhdCalcState :: Parameters
                      -> LlhdCalcState
                      -> LlhdCalcState
 updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
-  if k >= 0
-  then ((l+l'+l'',nb''),t',k'')
-  else error $ "bad k in updatedLlhdCalcState: k = " ++ show k
+  assert (k >= 0) ((l+l'+l'',nb''),t',k'')
   where
     t' = timeAfterDelta t delay
     (l',nb') = intervalLlhd params delay k nb
