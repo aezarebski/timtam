@@ -20,7 +20,6 @@ import Epidemic.Types.Population
 import qualified Epidemic.Utility as EpiUtil
 import GHC.Generics
 import Generic.Random (genericArbitraryU)
-import Numeric.GSL.SimulatedAnnealing
 import Numeric.LinearAlgebra.HMatrix
 import qualified System.Random.MWC as MWC
 import Test.Hspec
@@ -561,17 +560,6 @@ tmpIsSampling e = case e of
   Sampling{} -> True
   _ -> False
 
-testHmatrixUsage :: SpecWith ()
-testHmatrixUsage =
-  describe "Testing hmatrix-gsl usage" $
-    it "test simulated annealing example" $ do
-      let exampleParams = SimulatedAnnealingParams 200 1000 1.0 1.0 0.008 1.003 2.0e-6
-          exampleE x = exp (-(x - 1)**2) * sin (8 * x)
-          exampleM x y = abs $ x - y
-          exampleS rands stepSize current = (rands ! 0) * 2 * stepSize - stepSize + current
-          exampleMin = simanSolve 0 1 exampleParams 15.5 exampleE exampleM exampleS Nothing
-      withinDeltaOf 1e-2 exampleMin 1.36 `shouldBe` True
-
 testParameterUpdate :: SpecWith ()
 testParameterUpdate =
   let params1 = (Parameters (2.4, 1, 0.3, Timed [(AbsoluteTime 1000, 0.5)], 0.6, Timed [])) :: Parameters
@@ -950,7 +938,6 @@ main :: IO ()
 main = hspec $ do
   -- ** slow tests **
   testNbPGF
-  testHmatrixUsage
   -- ** fast tests **
   testTestingHelpers
   testPdeStatistics
