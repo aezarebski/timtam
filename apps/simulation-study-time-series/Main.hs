@@ -4,8 +4,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Main where
-
-import BDSCOD.Llhd (llhdAndNB,initLlhdState)
+import Debug.Trace (traceShow)
+import Data.Either.Combinators (fromRight, maybeToRight)
+import BDSCOD.Llhd (llhdAndNB,initLlhdState, intervalLlhd)
 import BDSCOD.Types
 import BDSCOD.Utility
 import Control.Monad (zipWithM)
@@ -30,23 +31,35 @@ import Epidemic.Types.Parameter
 import Epidemic.Types.Population (Person(..), Identifier(..))
 import qualified Epidemic.Utility as SimUtil
 import GHC.Generics
-import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
+import Numeric.Minimisation.Powell (minimise)
 import Numeric.LinearAlgebra.Data (linspace, toList)
 import Numeric.LinearAlgebra.HMatrix
 import System.Environment (getArgs)
 import System.Random.MWC
 import Data.Word (Word32)
+import System.IO.Unsafe (unsafePerformIO)
 
--- | These objects define the specifics for an inference evaluation which can be
--- run at differing points in the simulation to understand how differing amounts
--- of data influences the results.
+minimizeV :: Double -> Int -> Vector Double -> (Vector Double -> Double) -> Vector Double -> (Vector Double, Matrix Double)
+minimizeV = undefined
+
+-- | Values of this type are used to specify an analysis of the data.
 data InferenceConfiguration =
   InferenceConfiguration
-    { inferenceTime :: AbsoluteTime
-    , reconstructedTreeOutputFiles :: (FilePath, FilePath)
-    , observationsOutputCsv :: FilePath
-    , llhdOutputCsv :: FilePath
-    , pointEstimatesCsv :: FilePath
+    {
+    -- | The time in the simulation at which the inference is carried out.
+    inferenceTime :: AbsoluteTime
+    ,
+    -- | A couple of files to write the Newick representation to and the node labels.
+    reconstructedTreeOutputFiles :: (FilePath, FilePath)
+    ,
+    -- | Where to write the sequence of observed events.
+    observationsOutputCsv :: FilePath
+    ,
+    -- | Where to write the likelihood evaluations.
+    llhdOutputCsv :: FilePath
+    ,
+    -- | Where to write the point estimate of prevalence.
+    pointEstimatesCsv :: FilePath
     }
   deriving (Show, Generic)
 
@@ -98,10 +111,12 @@ data ParameterKind
 bdscodConfiguration = do
   simParams <- asks simulationParameters
   (TimeDelta simDurDouble) <- asks simulationDuration
-  let bdscodConfig = SimBDSCOD.configuration (AbsoluteTime simDurDouble) (unpackParameters simParams)
+  let bdscodConfig =
+        SimBDSCOD.configuration (AbsoluteTime simDurDouble) (unpackParameters simParams)
   case bdscodConfig of
+    Just x -> do liftIO $ putStrLn (show simParams)
+                 return x
     Nothing -> throwError "Could not construct BDSCOD configuration"
-    (Just config) -> return config
 
 -- | Simulate the transmission process part of the epidemic making sure that the
 -- results are acceptable in terms of the number of observed events before
@@ -131,15 +146,20 @@ simulatedObservations :: InferenceConfiguration
                       -> [EpidemicEvent]
                       -> Simulation (InferenceConfiguration,[Observation])
 simulatedObservations infConfig@InferenceConfiguration{..} simEvents = do
-  let Just (newickBuilder,newickMetaData) = asNewickString (AbsoluteTime 0, Person (Identifier 1)) =<< maybeReconstructedTree =<< maybeEpidemicTree simEvents
+  let Just (newickBuilder,newickMetaData) =
+        do eTree <- maybeEpidemicTree simEvents
+           rTree <- maybeReconstructedTree eTree
+           asNewickString (AbsoluteTime 0, Person (Identifier 1)) rTree
       maybeObs = eventsAsObservations <$> SimBDSCOD.observedEvents simEvents
       (reconNewickTxt,reconNewickCsv) = reconstructedTreeOutputFiles
   case maybeObs of
-    (Just obs) -> do liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
-                     liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
-                     liftIO $ L.writeFile observationsOutputCsv (Csv.encode obs)
-                     return (infConfig,obs)
-    Nothing -> throwError "Failed to simulate observations."
+    (Just obs) ->
+      do
+        liftIO $ L.writeFile reconNewickTxt (BBuilder.toLazyByteString newickBuilder)
+        liftIO $ L.writeFile reconNewickCsv (Csv.encode newickMetaData)
+        liftIO $ L.writeFile observationsOutputCsv (Csv.encode obs)
+        return (infConfig,obs)
+    _ -> throwError "Failed to simulate observations."
 
 
 -- | If there is a unique timed value return that. This is used to make it
@@ -155,42 +175,42 @@ uniqueTimedValue (Timed txs) = case txs of
 -- | Evaluate the NB posterior approximation of the prevalence for a single
 -- point in parameter space and the LLHD over a list of points and write all of
 -- the results to CSV.
-generateLlhdProfileCurves :: InferenceConfiguration
+recordLlhdCrossSections :: InferenceConfiguration
                           -> [Observation]
                           -> (Parameters,ParameterKind,[Parameters])
                           -> Simulation ()
-generateLlhdProfileCurves InferenceConfiguration {..} obs (singleParams, paramKind, evalParams) =
+recordLlhdCrossSections InferenceConfiguration {..} obs (singleParams, paramKind, evalParams) =
   let comma = BBuilder.charUtf8 ','
       parametersUsed = show paramKind
       parametersUsed' = BBuilder.stringUtf8 parametersUsed
-      llhdVals = [fst $ llhdAndNB obs p initLlhdState | p <- evalParams]
+      llhdVals = [fromRight (-1e6) $ fst <$> llhdAndNB obs p initLlhdState | p <- evalParams]
       nBValAndParams =
-        pure
-          ( parametersUsed    -- the kind of parameter considered
-          , show $ length obs -- the number of observations
-          , snd $ llhdAndNB obs singleParams initLlhdState -- the posterior NB at present
-          , show $ getLambda singleParams
-          , show $ getMu singleParams
-          , show $ getPsi singleParams
-          , show <$> uniqueTimedValue $ getRhos singleParams
-          , show $ getOmega singleParams
-          , show <$> uniqueTimedValue $ getNus singleParams)
+        Csv.encode . (:[]) $
+        ( parametersUsed
+        , show $ length obs
+        , fromRight Zero $ snd <$> llhdAndNB obs singleParams initLlhdState
+        , show $ getLambda singleParams
+        , show $ getMu singleParams
+        , show $ getPsi singleParams
+        , show <$> uniqueTimedValue $ getRhos singleParams
+        , show $ getOmega singleParams
+        , show <$> uniqueTimedValue $ getNus singleParams )
       doublesAsString =
         BBuilder.toLazyByteString .
         mconcat .
         intersperse comma . (parametersUsed' :) . map BBuilder.doubleDec
-   in do liftIO $ L.appendFile llhdOutputCsv (doublesAsString llhdVals)
-         liftIO $ L.appendFile pointEstimatesCsv (Csv.encode nBValAndParams)
+   in liftIO $
+      do
+        L.appendFile llhdOutputCsv (doublesAsString llhdVals)
+        L.appendFile pointEstimatesCsv nBValAndParams
 
--- | Run the evaluation of the log-likelihood profiles on a given set of
--- observations at the parameters used to simulate the data set and write the
--- result to file.
+-- | Evaluate the LLHD function on cross-sections centred at the true values
 evaluateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 evaluateLLHD infConfig obs = do
   simParams <- asks simulationParameters -- get the actual parameters used to simulate the observations
-  llhdProfMesh <- asks acLlhdProfileMesh
-  let evalParams = adjustedEvaluationParameters llhdProfMesh simParams
-  generateLlhdProfileCurves infConfig obs (simParams,SimulationParameters,evalParams)
+  llhdProfMesh <- asks acLlhdProfileMesh -- this specifies the cross section to use.
+  let evalParams = crossSectionParameters llhdProfMesh simParams
+  recordLlhdCrossSections infConfig obs (simParams,SimulationParameters,evalParams)
 
 -- | Estimate the parameters of the of the model and then evaluate the LLHD
 -- profiles and prevalence and append this to the file. The first value of the
@@ -200,40 +220,61 @@ estimateLLHD :: InferenceConfiguration -> [Observation] -> Simulation ()
 estimateLLHD infConfig obs = do
   simParams@(Parameters (_,deathRate,_,_,_,_)) <- asks simulationParameters
   llhdProfMesh <- asks acLlhdProfileMesh
+  liftIO $ putStrLn $ "\t\tEstimating parameters using " ++ show (length obs) ++ " observations..."
   let schedTimes = scheduledTimes simParams
       mleParams = estimateParameters deathRate schedTimes obs -- get the MLE estimate of the parameters
-      evalParams = adjustedEvaluationParameters llhdProfMesh mleParams -- generate a list of evaluation parameters
-  generateLlhdProfileCurves infConfig obs (mleParams,EstimatedParameters,evalParams)
+      evalParams = crossSectionParameters llhdProfMesh mleParams
+  recordLlhdCrossSections infConfig obs (mleParams,EstimatedParameters,evalParams)
 
--- | Use GSL to estimate the MLE based on the observations given. This uses a
--- simplex method because it seems to be faster and more accurate than the
--- simulated annealing.
+-- | Estimate of the MLE. This uses a simplex method.
+--
+-- __NOTE__ the ugly case statement means that this should work both with and
+-- without scheduled observations.
 --
 -- __NOTE__ we fix the death rate to the true value because
 -- this is assumed to be known a priori.
+--
 estimateParameters :: Rate -> ([AbsoluteTime],[AbsoluteTime]) -> [Observation] -> Parameters
 estimateParameters deathRate sched obs =
-  let maxIters = 500
-      desiredPrec = 1e-3
-      initBox = fromList [2,2,2,2,2]
-      energyFunc x = negate . fst $ llhdAndNB obs (vectorAsParameters deathRate sched x) initLlhdState
-      randInit = fromList [0,0,0,0,0]
-      (est,_) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-  in vectorAsParameters deathRate sched est
+  let energyFunc v2p x =
+        negate $ fromRight (-1e6) (fst <$> llhdAndNB obs (v2p x) initLlhdState)
+      mini rI v2p = minimise (energyFunc v2p) rI
+  in case sched of
+       -- there are no scheduled observations
+       ([],[]) ->
+         let randInit = [-1.5,-2.5,-2.5] -- initial point to start
+             vec2Param vec =
+               let [lnR1, lnR2, lnR3] = vec
+               in packParameters ( exp lnR1
+                                 , deathRate
+                                 , exp lnR2
+                                 , []
+                                 , exp lnR3
+                                 , [])
+             Right (est,_,grad) = mini randInit vec2Param
+         in traceShow grad $ vec2Param est
+       -- there is at least one scheduled observation
+       (rhoTs, nuTs) ->
+         let randInit = [-1.5,-2.5,-1,-2.5,-1]
+             vec2Param vec =
+               let [lnR1, lnR2, logitP1, lnR3, logitP2] = vec
+                   rhoVal = invLogit logitP1
+                   nuVal = invLogit logitP2
+                   timed v ts = zip ts (repeat v)
+               in packParameters ( exp lnR1
+                                 , deathRate
+                                 , exp lnR2
+                                 , timed rhoVal rhoTs
+                                 , exp lnR3
+                                 , timed nuVal nuTs)
+             Right (est,_,_) = mini randInit vec2Param
+         in vec2Param est
 
--- | Helper function for @estimateParameters@
-vectorAsParameters :: Rate -> ([AbsoluteTime],[AbsoluteTime]) -> Vector Double -> Parameters
-vectorAsParameters deathRate (rhoTimes, nuTimes) paramVec =
-  let [lnR1, lnR2, lnP1, lnR3, lnP2] = toList paramVec
-      p1 = invLogit lnP1
-      p2 = invLogit lnP2
-  in packParameters (exp lnR1, deathRate, exp lnR2, [(t,p1)|t<-rhoTimes], exp lnR3, [(t,p2)|t<-nuTimes])
 
-
--- | Recenter the evaluation parametes about the parameters given.
-adjustedEvaluationParameters :: LlhdProfileMesh -> Parameters -> [Parameters]
-adjustedEvaluationParameters LlhdProfileMesh{..} ps =
-  let mesh bounds = toList $ linspace lpmMeshSize bounds
+-- | List of parameters required to plot the cross sections.
+crossSectionParameters :: LlhdProfileMesh -> Parameters -> [Parameters]
+crossSectionParameters LlhdProfileMesh{..} ps =
+  let mesh = toList . linspace lpmMeshSize
       lambdaMesh = mesh lpmLambdaBounds
       muMesh = mesh lpmMuBounds
       psiMesh = mesh lpmPsiBounds
@@ -243,10 +284,16 @@ adjustedEvaluationParameters LlhdProfileMesh{..} ps =
       (rhoTimes,nuTimes) = scheduledTimes ps
       rhoMesh = [Timed [(t,r) | t <- rhoTimes] | r <- rhoProbMesh]
       nuMesh = [Timed [(t,n) | t <- nuTimes] | n <- nuProbMesh]
+      -- for each dimension, construct a list of parameter values with the
+      -- values from the mesh
       apply f = map (f ps)
-      [lPs,mPs,pPs,oPs] = zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
+      [lPs,mPs,pPs,oPs] =
+        zipWith apply [putLambda,putMu,putPsi,putOmega] [lambdaMesh,muMesh,psiMesh,omegaMesh]
       [rPs,nPs] = zipWith apply [putRhos,putNus] [rhoMesh,nuMesh]
-  in concat [lPs,mPs,pPs,rPs,oPs,nPs]
+  in concat $
+     if (rhoTimes,nuTimes) /= ([],[])
+     then [lPs,mPs,pPs,rPs,oPs,nPs]
+     else [lPs,mPs,pPs,oPs]
 
 -- | Definition of the complete simulation study.
 simulationStudy :: Simulation ()
@@ -262,6 +309,22 @@ simulationStudy = do
   mapM_ (uncurry evaluateLLHD) pObs
   liftIO $ putStrLn "\tEvaluating LLHD on cross-sections about estimated parameters"
   mapM_ (uncurry estimateLLHD) pObs
+
+
+
+main' :: IO ()
+main' = do
+  let configFilePath = "./examples/simulation-study-time-series/ts-config.json"
+  maybeConfig <- getConfiguration configFilePath
+  case maybeConfig of
+    Nothing ->
+      putStrLn $ "Could not get configuration from file: " ++ configFilePath
+    Just config -> do
+      putStrLn $ "Succeeded in reading configuration from file: " ++ configFilePath
+      result <- runExceptT (runReaderT simulationStudy config)
+      case result of
+        Left errMsg -> putStrLn errMsg
+        Right _ -> return ()
 
 main :: IO ()
 main = do

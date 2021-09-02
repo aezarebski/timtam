@@ -21,6 +21,7 @@ library
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd
+                   Numeric.Minimisation.Powell
                    Statistics.Distribution.Lognormal
   hs-source-dirs:
       src
