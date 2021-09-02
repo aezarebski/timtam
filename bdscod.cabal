@@ -21,6 +21,7 @@ library
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd
+                   Numeric.Minimisation.Powell
                    Statistics.Distribution.Lognormal
   hs-source-dirs:
       src
@@ -79,7 +80,6 @@ executable simulation-study-time-series
     , either
     , epi-sim
     , hmatrix >= 0.20.0.0
-    , hmatrix-gsl >= 0.19.0.1
     , mtl >= 2.2
     , mwc-random >= 0.14
     , vector
@@ -102,7 +102,6 @@ executable simulation-study-aggregated-observations
     , either
     , epi-sim
     , hmatrix
-    , hmatrix-gsl
     , mighty-metropolis >= 2.0.0
     , mtl
     , mwc-random
@@ -164,7 +163,6 @@ test-suite tests
                       , bdscod
                       , epi-sim
                       , hmatrix
-                      , hmatrix-gsl
                       , hspec
                       , hspec-core >= 2.7.4
                       , mighty-metropolis
