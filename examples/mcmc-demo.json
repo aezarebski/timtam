@@ -1,0 +1,42 @@
+{
+    "mcmcObservations": [
+        [
+            0.1,
+            {
+                "tag": "OBirth"
+            }
+        ],
+        [
+            0.1,
+            {
+                "tag": "ObsUnscheduledSequenced"
+            }
+        ],
+        [
+            0.1,
+            {
+                "tag": "ObsUnscheduledSequenced"
+            }
+        ],
+        [
+            0.1,
+            {
+                "tag": "OOccurrence"
+            }
+        ]
+    ],
+    "mcmcNumSamples": 10,
+    "mcmcSampleCSV": "foo.csv",
+    "mcmcStepSD": 1e-3,
+    "mcmcSeed": [
+        1,
+        2
+    ],
+    "mcmcInit": [
+        2.0,
+        0.2,
+        0.2
+    ],
+    "mcmcParameterisation": "identity-mu1-lambda-psi-noRho-omega-noNu",
+    "mcmcPrior": "foobar"
+}
