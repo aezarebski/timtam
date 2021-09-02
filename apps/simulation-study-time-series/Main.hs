@@ -39,8 +39,6 @@ import System.Random.MWC
 import Data.Word (Word32)
 import System.IO.Unsafe (unsafePerformIO)
 
-minimizeV :: Double -> Int -> Vector Double -> (Vector Double -> Double) -> Vector Double -> (Vector Double, Matrix Double)
-minimizeV = undefined
 
 -- | Values of this type are used to specify an analysis of the data.
 data InferenceConfiguration =
