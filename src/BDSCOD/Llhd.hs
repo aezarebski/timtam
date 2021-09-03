@@ -42,11 +42,12 @@ import Data.Either.Combinators (fromRight')
 arePlausible :: [Observation]
              -> Parameters
              -> Bool
-arePlausible obs (Parameters (l, m, r, _, o, _))
-  | minimum [l, m, r, o] < 0 = False
-  | maximum [l, m, r, o] > 100 = False
-  | any isBirth obs && l == 0 = False
-  | any isUnscheduledSequenced obs && r == 0 = False
+arePlausible obs (Parameters (λ, μ, ψ, _, ω, _))
+  | minimum [λ, μ, ψ, ω] < 0 = False
+  | maximum [λ, μ, ψ, ω] > 100 = False
+  | any isBirth obs && λ == 0 = False
+  | any isUnscheduledSequenced obs && ψ == 0 = False
+  | λ < (μ + ψ + ω) = False
   | otherwise = True
 
 
@@ -227,7 +228,7 @@ logPdeGF' :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 logPdeGF' params delay (PDESol Zero 1) z = log rdashz
   where
     rdashz = rr' params delay z
-logPdeGF' params delay (PDESol nb k) z =
+logPdeGF' params@(Parameters (λ,μ,ψ,_,ω,_)) delay (PDESol nb k) z =
   if | k > 0 -> let p0z = p0 params delay z
                     logP0DashZ = logP0' params delay z
                     rz = rr params delay z
@@ -246,6 +247,11 @@ logPdeGF' params delay (PDESol nb k) z =
                         "\n------------------------------------------------------------" ++
                         "\n\tk: " ++ show k ++
                         "\n\tnb: " ++ show nb ++
+                        "\n\tparameters: " ++
+                        "\n\t\tbirth rate (lambda): " ++ show λ ++
+                        "\n\t\tdeath rate (mu): " ++ show μ ++
+                        "\n\t\tsampling rate (psi): " ++ show ψ ++
+                        "\n\t\toccurrence rate (omega): " ++ show ω ++
                         "\n\tfirst term: " ++ show firstTerm ++
                         "\n\tsecond term: " ++ show secondTerm ++
                         "\n\tp0z: " ++ show p0z ++
