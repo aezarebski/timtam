@@ -181,7 +181,7 @@ recordLlhdCrossSections InferenceConfiguration {..} obs (singleParams, paramKind
   let comma = BBuilder.charUtf8 ','
       parametersUsed = show paramKind
       parametersUsed' = BBuilder.stringUtf8 parametersUsed
-      llhdVals = [fromRight (-1e6) $ fst <$> llhdAndNB obs p initLlhdState | p <- evalParams]
+      llhdVals = safeLlhdFromInit obs <$> evalParams
       nBValAndParams =
         Csv.encode . (:[]) $
         ( parametersUsed
@@ -224,6 +224,20 @@ estimateLLHD infConfig obs = do
       evalParams = crossSectionParameters llhdProfMesh mleParams
   recordLlhdCrossSections infConfig obs (mleParams,EstimatedParameters,evalParams)
 
+-- | A safe version of the log-likelihood assuming that you want to start from a
+-- simple initial condition.
+--
+-- __NOTE__ This conditions the process against extinction.
+--
+safeLlhdFromInit :: [Observation] -> Parameters -> LogLikelihood
+safeLlhdFromInit obs p@(Parameters (λ, μ, ψ, _, ω, _)) =
+    let
+      -- log-likelihood
+      llhd = fromRight (-1e6) $ fst <$> llhdAndNB obs p initLlhdState
+      -- log of the probability of not going extinct.
+      lpne = log (1 - (μ + ψ + ω) / λ)
+    in llhd - lpne
+
 -- | Estimate of the MLE. This uses a simplex method.
 --
 -- __NOTE__ the ugly case statement means that this should work both with and
@@ -235,22 +249,24 @@ estimateLLHD infConfig obs = do
 estimateParameters :: Rate -> ([AbsoluteTime],[AbsoluteTime]) -> [Observation] -> Parameters
 estimateParameters deathRate sched obs =
   let energyFunc v2p x =
-        negate $ fromRight (-1e6) (fst <$> llhdAndNB obs (v2p x) initLlhdState)
+        negate $ safeLlhdFromInit obs (v2p x)
       mini rI v2p = minimise (energyFunc v2p) rI
   in case sched of
        -- there are no scheduled observations
        ([],[]) ->
-         let randInit = [-1.5,-2.5,-2.5] -- initial point to start
-             vec2Param vec =
-               let [lnR1, lnR2, lnR3] = vec
-               in packParameters ( exp lnR1
-                                 , deathRate
-                                 , exp lnR2
-                                 , []
-                                 , exp lnR3
-                                 , [])
-             Right (est,_,grad) = mini randInit vec2Param
-         in traceShow grad $ vec2Param est
+         let -- randInit = [-1.5,-2.2,-2.2] -- initial point to start
+           randInit = log <$> [0.228,4.8e-2,2.6e-2] -- _GROSS_ initial point as true value
+           vec2Param vec =
+             let [lnR1, lnR2, lnR3] = vec
+             in packParameters ( exp lnR1
+                               , deathRate
+                               , exp lnR2
+                               , []
+                               , exp lnR3
+                               , [])
+         in case mini randInit vec2Param of
+              Right (est,_,grad) -> traceShow grad $ vec2Param est
+              Left msg -> error msg
        -- there is at least one scheduled observation
        (rhoTs, nuTs) ->
          let randInit = [-1.5,-2.5,-1,-2.5,-1]
@@ -265,8 +281,9 @@ estimateParameters deathRate sched obs =
                                  , timed rhoVal rhoTs
                                  , exp lnR3
                                  , timed nuVal nuTs)
-             Right (est,_,_) = mini randInit vec2Param
-         in vec2Param est
+         in case mini randInit vec2Param of
+              Right (est,_,grad) -> traceShow grad $ vec2Param est
+              Left msg -> error msg
 
 
 -- | List of parameters required to plot the cross sections.

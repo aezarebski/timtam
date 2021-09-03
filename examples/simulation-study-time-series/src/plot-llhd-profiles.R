@@ -48,7 +48,10 @@ llhd_profile_figure <- function(infConfig,
     plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "Simulation"),
                      make_plot_df(all_llhd_vals[[2]], "Estimated"))
 
-    my_ylims <- c(min(plot_df$llhd) - 10, max(plot_df$llhd) + 10)
+    ## This functionality is not used in the figure, if you want to adjust the y
+    ## limits manually, you will need to look at the call to facet_wrap below.
+    ylim_buffer <- 0.1 * diff(range(plot_df$llhd))
+    my_ylims <- c(min(plot_df$llhd) - ylim_buffer, max(plot_df$llhd) + ylim_buffer)
 
     estimated_hex_colour <- "#7fc97f"
     true_hex_colour <- "#beaed4"
@@ -62,12 +65,13 @@ llhd_profile_figure <- function(infConfig,
       geom_vline(data = estimated_parameters,
                  mapping = aes(xintercept = parameter_value),
                  colour = estimated_hex_colour) +
-      facet_wrap(~parameter_name, scales = "free_x") +
+      facet_wrap(~parameter_name, scales = "free") +
+      ## facet_wrap(~parameter_name, scales = "free_x") +
+      ## ylim(my_ylims) +
       scale_color_manual(values = c(estimated_hex_colour, true_hex_colour)) +
       labs(x = "Parameter value",
            y = "Log-likelihood",
            colour = "Parameter Kind") +
-      ylim(my_ylims) +
       theme_classic() +
       theme(
         strip.background = element_blank(),
@@ -77,6 +81,7 @@ llhd_profile_figure <- function(infConfig,
         legend.position = "top",
         legend.title = element_text(face = "bold")
       )
+
 }
 
 
