@@ -315,6 +315,9 @@ main <- function(args) {
       "ape-sim-event-times.csv",
       sep = "/"
     )
+    if (args$verbose) {
+      cat("writing output to csv...\n")
+    }
     write.table(x = sim_result$event_times_df,
                 file = output_csv,
                 sep = ",",
