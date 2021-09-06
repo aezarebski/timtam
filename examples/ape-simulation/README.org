@@ -1,0 +1,13 @@
+#+title: Simulating data with ape
+
+There is a =run.sh= script to carry out this computation. It uses the [[https://cran.r-project.org/web/packages/ape/index.html][=ape=]]
+package in R to simulate a birth-death process and then randomly annotate the
+tips to produce a sample from the BDSCOD process.
+
+* Simulation script
+
+The following demonstrates how to use the =ape-sim.R= script
+
+#+begin_src sh
+./ape-sim.R --seed 1 -p ../example-parameters.json -o out --duration 30.0 
+#+end_src
