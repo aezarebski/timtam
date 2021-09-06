@@ -3,12 +3,19 @@
 #' ape-sim
 #' =======
 #'
-#' Use the ape package from R to simulate the BDSCOD process.
+#' Use the ape package from R to simulate the BDSCOD process. When run in
+#' interactive mode this will substitute some parameters otherwise it expected
+#' to get everything from the command line.
 #'
 #' Usage
 #' -----
 #'
-#' $ ./ape-sim.R -v -s 1 -p ../example-parameters.json -o out --duration 30.0
+#' $ ./ape-sim.R --seed 1 -p ../example-parameters.json -o out --duration 30.0
+#'
+#' Help
+#' ----
+#'
+#' $ ./ape-sim.R --help
 #'
 suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library(ggplot2))
@@ -79,7 +86,7 @@ read_parameters <- function(parameter_filepath, sim_duration, is_verbose) {
     params$prob_observed <- params$sampling_prob + params$occurrence_prob
     params$prob_sampled_given_observed <-
       params$sampling_prob / params$prob_observed
-    params$duration = sim_duration
+    params$duration <- sim_duration
     return(params)
   }
 }
@@ -106,7 +113,7 @@ run_simulation <- function(params, is_verbose) {
   tip_labels <- phy$tip.label
   num_tips <- length(tip_labels)
   tip_ix <- seq.int(num_tips)
-  tip_times <- head(node.depth.edgelength(phy), num_tips)
+  tip_times <- head(ape::node.depth.edgelength(phy), num_tips)
   ## TODO we can find the tips that are still extant in the simulation but it is
   ## unclear if we can use strict equality here of if we need to account for
   ## potential error in the branch lengths.
@@ -160,12 +167,10 @@ run_simulation <- function(params, is_verbose) {
         stop("unaccounted for tip: ", tl)
       }
   }
-
-  is_observed <- is.element(outcome, c("sampling", "occurrence"))
   ## We then drop the lineages that did not result in a sampled lineage to get
   ## the reconstructed tree.
-  rt <- keep.tip(phy, sampling_labels)
-  rt_tip_and_node_depths <- node.depth.edgelength(rt)
+  rt <- ape::keep.tip(phy, sampling_labels)
+  rt_tip_and_node_depths <- ape::node.depth.edgelength(rt)
   rt_tip_depths <- head(rt_tip_and_node_depths, num_sampled)
   rt_node_depths <- tail(rt_tip_and_node_depths, -num_sampled)
   ## The depths of the nodes and tips is relative to the TMRCA so we need to
@@ -175,8 +180,17 @@ run_simulation <- function(params, is_verbose) {
   rt_offset <- true_first_sample_time - depth_first_in_rt
   ## Finally we can put all of this information into a single dataframe.
   event_times_df <- data.frame(
-    time = c(-tmrca, tip_times[outcome == "occurrence"], tip_times[outcome == "sampling"], rt_node_depths + rt_offset),
-    event = c("origin", rep(c("occurrence", "sampling", "birth"), times = c(num_occurrences, num_sampled, num_sampled - 1)))
+    time = c(-tmrca,
+             tip_times[outcome == "occurrence"],
+             tip_times[outcome == "sampling"],
+             rt_node_depths + rt_offset
+             ),
+    event = c("origin",
+              rep(
+                c("occurrence", "sampling", "birth"),
+                times = c(num_occurrences, num_sampled, num_sampled - 1)
+              )
+              )
   )
   if (is_verbose) {
     cat("checking output from run_simulation...\n")
@@ -190,11 +204,96 @@ run_simulation <- function(params, is_verbose) {
   stopifnot(abs(dur_1 - dur_2) < 1e-10 * params$duration)
   dur_3 <- max(tip_times[outcome == "extant"]) + tmrca
   stopifnot(abs(dur_3 - params$duration) < time_eps)
-  return(list(event_times_df = event_times_df))
+  return(list(
+    event_times_df = event_times_df,
+    phylo = phy,
+    outcome = outcome,
+    tip_ix = tip_ix,
+    num_extinct = num_extinct,
+    num_sampled = num_sampled,
+    num_observed = num_observed,
+    num_occurrences = num_occurrences))
 }
 
-write_plot <- function(simulation_results, output_directory, is_verbose) {
-  stop("not implemented.")
+write_plot <- function(simulation_results, parameters, output_directory, is_verbose) {
+  hist_plt_df <- data.frame(
+    outcome = c("death",
+                "sampling",
+                "occurrence"),
+    empirical = c(simulation_results$num_extinct - simulation_results$num_observed,
+                  simulation_results$num_sampled,
+                  simulation_results$num_occurrences),
+    theory = c(qbinom(p = 0.5,
+                      size = simulation_results$num_extinct,
+                      prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+               qbinom(p = 0.5,
+                      size = simulation_results$num_extinct,
+                      prob = parameters$sampling_prob),
+               qbinom(p = 0.5,
+                      size = simulation_results$num_extinct,
+                      prob = parameters$occurrence_prob)),
+    theory_min = c(qbinom(p = 0.025,
+                          size = simulation_results$num_extinct,
+                          prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+                   qbinom(p = 0.025,
+                          size = simulation_results$num_extinct,
+                          prob = parameters$sampling_prob),
+                   qbinom(p = 0.025,
+                          size = simulation_results$num_extinct,
+                          prob = parameters$occurrence_prob)),
+    theory_max = c(qbinom(p = 0.975,
+                          size = simulation_results$num_extinct,
+                          prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+                   qbinom(p = 0.975,
+                          size = simulation_results$num_extinct,
+                          prob = parameters$sampling_prob),
+                   qbinom(p = 0.975,
+                          size = simulation_results$num_extinct,
+                          prob = parameters$occurrence_prob))
+  )
+
+  plt5 <- ggplot(hist_plt_df) +
+    geom_col(mapping = aes(x = outcome, y = empirical)) +
+    geom_point(mapping = aes(x = outcome, y = theory)) +
+    geom_errorbar(mapping = aes(x = outcome, ymin = theory_min, ymax = theory_max)) +
+    labs(y = "Count", x = NULL) +
+    theme_classic()
+
+  is_observed <- is.element(simulation_results$outcome, c("sampling", "occurrence"))
+
+  tip_annotations <- tibble(
+    node = simulation_results$tip_ix,
+    outcome = simulation_results$outcome,
+    is_observed = is_observed
+  )
+
+  ## TODO does this come from tidytree???
+  tr <- treedata(phylo = simulation_results$phylo, data = tip_annotations)
+  
+  plt4 <- ggplot(tr, mapping = aes(x, y)) +
+    geom_tippoint(mapping = aes(colour = outcome, shape = is_observed),
+                  size = 3) +
+    geom_nodepoint() +
+    geom_vline(data = simulation_results$event_times_df, aes(xintercept = time, colour = event)) +
+    geom_tree() +
+    labs(colour = "Tip outcome",
+         shape = "Observed") +
+    theme_tree2(legend.position = "top")
+
+  if (is_verbose) {
+    cat("writing visualistion to file...\n")
+  }
+  ggsave(
+    filename = paste(
+      output_directory,
+      "ape-simulation-figure.png",
+      sep = "/"
+    ),
+    plot = plot_grid(plt4, plt5, nrow = 1, rel_widths = c(2, 1)),
+    width = 25,
+    height = 15,
+    units = "cm"
+  )
 }
 
 main <- function(args) {
@@ -223,7 +322,7 @@ main <- function(args) {
   }
 
   if (args$make_plots) {
-    write_plot(sim_result, args$output_directory, args$verbose)
+    write_plot(sim_result, params, args$output_directory, args$verbose)
   }
 }
 
@@ -241,6 +340,3 @@ if (!interactive()) {
   )
   main(args)
 }
-
-
-
