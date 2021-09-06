@@ -29,3 +29,12 @@ The LLHD profiles based on the final data set collected.
 To build the executable use =stack build=. The rest of the computation is driven
 by =run.sh=. To clean up remove the contents of =out/= and remove
 =ts-config.json= there is a =clean.sh= script.
+
+* Super weird bug!
+
+Using the inference times specified by =inference_times <- c(32.6,32.7)= in
+=src/make-json-config.R= causes the likelihood to behave very strangely with
+only a very minor change to the data. It is very unclear what is going on
+here...
+
+

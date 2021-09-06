@@ -10,12 +10,13 @@ if (not(dir.exists("out"))) {
 output_file <- "ts-config.json"
 
 
-simulation_duration <- 33
+simulation_duration <- 32
 
 ## We want to see how the inference changes over times so we set several time
 ## points at which to generate estimates. This vector is used to specify when
 ## they occur.
 inference_times <- seq(from = 25, to = simulation_duration, by = 1)
+## inference_times <- c(32.6,32.7)
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
@@ -82,10 +83,10 @@ sim_params <- list(birth_rate,
 ## parameter and the mesh size refers to the number of points to evaluate the
 ## likelihood at for each profile.
 llhd_profile_mesh <- list(
-  lpmLambdaBounds = c(0.1, 0.5),
-  lpmMuBounds = c(0.01, 0.2),
-  lpmPsiBounds = c(0.01, 0.1),
-  lpmOmegaBounds = c(0.01, 0.1),
+  lpmLambdaBounds = c(0.15, 0.35),
+  lpmMuBounds = c(0.01, 0.075),
+  lpmPsiBounds = c(0.01, 0.075),
+  lpmOmegaBounds = c(0.01, 0.075),
   lpmMeshSize = 100,
   lpmRhoBounds = c(0.01, 0.6),
   lpmNuBounds = c(0.01, 0.6)
