@@ -17,6 +17,8 @@ multiple unscheduled observations are aggregated into a single observation and
 treated as a scheduled observation. This is useful for assessing the impact of
 model misspecification.
 
+** Simulating data with =ape=
+
 ** Timing Evaluation
 
 Generates the figures in which the log-likelihood function is compared to
