@@ -6,7 +6,13 @@ out_html <- "index.html"
 foo <- lapply(mcmc_diagnostics, unlist) |> as.data.frame()
 bar <- c()
 for (ix in seq.int(nrow(foo))) {
-  bar <- c(bar, sprintf("%s, %f, %f, %f", foo[ix,1], foo[ix,2], foo[ix,3], foo[ix, 4]))
+  if (ncol(foo) == 4) {
+    bar <- c(bar, sprintf("%s, %f, %f, %f", foo[ix,1], foo[ix,2], foo[ix,3], foo[ix, 4]))
+  } else if (ncol(foo) == 3) {
+    bar <- c(bar, sprintf("%s, %f, %f", foo[ix,1], foo[ix,2], foo[ix,3]))
+  } else {
+    stop("")
+  }
 }
 
 

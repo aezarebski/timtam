@@ -50,11 +50,13 @@ mcmc_input <- list(
   mcmcNumSamples = 1e6,
   mcmcSampleCSV= "out/mcmc-samples.csv",
   mcmcStepSD  = 1e-3,
-  mcmcInit   = c(0.228, 0.048, 0.5, 0.026),
+  ## mcmcInit   = c(0.228, 0.048, 0.5, 0.026),
+  mcmcInit   = c(0.228, 0.048, 0.026),
   mcmcSeed  = c(1, 2),
-  mcmcParameterisation = "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu",
+  ## mcmcParameterisation = "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu",
+  mcmcParameterisation = "identity-muKnown-lambda-psi-noRho-omega-noNu",
   mcmcKnownMu = params$deathRate,
-  mcmcSimDuration = maybe_sim_dur,
+  ## mcmcSimDuration = maybe_sim_dur,
   mcmcPrior= "foobar"
 )
 

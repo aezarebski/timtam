@@ -82,6 +82,9 @@ paramConstructor :: String -> Maybe Double -> Maybe Double -> ([Double] -> Maybe
 paramConstructor p maybeMu maybeDuration
   | p == "identity-mu1-lambda-psi-noRho-omega-noNu" =
     \[λ, ψ, ω] -> Just $ packParameters (λ, 0.026, ψ, [], ω, [])
+  | p == "identity-muKnown-lambda-psi-noRho-omega-noNu" =
+    let μ = fromJust maybeMu
+    in \[λ, ψ, ω] -> Just $ packParameters (λ, μ, ψ, [], ω, [])
   | p == "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu" =
     let μ = fromJust maybeMu
         dur = fromJust maybeDuration
