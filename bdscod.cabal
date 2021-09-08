@@ -48,13 +48,14 @@ executable mcmc
       Paths_bdscod
   hs-source-dirs:
       apps/mcmc
-  ghc-options:
+  ghc-options: -O2
 
   build-depends:
       base
     , aeson
     , bdscod
     , either
+    , epi-sim
     , mighty-metropolis >= 2.0
     , mwc-random >= 0.14
     , vector

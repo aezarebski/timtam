@@ -3,39 +3,42 @@
 
 module Main where
 
-import Data.Either.Combinators (fromRight)
-import           BDSCOD.Types            (Observation)
-import qualified Data.Aeson              as Json
-import           Data.List               (intersperse)
-import qualified Data.Vector.Unboxed     as Unboxed
-import           GHC.Generics            (Generic)
-import           GHC.Word                (Word32 (..))
-import           Numeric.MCMC.Metropolis (Chain (..), chain')
-import           System.Environment      (getArgs)
-import           System.Random.MWC       (initialize)
-import           BDSCOD.Llhd                (initLlhdState, llhdAndNB)
-import           BDSCOD.Types               (LogLikelihood (..),
-                                             MCMCConfiguration (..), MWCSeed,
-                                             NegativeBinomial (..), NumLineages,
-                                             Observation (..),
-                                             ObservedEvent (..),
-                                             PDESolution (..), Parameters (..),
-                                             packParameters, putLambda, putMu,
-                                             putNus, putOmega, putPsi, putRhos,
-                                             scheduledTimes, unpackParameters)
+import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
+import           BDSCOD.Types             (Observation)
+import           BDSCOD.Types             (LogLikelihood (..),
+                                           MCMCConfiguration (..), MWCSeed,
+                                           NegativeBinomial (..), NumLineages,
+                                           Observation (..), ObservedEvent (..),
+                                           PDESolution (..), Parameters (..),
+                                           packParameters, putLambda, putMu,
+                                           putNus, putOmega, putPsi, putRhos,
+                                           scheduledTimes, unpackParameters)
+import qualified Data.Aeson               as Json
+import           Data.Either.Combinators  (fromRight, maybeToRight)
+import           Data.List                (intersperse)
+import           Data.Maybe               (fromJust)
+import qualified Data.Vector.Unboxed      as Unboxed
+import           Epidemic.Types.Parameter (AbsoluteTime (..))
+import           GHC.Generics             (Generic)
+import           GHC.Word                 (Word32 (..))
+import           Numeric.MCMC.Metropolis  (Chain (..), chain')
+import           System.Environment       (getArgs)
+import           System.Random.MWC        (initialize)
 
 
 
 
 
-data MCMCInput = MI { mcmcObservations :: [Observation]
-                    , mcmcNumSamples   :: Int
-                    , mcmcSampleCSV    :: FilePath
-                    , mcmcStepSD       :: Double
-                    , mcmcInit         :: [Double]
-                    , mcmcSeed         :: [Word32]
+data MCMCInput = MI { mcmcObservations     :: [Observation]
+                    , mcmcNumSamples       :: Int
+                    , mcmcSampleCSV        :: FilePath
+                    , mcmcStepSD           :: Double
+                    , mcmcInit             :: [Double]
+                    , mcmcSeed             :: [Word32]
                     , mcmcParameterisation :: String
-                    , mcmcPrior        :: String } deriving (Show, Generic)
+                    , mcmcKnownMu          :: Maybe Double
+                    , mcmcSimDuration      :: Maybe Double
+                    , mcmcPrior            :: String } deriving (Show, Generic)
 
 instance Json.FromJSON MCMCInput
 
@@ -57,8 +60,9 @@ main = do
            "\n\tnumber samples:        " ++ show mcmcNumSamples
 
          -- construct the target density and a summary function if necessary.
-         let asParam = paramConstructor mcmcParameterisation
-             llhd x = fromRight (-1e6) $ fst <$> llhdAndNB mcmcObservations (asParam x) initLlhdState
+         let asParam = paramConstructor mcmcParameterisation mcmcKnownMu mcmcSimDuration
+             llhd x = fromRight (-1e6) $ fst <$> do params <- maybeToRight mempty $ asParam x
+                                                    llhdAndNB mcmcObservations params initLlhdState
              -- TODO Implement the prior functionality
              prior :: [Double] -> Double
              prior = undefined
@@ -74,14 +78,20 @@ main = do
          putStrLn msg
 
 -- | A function for constructing parameters that can be used by the likelihood.
-paramConstructor :: String -> ([Double] -> Parameters)
-paramConstructor p
+paramConstructor :: String -> Maybe Double -> Maybe Double -> ([Double] -> Maybe Parameters)
+paramConstructor p maybeMu maybeDuration
   | p == "identity-mu1-lambda-psi-noRho-omega-noNu" =
-    \[λ, ψ, ω] -> packParameters (λ, 1.0, ψ, [], ω, [])
+    \[λ, ψ, ω] -> Just $ packParameters (λ, 0.026, ψ, [], ω, [])
+  | p == "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu" =
+    let μ = fromJust maybeMu
+        dur = fromJust maybeDuration
+    in \[λ, ψ, ρ, ω] -> if minimum [λ, ψ, ρ, ω] > 0.0
+                        then Just $ packParameters (λ, μ, ψ, [(AbsoluteTime dur, ρ)], ω, [])
+                        else Nothing
   | otherwise = error $ "do not recognise parameterisation: " ++ p
 
 -- | Write the samples to file.
 writeChainToCSV :: [Chain [Double] b] -> FilePath -> IO ()
 writeChainToCSV samples csv = writeFile csv $ samples2CSV samples ++ "\n"
   where samples2CSV = mconcat . intersperse "\n" . map sample2Row
-        sample2Row = mconcat . intersperse "," . map show . chainPosition
+        sample2Row s = mconcat . intersperse "," . map show $ (chainScore s) : (chainPosition s)

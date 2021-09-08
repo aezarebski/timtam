@@ -1,6 +1,14 @@
 library(htmltools)
 
+mcmc_diagnostics <- jsonlite::read_json("out/mcmc-diagnostics.json")
 out_html <- "index.html"
+
+foo <- lapply(mcmc_diagnostics, unlist) |> as.data.frame()
+bar <- c()
+for (ix in seq.int(nrow(foo))) {
+  bar <- c(bar, sprintf("%s, %f, %f, %f", foo[ix,1], foo[ix,2], foo[ix,3], foo[ix, 4]))
+}
+
 
 html <-
   tags$html(
@@ -13,8 +21,14 @@ html <-
                                 style = "width: 1000px;")
                      ),
                 tags$div(
+                       tags$h3("MCMC summary"),
+                       tags$p(paste(names(foo), collapse = ", ")),
+                       tags$ul(purrr::map(bar, tags$li))
+                     ),
+                tags$div(
                        tags$h3("MCMC traceplot"),
-                       tags$img(src = "out/mcmc-traceplot.png")
+                       tags$img(src = "out/mcmc-traceplot-1.png"),
+                       tags$img(src = "out/mcmc-traceplot-2.png")
                      )
               )
        )
