@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 
-./ape-sim.R --seed 1 -p ../example-parameters.json -o out --duration 30.0
+SEED=5
+
+./ape-sim.R --seed $SEED -p ../example-parameters.json -o out --duration 40.0 --make-plots -v
 
 Rscript src/prep-mcmc-data.R
 
+stack exec -- mcmc out/simulation-data.json
 
+Rscript src/mcmc-plots.R
+
+Rscript src/make-viewer.R

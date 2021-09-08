@@ -24,8 +24,8 @@ observations_list <- purrr::map2(delays, events, observation)
 
 mcmc_input <- list(
   mcmcObservations = observations_list,
-  mcmcNumSamples = 1e3,
-  mcmcSampleCSV= "foo.csv",
+  mcmcNumSamples = 1e5,
+  mcmcSampleCSV= "out/mcmc-samples.csv",
   mcmcStepSD  = 1e-3,
   mcmcInit   = c(0.228, 0.048, 0.026),
   mcmcSeed  = c(1,2),

@@ -12,6 +12,9 @@
 #'
 #' $ ./ape-sim.R --seed 1 -p ../example-parameters.json -o out --duration 30.0
 #'
+#' or if you want to generate a figure showing the simulated data append the
+#' --make-plots flag.
+#'
 #' Help
 #' ----
 #'
