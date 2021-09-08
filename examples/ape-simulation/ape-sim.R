@@ -7,6 +7,9 @@
 #' interactive mode this will substitute some parameters otherwise it expected
 #' to get everything from the command line.
 #'
+#' By default this avoids a population sample at the end of the simulation but
+#' there is a command line argument if you want to include this.
+#'
 #' Usage
 #' -----
 #'
@@ -70,15 +73,28 @@ parser$add_argument(
          default = FALSE,
          help = "Generate plots"
        )
+parser$add_argument(
+         "-r",
+         "--rho",
+         type = "double",
+         default = -1.0,
+         help = "Scheduled sample probability")
 
-
-read_parameters <- function(parameter_filepath, sim_duration, is_verbose) {
+read_parameters <- function(parameter_filepath, sim_duration, maybe_rho, is_verbose) {
   if (!file.exists(parameter_filepath)) {
     stop("Cannot find parameter file: ", parameter_filepath)
   } else if (sim_duration <= 0.0) {
     stop("Need a positive duration")
+  } else if (!(is.null(maybe_rho) | is.numeric(maybe_rho))) {
+    stop("Need a maybe numeric value for maybe_rho")
   } else {
     params <- jsonlite::read_json(parameter_filepath)
+    expected_names <-
+      c("birthRate",
+        "deathRate",
+        "samplingRate",
+        "occurrenceRate")
+    stopifnot(setequal(names(params), expected_names))
     ## it will be useful to have some other ways to talk about the parameters so
     ## we compute a couple of other views.
     params$net_rem_rate <-
@@ -90,7 +106,18 @@ read_parameters <- function(parameter_filepath, sim_duration, is_verbose) {
     params$prob_sampled_given_observed <-
       params$sampling_prob / params$prob_observed
     params$duration <- sim_duration
-    return(params)
+    ## we need to handle the possibility that there is a valid rho.
+    if (is.null(maybe_rho)) {
+      params$rho <- maybe_rho
+      return(params)
+    } else {
+      if (0 < maybe_rho && maybe_rho < 1) {
+        params$rho <- maybe_rho
+        return(params)
+      } else {
+        stop("invalid rho argument: ", maybe_rho)
+      }
+    }
   }
 }
 
@@ -119,9 +146,27 @@ run_simulation <- function(params, is_verbose) {
   tip_times <- head(ape::node.depth.edgelength(phy), num_tips)
   ## TODO we can find the tips that are still extant in the simulation but it is
   ## unclear if we can use strict equality here of if we need to account for
-  ## potential error in the branch lengths.
+  ## potential error in the branch lengths. It seems like this is safe...
   extant_mask <- tip_times + tmrca == params$duration
   extant_labels <- tip_labels[extant_mask]
+  num_extant <- length(extant_labels)
+  ## We need to do a rho sample at the end of the duration if one has been
+  ## requested, otherwise we need to propagate the null values.
+  if (is.null(params$rho)) {
+    num_rho_sampled <- NULL
+    rho_sampled_labels <- NULL
+  } else {
+    num_rho_sampled <- rbinom(
+      n = 1,
+      size = num_extant,
+      prob = params$rho
+    )
+    rho_sampled_labels <- sample(
+      x = extant_labels,
+      size = num_rho_sampled,
+      replace = FALSE
+    )
+  }
   extinct_labels <- tip_labels[!extant_mask]
   num_extinct <- length(extinct_labels)
   ## We can select which extinctions are deaths, samples and occurrences by
@@ -159,7 +204,13 @@ run_simulation <- function(params, is_verbose) {
     tl <- tip_labels[ix]
     outcome[ix] <-
       if (is.element(tl, extant_labels)) {
-        "extant"
+        if (is.null(rho_sampled_labels)) {
+          "extant"
+        } else if (is.element(tl, rho_sampled_labels)) {
+          "rho"
+        } else {
+          "extant"
+        }
       } else if (is.element(tl, unobserved_labels)) {
         "death"
       } else if  (is.element(tl, sampling_labels)) {
@@ -172,13 +223,16 @@ run_simulation <- function(params, is_verbose) {
   }
   ## We then drop the lineages that did not result in a sampled lineage to get
   ## the reconstructed tree.
-  rt <- ape::keep.tip(phy, sampling_labels)
+  rt_tip_labels <- c(sampling_labels, rho_sampled_labels)
+  num_rt_tips <- length(rt_tip_labels)
+  rt <- ape::keep.tip(phy, rt_tip_labels)
   rt_tip_and_node_depths <- ape::node.depth.edgelength(rt)
-  rt_tip_depths <- head(rt_tip_and_node_depths, num_sampled)
-  rt_node_depths <- tail(rt_tip_and_node_depths, -num_sampled)
+  rt_tip_depths <- head(rt_tip_and_node_depths, num_rt_tips)
+  rt_node_depths <- tail(rt_tip_and_node_depths, -num_rt_tips)
   ## The depths of the nodes and tips is relative to the TMRCA so we need to
   ## adjust for this when computing the extact times that they occurred at.
-  true_first_sample_time <- min(tip_times[outcome == "sampling"])
+  true_first_sample_time <-
+    min(tip_times[outcome == "sampling" | outcome == "rho"])
   depth_first_in_rt <- min(rt_tip_depths)
   rt_offset <- true_first_sample_time - depth_first_in_rt
   ## Finally we can put all of this information into a single dataframe.
@@ -186,12 +240,16 @@ run_simulation <- function(params, is_verbose) {
     time = c(-tmrca,
              tip_times[outcome == "occurrence"],
              tip_times[outcome == "sampling"],
+             tip_times[outcome == "rho"],
              rt_node_depths + rt_offset
              ),
     event = c("origin",
               rep(
-                c("occurrence", "sampling", "birth"),
-                times = c(num_occurrences, num_sampled, num_sampled - 1)
+                c("occurrence", "sampling", "rho", "birth"),
+                times = c(num_occurrences,
+                          num_sampled,
+                          ifelse(is.null(num_rho_sampled), 0, num_rho_sampled),
+                          ifelse(is.null(num_rho_sampled), num_sampled - 1, num_rt_tips - 1))
               )
               )
   )
@@ -201,7 +259,7 @@ run_simulation <- function(params, is_verbose) {
   ## We can do a quick check of the results to make sure that some invariants
   ## have been preserved. Note that one of the checks here will fail a small
   ## percent of the time because it is not exact.
-  dur_1 <- max(tip_times[outcome == "sampling"]) + tmrca
+  dur_1 <- max(tip_times[outcome == "sampling" | outcome == "rho"]) + tmrca
   dur_2 <- max(rt_tip_depths) + rt_offset + tmrca
   ## these should be equal up to numerical error.
   stopifnot(abs(dur_1 - dur_2) < 1e-10 * params$duration)
@@ -213,7 +271,9 @@ run_simulation <- function(params, is_verbose) {
     outcome = outcome,
     tip_ix = tip_ix,
     num_extinct = num_extinct,
+    num_extant = num_extant,
     num_sampled = num_sampled,
+    num_rho_sampled = num_rho_sampled,
     num_observed = num_observed,
     num_occurrences = num_occurrences))
 }
@@ -255,6 +315,23 @@ write_plot <- function(simulation_results, parameters, output_directory, is_verb
                           prob = parameters$occurrence_prob))
   )
 
+  if (!is.null(parameters$rho)) {
+    rho_row <- data.frame(
+      outcome = "rho",
+      empirical = simulation_results$num_rho_sampled,
+      theory = qbinom(p = 0.5,
+                      size = simulation_results$num_extant,
+                      prob = parameters$rho),
+      theory_min = qbinom(p = 0.025,
+                          size = simulation_results$num_extant,
+                          prob = parameters$rho),
+      theory_max = qbinom(p = 0.975,
+                          size = simulation_results$num_extant,
+                          prob = parameters$rho)
+    )
+    hist_plt_df <- rbind(hist_plt_df, rho_row)
+  }
+
   plt5 <- ggplot(hist_plt_df) +
     geom_col(mapping = aes(x = outcome, y = empirical)) +
     geom_point(mapping = aes(x = outcome, y = theory)) +
@@ -262,7 +339,7 @@ write_plot <- function(simulation_results, parameters, output_directory, is_verb
     labs(y = "Count", x = NULL) +
     theme_classic()
 
-  is_observed <- is.element(simulation_results$outcome, c("sampling", "occurrence"))
+  is_observed <- is.element(simulation_results$outcome, c("sampling", "occurrence", "rho"))
 
   tip_annotations <- tibble(
     node = simulation_results$tip_ix,
@@ -272,7 +349,7 @@ write_plot <- function(simulation_results, parameters, output_directory, is_verb
 
   ## TODO does this come from tidytree???
   tr <- treedata(phylo = simulation_results$phylo, data = tip_annotations)
-  
+
   plt4 <- ggplot(tr, mapping = aes(x, y)) +
     geom_tippoint(mapping = aes(colour = outcome, shape = is_observed),
                   size = 3) +
@@ -301,12 +378,30 @@ write_plot <- function(simulation_results, parameters, output_directory, is_verb
 
 main <- function(args) {
   if (args$verbose) {
-    cat("Reading parameters from", args$parameters, "\n")
+    cat("reading parameters from", args$parameters, "\n")
   }
 
   set.seed(args$seed)
 
-  params <- read_parameters(args$parameters, args$duration, args$verbose)
+  ## Awkward because you cannot assign NULL via ifelse.
+  if (args$rho == -1.0) {
+    maybe_rho <-  NULL
+  } else {
+    maybe_rho <-  args$rho
+  }
+
+  if (args$verbose) {
+    if (is.null(maybe_rho)) {
+      cat("without rho sampling at the end of the simulation\n")
+    } else {
+      cat("with rho sampling at the end of the simulation\n")
+    }
+  }
+  params <- read_parameters(
+    args$parameters,
+    args$duration,
+    maybe_rho,
+    args$verbose)
 
   sim_result <- run_simulation(params, args$verbose)
 
@@ -342,7 +437,8 @@ if (!interactive()) {
     parameters = "../example-parameters.json",
     duration = 30.0,
     output_directory = "out",
-    make_plots = TRUE
+    make_plots = TRUE,
+    rho = 0.1
   )
   main(args)
 }
