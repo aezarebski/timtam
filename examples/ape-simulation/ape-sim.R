@@ -225,6 +225,9 @@ run_simulation <- function(params, is_verbose) {
   ## the reconstructed tree.
   rt_tip_labels <- c(sampling_labels, rho_sampled_labels)
   num_rt_tips <- length(rt_tip_labels)
+  if (num_rt_tips < 2) {
+    stop(paste0(c("\n\n", rep("-", 60), "\n\n\tSIMULATION HAS LESS THAN TWO SEQUENCED SAMPLES!\n\n", rep("-", 60), "\n"), collapse=""))
+  }
   rt <- ape::keep.tip(phy, rt_tip_labels)
   rt_tip_and_node_depths <- ape::node.depth.edgelength(rt)
   rt_tip_depths <- head(rt_tip_and_node_depths, num_rt_tips)
