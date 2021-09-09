@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 SEED=2
+DURATION=25.0
 PARAM_JSON=../example-parameters.json
 
-./ape-sim.R --seed $SEED -p $PARAM_JSON -o out --duration 25.0 --make-plots -v
+./ape-sim.R --seed $SEED -p $PARAM_JSON -o out --duration $DURATION --make-plots -v
 
 Rscript src/prep-mcmc-data.R
 

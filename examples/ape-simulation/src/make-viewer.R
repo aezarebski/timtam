@@ -28,8 +28,18 @@ html <-
                      ),
                 tags$div(
                        tags$h3("MCMC summary"),
-                       tags$p(paste(names(foo), collapse = ", ")),
-                       tags$ul(purrr::map(bar, tags$li))
+                       tags$div(
+                              tags$p(paste(names(foo), collapse = ", ")),
+                              tags$ul(purrr::map(bar, tags$li))
+                            ),
+                       tags$div(
+                              tags$h5("Posterior distribution of parameters"),
+                              tags$img(src = "out/posterior-marginals.png",
+                                       style = "width: 1000px;"),
+                              tags$h5("Posterior distribution of R-naught"),
+                              tags$img(src = "out/posterior-r-naught.png",
+                                       style = "width: 600px;")
+                            )
                      ),
                 tags$div(
                        tags$h3("MCMC traceplot"),
