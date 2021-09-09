@@ -27,7 +27,7 @@ library
       src
   build-depends:
                     aeson
-                  , either
+                  , either >= 5.0
                   , generic-random
                   , QuickCheck >= 2.13.2
                   , base >= 4.7 && < 5
@@ -38,10 +38,29 @@ library
                   , hspec-core >= 2.7.4
                   , math-functions
                   , statistics
-                  , vector
+                  , vector >= 0.12
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs -Wmissing-signatures -O2 -fwarn-incomplete-patterns
 
+executable mcmc
+  main-is: Main.hs
+  other-modules:
+      Paths_bdscod
+  hs-source-dirs:
+      apps/mcmc
+  ghc-options: -O2
+
+  build-depends:
+      base
+    , aeson
+    , bdscod
+    , either
+    , epi-sim
+    , mighty-metropolis >= 2.0
+    , mwc-random >= 0.14
+    , vector
+
+  default-language: Haskell2010
 
 executable simulation-study
   main-is: Main.hs
