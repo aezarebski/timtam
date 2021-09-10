@@ -7,8 +7,10 @@ sim_events <- read.csv(input_csv)
 sim_events <- sim_events[order(sim_events$time), ]
 
 if (is.element("rho", sim_events$event)) {
+  rho_enabled <- TRUE
   maybe_sim_dur <- diff(range(sim_events$time))
 } else {
+  rho_enabled <- FALSE
   maybe_sim_dur <- NULL
 }
 
@@ -45,21 +47,29 @@ if (length(rho_times) == 1) {
   observations_list <- c(observations_list, list(rho_sample))
 }
 
+if (rho_enabled) {
+  mcmc_init <- c(0.228, 0.048, 0.5, 0.026)
+  mcmc_parameterisation <- "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu"
+} else {
+  mcmc_init <- c(0.228, 0.048, 0.026)
+  mcmc_parameterisation <- "identity-muKnown-lambda-psi-noRho-omega-noNu"
+}
+
 mcmc_input <- list(
   mcmcObservations = observations_list,
   mcmcNumSamples = 1e6,
   mcmcSampleCSV= "out/mcmc-samples.csv",
   mcmcStepSD  = 1e-3,
-  ## mcmcInit   = c(0.228, 0.048, 0.5, 0.026),
-  mcmcInit   = c(0.228, 0.048, 0.026),
+  mcmcInit   = mcmc_init,
   mcmcSeed  = c(1, 2),
-  ## mcmcParameterisation = "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu",
-  mcmcParameterisation = "identity-muKnown-lambda-psi-noRho-omega-noNu",
+  mcmcParameterisation = mcmc_parameterisation,
   mcmcKnownMu = params$deathRate,
-  ## mcmcSimDuration = maybe_sim_dur,
-  mcmcPrior= "foobar"
+  mcmcPrior = "foobar"
 )
 
+if (rho_enabled) {
+  mcmc_input$mcmcSimDuration <- maybe_sim_dur
+}
 
 jsonlite::write_json(
             x = mcmc_input,
