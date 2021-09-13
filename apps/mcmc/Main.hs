@@ -3,6 +3,7 @@
 
 module Main where
 
+import Text.Printf (printf)
 import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
 import           BDSCOD.Types             (Observation)
 import           BDSCOD.Types             (LogLikelihood (..),
@@ -18,15 +19,12 @@ import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
 import           Data.Maybe               (fromJust)
 import qualified Data.Vector.Unboxed      as Unboxed
-import           Epidemic.Types.Parameter (AbsoluteTime (..))
+import           Epidemic.Types.Parameter (AbsoluteTime (..), TimeDelta(..))
 import           GHC.Generics             (Generic)
 import           GHC.Word                 (Word32 (..))
 import           Numeric.MCMC.Metropolis  (Chain (..), chain')
 import           System.Environment       (getArgs)
 import           System.Random.MWC        (initialize)
-
-
-
 
 
 data MCMCInput = MI { mcmcObservations     :: [Observation]
@@ -44,20 +42,22 @@ instance Json.FromJSON MCMCInput
 
 main :: IO ()
 main = do
+  putStrLn "\nrunning mcmc application"
   configFile <- head <$> getArgs
-  eitherMI <- Json.eitherDecodeFileStrict configFile :: IO (Either String MCMCInput)
+  eitherMI <- readConfigAndValidate configFile
   case eitherMI of
     Right MI {..} ->
-      do putStrLn $ "read MCMC configuration from " ++ configFile
-
-         -- report some of the details of the mcmc so you can tell if the
+      do -- report some of the details of the mcmc so you can tell if the
          -- configuration has been read correctly
          putStrLn $
+           replicate 60 '-' ++
+           "\n\tconfiguration file:    " ++ configFile ++
            "\n\tprior:                  WARNING NOT IMPLEMENTED" ++
            "\n\tparameterisation name: " ++ mcmcParameterisation ++
            "\n\toutput file:           " ++ mcmcSampleCSV ++
            "\n\tnumber observations:   " ++ show (length mcmcObservations) ++
-           "\n\tnumber samples:        " ++ show mcmcNumSamples
+           "\n\tnumber samples:        " ++ show mcmcNumSamples ++
+           replicate 60 '-'
 
          -- construct the target density and a summary function if necessary.
          let asParam = paramConstructor mcmcParameterisation mcmcKnownMu mcmcSimDuration
@@ -74,8 +74,43 @@ main = do
          ch <- chain' mcmcNumSamples mcmcStepSD mcmcInit target tunable gen
          writeChainToCSV ch mcmcSampleCSV
     Left msg ->
-      do putStrLn $ "failed to read MCMC configuration from " ++ configFile
+      do putStrLn $ "failed to read valid MCMC configuration from " ++ configFile
          putStrLn msg
+
+-- | The configuration for the MCMC or an error message explaining why it is
+-- invalid if this cannot be done.
+readConfigAndValidate :: FilePath -> IO (Either String MCMCInput)
+readConfigAndValidate configFile =
+  do
+    eMI <- Json.eitherDecodeFileStrict configFile
+    return $ eMI >>= eValidMI
+    where
+      eValidMI mi@MI {..} =
+        let
+          timeDeltas = fst <$> mcmcObservations
+
+          deltasSum = foldl (\a (TimeDelta b) -> a + b) 0 timeDeltas
+          deltasSumToDuration =
+            case mcmcSimDuration of
+              Nothing -> True
+              Just dur -> dur == deltasSum
+
+          -- Construct an association list so we can provide a clear error
+          -- message if one of the checks fails.
+          namedTests =
+            [ ( "At least one observation", not $ null mcmcObservations)
+            , ( "Positive number of posterior samples", mcmcNumSamples > 0)
+            , ( "Step standard deviation is positive", mcmcStepSD > 0)
+            , ( "Time deltas are all positive"
+              , minimum timeDeltas > TimeDelta 0.0)
+            , ( "Time deltas sum to duration" <>
+                (printf "\n\tduration: %f\n\tdeltas sum: %f" (fromJust mcmcSimDuration) deltasSum)
+              , deltasSumToDuration)]
+        in if and $ snd <$> namedTests
+           then Right mi
+           else Left $
+                "Validation failed on test: " <>
+                (fst . head $ dropWhile snd namedTests)
 
 -- | A function for constructing parameters that can be used by the likelihood.
 paramConstructor :: String -> Maybe Double -> Maybe Double -> ([Double] -> Maybe Parameters)
