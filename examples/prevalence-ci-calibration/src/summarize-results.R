@@ -608,7 +608,12 @@ main <- function(args) {
     )
 
     ## Create the visualisation data JSON file.
-    write_json(vj(successful_sim_seeds), vis_data_json, auto_unbox = TRUE, pretty = TRUE)
+    write_json(
+      vj(successful_sim_seeds),
+      vis_data_json,
+      auto_unbox = TRUE,
+      digits = 16,
+      pretty = TRUE)
 
     for (sim_seed in successful_sim_seeds) {
       run_post_processing(sim_seed)

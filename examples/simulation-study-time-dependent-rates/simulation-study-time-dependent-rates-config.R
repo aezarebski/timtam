@@ -24,4 +24,4 @@ config <- list(simulationParameters = list(list(c(0.0,birth_rate_1_true),c(birth
                                        map(birth_rate_2_vals, ~ list(list(c(0.0,birth_rate_1_true),c(birth_rate_change_time,.x),c(1e10,1.0)),death_rate,sampling_rate))),
                inferenceLlhdFile = "fake-bar.csv")
 
-write_json(x = config, path = OUTPUT_FILE, auto_unbox = TRUE)
+write_json(x = config, path = OUTPUT_FILE, auto_unbox = TRUE, digits = 16)
