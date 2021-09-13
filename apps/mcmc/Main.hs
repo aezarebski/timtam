@@ -40,6 +40,7 @@ data MCMCInput = MI { mcmcObservations     :: [Observation]
 
 instance Json.FromJSON MCMCInput
 
+
 main :: IO ()
 main = do
   putStrLn "\nrunning mcmc application"
@@ -57,7 +58,7 @@ main = do
            "\n\toutput file:           " ++ mcmcSampleCSV ++
            "\n\tnumber observations:   " ++ show (length mcmcObservations) ++
            "\n\tnumber samples:        " ++ show mcmcNumSamples ++
-           replicate 60 '-'
+           "\n" ++ replicate 60 '-'
 
          -- construct the target density and a summary function if necessary.
          let asParam = paramConstructor mcmcParameterisation mcmcKnownMu mcmcSimDuration
@@ -93,7 +94,7 @@ readConfigAndValidate configFile =
           deltasSumToDuration =
             case mcmcSimDuration of
               Nothing  -> True
-              Just dur -> dur == deltasSum
+              Just dur -> abs (dur - deltasSum) < 1e-6
 
           -- Construct an association list so we can provide a clear error
           -- message if one of the checks fails.
@@ -104,7 +105,7 @@ readConfigAndValidate configFile =
             , ( "Time deltas are all positive"
               , minimum timeDeltas > TimeDelta 0.0)
             , ( "Time deltas sum to duration" <>
-                (printf "\n\tduration: %f\n\tdeltas sum: %f" (fromJust mcmcSimDuration) deltasSum)
+                printf "\n\tduration: %f\n\tdeltas sum: %f" (fromJust mcmcSimDuration) deltasSum
               , deltasSumToDuration)]
         in if and $ snd <$> namedTests
            then Right mi

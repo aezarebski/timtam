@@ -1,4 +1,7 @@
 
+cat("\nPreparing the data for the MCMC...\n")
+
+output_json <- "out/simulation-data.json"
 params <- jsonlite::read_json("../example-parameters.json")
 
 input_csv <- "out/ape-sim-event-times.csv"
@@ -57,7 +60,7 @@ if (rho_enabled) {
 
 mcmc_input <- list(
   mcmcObservations = observations_list,
-  mcmcNumSamples = 1e6,
+  mcmcNumSamples = 2e5,
   mcmcSampleCSV= "out/mcmc-samples.csv",
   mcmcStepSD  = 1e-3,
   mcmcInit   = mcmc_init,
@@ -73,7 +76,8 @@ if (rho_enabled) {
 
 jsonlite::write_json(
             x = mcmc_input,
-            path = "out/simulation-data.json",
-            auto_unbox = T
+            path = output_json,
+            auto_unbox = T,
+            digits = 16,
+            pretty = TRUE,
           )
-
