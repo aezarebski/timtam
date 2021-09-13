@@ -58,5 +58,5 @@ write_json(result,
   output_file,
   pretty = TRUE,
   auto_unbox = TRUE,
-  digits = 7
+  digits = 16
 )

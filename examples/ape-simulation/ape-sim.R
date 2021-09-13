@@ -266,7 +266,7 @@ run_simulation <- function(params, is_verbose) {
   dur_2 <- max(rt_tip_depths) + rt_offset + tmrca
   ## these should be equal up to numerical error.
   stopifnot(abs(dur_1 - dur_2) < 1e-10 * params$duration)
-  dur_3 <- max(tip_times[outcome == "extant"]) + tmrca
+  dur_3 <- max(tip_times[outcome == "extant" | outcome == "rho"]) + tmrca
   stopifnot(abs(dur_3 - params$duration) < time_eps)
   return(list(
     event_times_df = event_times_df,
@@ -436,12 +436,12 @@ if (!interactive()) {
 } else {
   args <- list(
     verbose = TRUE,
-    seed = 1,
+    seed = 6,
     parameters = "../example-parameters.json",
-    duration = 30.0,
+    duration = 25.0,
     output_directory = "out",
     make_plots = TRUE,
-    rho = 0.1
+    rho = 0.6
   )
   main(args)
 }

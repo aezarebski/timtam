@@ -59,7 +59,8 @@ diagnostics <- list(
 jsonlite::write_json(
             x = diagnostics,
             path = mcmc_diagnostics_json,
-            auto_unbox = T
+            auto_unbox = T,
+            digits = 16
           )
 
 
