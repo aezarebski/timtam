@@ -1,106 +1,82 @@
-> print("================================================================================\n")
 [1] "================================================================================\n"
-> cat("Linear model comparing LLHD values\n")
 Linear model comparing LLHD values
-> cat("================================================================================\n")
 ================================================================================
-> summary(lm(
-+   formula = popSimLlhd ~ bdscodLlhd,
-+   data = plot_df
-+ ))
 
 Call:
 lm(formula = popSimLlhd ~ bdscodLlhd, data = plot_df)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--10.8305  -3.6092   0.8434   4.2090   5.8300 
+-2.64526 -0.59164  0.01537  0.36382  3.01151 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -5.87835    1.29902  -4.525 0.000109 ***
-bdscodLlhd   1.00236    0.03503  28.615  < 2e-16 ***
+(Intercept) 1.162253   0.555673   2.092   0.0472 *  
+bdscodLlhd  1.024148   0.001268 807.701   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 5.054 on 27 degrees of freedom
-Multiple R-squared:  0.9681,	Adjusted R-squared:  0.9669 
-F-statistic: 818.8 on 1 and 27 DF,  p-value: < 2.2e-16
+Residual standard error: 1.217 on 24 degrees of freedom
+Multiple R-squared:      1,	Adjusted R-squared:      1 
+F-statistic: 6.524e+05 on 1 and 24 DF,  p-value: < 2.2e-16
 
-> sink()
-> print("================================================================================\n")
 [1] "================================================================================\n"
-> cat("Comparing LLHD values\n")
 Comparing LLHD values
-> cat("================================================================================\n")
 ================================================================================
-> summary(lm(
-+   formula = difference ~ size,
-+   data = plot_df_2
-+ ))
 
 Call:
 lm(formula = difference ~ size, data = plot_df_2)
 
 Residuals:
     Min      1Q  Median      3Q     Max 
--5.2764 -2.3228  0.5279  1.2542  6.1547 
+-3.5703 -0.6208 -0.0030  0.5523  3.6285 
 
 Coefficients:
              Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -1.606699   1.139897  -1.410     0.17    
-size         0.048231   0.006435   7.496 4.61e-08 ***
+(Intercept) -0.565538   0.658940  -0.858    0.399    
+size         0.059229   0.003898  15.194 8.21e-14 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 2.88 on 27 degrees of freedom
-Multiple R-squared:  0.6754,	Adjusted R-squared:  0.6634 
-F-statistic: 56.19 on 1 and 27 DF,  p-value: 4.606e-08
+Residual standard error: 1.499 on 24 degrees of freedom
+Multiple R-squared:  0.9058,	Adjusted R-squared:  0.9019 
+F-statistic: 230.9 on 1 and 24 DF,  p-value: 8.206e-14
 
-> summary(lm(
-+   formula = difference ~ mean_val,
-+   data = plot_df_2
-+ ))
 
 Call:
 lm(formula = difference ~ mean_val, data = plot_df_2)
 
 Residuals:
-   Min     1Q Median     3Q    Max 
--5.729 -4.290 -1.078  3.372 10.284 
+     Min       1Q   Median       3Q      Max 
+-2.97825 -0.35890 -0.01499  0.59000  2.61306 
 
 Coefficients:
-            Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  5.40307    1.36190   3.967 0.000483 ***
-mean_val    -0.01873    0.03466  -0.540 0.593292    
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -1.155830   0.548390  -2.108   0.0457 *  
+mean_val    -0.023879   0.001238 -19.290 4.06e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 5.028 on 27 degrees of freedom
-Multiple R-squared:  0.0107,	Adjusted R-squared:  -0.02594 
-F-statistic: 0.2921 on 1 and 27 DF,  p-value: 0.5933
+Residual standard error: 1.203 on 24 degrees of freedom
+Multiple R-squared:  0.9394,	Adjusted R-squared:  0.9369 
+F-statistic: 372.1 on 1 and 24 DF,  p-value: 4.061e-16
 
-> summary(lm(
-+   formula = mean_val ~ size,
-+   data = plot_df_2
-+ ))
 
 Call:
 lm(formula = mean_val ~ size, data = plot_df_2)
 
 Residuals:
     Min      1Q  Median      3Q     Max 
--44.942 -18.531   2.041  16.676  54.604 
+-42.647  -8.167   2.365   9.183  27.310 
 
 Coefficients:
-             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -40.02470   10.76598  -3.718 0.000929 ***
-size          0.07298    0.06077   1.201 0.240197    
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  -19.098      7.100   -2.69   0.0128 *  
+size          -2.518      0.042  -59.94   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 27.2 on 27 degrees of freedom
-Multiple R-squared:  0.05071,	Adjusted R-squared:  0.01555 
-F-statistic: 1.442 on 1 and 27 DF,  p-value: 0.2402
+Residual standard error: 16.16 on 24 degrees of freedom
+Multiple R-squared:  0.9934,	Adjusted R-squared:  0.9931 
+F-statistic:  3592 on 1 and 24 DF,  p-value: < 2.2e-16
 
-> sink()
