@@ -3,7 +3,6 @@
 
 module Main where
 
-import Text.Printf (printf)
 import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
 import           BDSCOD.Types             (Observation)
 import           BDSCOD.Types             (LogLikelihood (..),
@@ -19,12 +18,13 @@ import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
 import           Data.Maybe               (fromJust)
 import qualified Data.Vector.Unboxed      as Unboxed
-import           Epidemic.Types.Parameter (AbsoluteTime (..), TimeDelta(..))
+import           Epidemic.Types.Parameter (AbsoluteTime (..), TimeDelta (..))
 import           GHC.Generics             (Generic)
 import           GHC.Word                 (Word32 (..))
 import           Numeric.MCMC.Metropolis  (Chain (..), chain')
 import           System.Environment       (getArgs)
 import           System.Random.MWC        (initialize)
+import           Text.Printf              (printf)
 
 
 data MCMCInput = MI { mcmcObservations     :: [Observation]
@@ -92,7 +92,7 @@ readConfigAndValidate configFile =
           deltasSum = foldl (\a (TimeDelta b) -> a + b) 0 timeDeltas
           deltasSumToDuration =
             case mcmcSimDuration of
-              Nothing -> True
+              Nothing  -> True
               Just dur -> dur == deltasSum
 
           -- Construct an association list so we can provide a clear error
