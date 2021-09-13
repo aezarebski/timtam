@@ -85,13 +85,13 @@ llhd_comparison <- ggplot(
   ) +
   scale_x_continuous(
     name = "TimTam log-likelihood",
-    breaks = plot_axis_breaks
+    ## breaks = plot_axis_breaks
   ) +
   scale_y_continuous(
     name = "Numeric ODE log-likelihood", # Marc has asked that his name not be
     # used to describe the method so this
     # has been used instead
-    breaks = plot_axis_breaks
+    ## breaks = plot_axis_breaks
   ) +
   coord_fixed() +
   theme_classic() +

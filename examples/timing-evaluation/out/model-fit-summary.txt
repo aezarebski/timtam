@@ -1,93 +1,76 @@
-> cat("================================================================================\n")
 ================================================================================
-> cat("BDSCOD model fit\n")
 BDSCOD model fit
-> cat("================================================================================\n")
 ================================================================================
-> summary(bdscod_model)
 
 Call:
 lm(formula = ln_time ~ ln_size, data = .)
 
 Residuals:
       Min        1Q    Median        3Q       Max 
--0.013935 -0.003831 -0.001185  0.002299  0.032391 
+-0.013833 -0.008478 -0.005042  0.005953  0.032549 
 
 Coefficients:
               Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -13.392742   0.009592 -1396.3   <2e-16 ***
-ln_size       1.013906   0.001957   518.1   <2e-16 ***
+(Intercept) -13.275854   0.018272  -726.6   <2e-16 ***
+ln_size       1.017561   0.003736   272.4   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.007584 on 27 degrees of freedom
-Multiple R-squared:  0.9999,	Adjusted R-squared:  0.9999 
-F-statistic: 2.685e+05 on 1 and 27 DF,  p-value: < 2.2e-16
+Residual standard error: 0.01224 on 24 degrees of freedom
+Multiple R-squared:  0.9997,	Adjusted R-squared:  0.9997 
+F-statistic: 7.419e+04 on 1 and 24 DF,  p-value: < 2.2e-16
 
-> cat("================================================================================\n")
 ================================================================================
-> cat("BDSCOD *ROBUST* model fit\n")
 BDSCOD *ROBUST* model fit
-> cat("================================================================================\n")
 ================================================================================
-> summary(bdscod_robust_model)
 
 Call: rlm(formula = ln_time ~ ln_size, data = .)
 Residuals:
-       Min         1Q     Median         3Q        Max 
--0.0131937 -0.0032951 -0.0005336  0.0030259  0.0330951 
+      Min        1Q    Median        3Q       Max 
+-0.012809 -0.006884 -0.003473  0.007722  0.034241 
 
 Coefficients:
-            Value      Std. Error t value   
-(Intercept)   -13.3930     0.0051 -2601.2000
-ln_size         1.0138     0.0011   965.1532
+            Value     Std. Error t value  
+(Intercept)  -13.2743    0.0167  -794.4699
+ln_size        1.0170    0.0034   297.7031
 
-Residual standard error: 0.004886 on 27 degrees of freedom
-> cat("\n================================================================================\n")
+Residual standard error: 0.01115 on 24 degrees of freedom
 
 ================================================================================
-> cat("Manceau et al (2020) model fit\n")
 Manceau et al (2020) model fit
-> cat("================================================================================\n")
 ================================================================================
-> summary(popsize_model)
 
 Call:
 lm(formula = ln_time ~ ln_size, data = .)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--0.36717 -0.18866 -0.06167  0.19201  0.52671 
+-0.51832 -0.19087 -0.05011  0.16339  0.58236 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -9.29031    0.30460  -30.50   <2e-16 ***
-ln_size      2.20576    0.06214   35.49   <2e-16 ***
+(Intercept)  -9.3042     0.4299  -21.64   <2e-16 ***
+ln_size       2.0544     0.0879   23.37   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.2408 on 27 degrees of freedom
-Multiple R-squared:  0.979,	Adjusted R-squared:  0.9782 
-F-statistic:  1260 on 1 and 27 DF,  p-value: < 2.2e-16
+Residual standard error: 0.2881 on 24 degrees of freedom
+Multiple R-squared:  0.9579,	Adjusted R-squared:  0.9562 
+F-statistic: 546.2 on 1 and 24 DF,  p-value: < 2.2e-16
 
-> cat("\n================================================================================\n")
 
 ================================================================================
-> cat("Manceau et al (2020) *ROBUST* model fit\n")
 Manceau et al (2020) *ROBUST* model fit
-> cat("================================================================================\n")
 ================================================================================
-> summary(popsize_robust_model)
 
 Call: rlm(formula = ln_time ~ ln_size, data = .)
 Residuals:
      Min       1Q   Median       3Q      Max 
--0.35911 -0.17615 -0.05934  0.20147  0.57894 
+-0.49742 -0.17414 -0.02993  0.17754  0.61448 
 
 Coefficients:
             Value    Std. Error t value 
-(Intercept)  -9.4116   0.3020   -31.1616
-ln_size       2.2288   0.0616    36.1716
+(Intercept)  -9.3635   0.4376   -21.3954
+ln_size       2.0626   0.0895    23.0524
 
-Residual standard error: 0.2827 on 27 degrees of freedom
-> sink()
+Residual standard error: 0.2697 on 24 degrees of freedom
