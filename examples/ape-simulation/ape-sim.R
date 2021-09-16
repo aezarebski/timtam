@@ -121,6 +121,24 @@ read_parameters <- function(parameter_filepath, sim_duration, maybe_rho, is_verb
   }
 }
 
+run_conditioned_simulation <- function(params, is_verbose) {
+  max_iterations <- 100
+  has_solution <- FALSE
+  curr_iter <- 0
+  while ((!has_solution) & (curr_iter < max_iterations)) {
+    result <- tryCatch(
+      run_simulation(params, is_verbose),
+      error = function(c) "run_simulation returned a bad simulation..."
+    )
+    if (class(result) != "character") {
+      has_solution <- TRUE
+    } else {
+      cat("\trepeating simulation...\n")
+    }
+  }
+  return(result)
+}
+
 run_simulation <- function(params, is_verbose) {
   time_eps <- 1e-6
   if (is_verbose) {
@@ -406,7 +424,10 @@ main <- function(args) {
     maybe_rho,
     args$verbose)
 
-  sim_result <- run_simulation(params, args$verbose)
+  ## the deefault simulator can produce simulations where the tree is not valid
+  ## (because it only has a single tip) so we use the conditioned simulator to
+  ## repeat the simulation if this happens.
+  sim_result <- run_conditioned_simulation(params, args$verbose)
 
   if (file.access(args$output_directory, mode = 2) != 0) {
     stop("Cannot write to output directory: ", args$output_directory)
