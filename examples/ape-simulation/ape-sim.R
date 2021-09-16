@@ -31,7 +31,6 @@ suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggtree))
 suppressPackageStartupMessages(library(cowplot))
-suppressPackageStartupMessages(library(treeio))
 suppressPackageStartupMessages(library(tidytree))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(ape))
@@ -373,7 +372,7 @@ write_plot <- function(simulation_results, parameters, output_directory, is_verb
   )
 
   ## TODO does this come from tidytree???
-  tr <- treedata(phylo = simulation_results$phylo, data = tip_annotations)
+  tr <- tidytree::treedata(phylo = simulation_results$phylo, data = tip_annotations)
 
   plt4 <- ggplot(tr, mapping = aes(x, y)) +
     geom_tippoint(mapping = aes(colour = outcome, shape = is_observed),
