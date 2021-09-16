@@ -259,7 +259,8 @@ run_simulation <- function(params, is_verbose) {
     min(tip_times[outcome == "sampling" | outcome == "rho"])
   depth_first_in_rt <- min(rt_tip_depths)
   rt_offset <- true_first_sample_time - depth_first_in_rt
-  ## Finally we can put all of this information into a single dataframe.
+  ## we can put all of this information into a single dataframe which is more
+  ## convenient for subsequent usage.
   event_times_df <- data.frame(
     time = c(-tmrca,
              tip_times[outcome == "occurrence"],
@@ -277,6 +278,14 @@ run_simulation <- function(params, is_verbose) {
               )
               )
   )
+  ## Compute the prevalence of infection at the end of the simulation. If there
+  ## is no rho sampling this is just the number of extant lineages otherwise we
+  ## need to subtract the number that were rho sampled from this.
+  if (is.null(params$rho)) {
+    final_prevalence <- num_extant
+  } else {
+    final_prevalence <- num_extant - num_rho_sampled
+  }
   if (is_verbose) {
     cat("checking output from run_simulation...\n")
   }
@@ -291,6 +300,7 @@ run_simulation <- function(params, is_verbose) {
   stopifnot(abs(dur_3 - params$duration) < time_eps)
   return(list(
     event_times_df = event_times_df,
+    final_prevalence = final_prevalence,
     phylo = phy,
     outcome = outcome,
     tip_ix = tip_ix,
@@ -302,41 +312,48 @@ run_simulation <- function(params, is_verbose) {
     num_occurrences = num_occurrences))
 }
 
-write_plot <- function(simulation_results, parameters, output_directory, is_verbose) {
+write_plot <- function(simulation_results,
+                       parameters,
+                       output_directory,
+                       is_verbose) {
   hist_plt_df <- data.frame(
     outcome = c("death",
                 "sampling",
                 "occurrence"),
-    empirical = c(simulation_results$num_extinct - simulation_results$num_observed,
-                  simulation_results$num_sampled,
-                  simulation_results$num_occurrences),
-    theory = c(qbinom(p = 0.5,
-                      size = simulation_results$num_extinct,
-                      prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
-               qbinom(p = 0.5,
-                      size = simulation_results$num_extinct,
-                      prob = parameters$sampling_prob),
-               qbinom(p = 0.5,
-                      size = simulation_results$num_extinct,
-                      prob = parameters$occurrence_prob)),
-    theory_min = c(qbinom(p = 0.025,
-                          size = simulation_results$num_extinct,
-                          prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
-                   qbinom(p = 0.025,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$sampling_prob),
-                   qbinom(p = 0.025,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$occurrence_prob)),
-    theory_max = c(qbinom(p = 0.975,
-                          size = simulation_results$num_extinct,
-                          prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
-                   qbinom(p = 0.975,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$sampling_prob),
-                   qbinom(p = 0.975,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$occurrence_prob))
+    empirical =
+      c(simulation_results$num_extinct - simulation_results$num_observed,
+        simulation_results$num_sampled,
+        simulation_results$num_occurrences),
+    theory =
+      c(qbinom(p = 0.5,
+               size = simulation_results$num_extinct,
+               prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+        qbinom(p = 0.5,
+               size = simulation_results$num_extinct,
+               prob = parameters$sampling_prob),
+        qbinom(p = 0.5,
+               size = simulation_results$num_extinct,
+               prob = parameters$occurrence_prob)),
+    theory_min =
+      c(qbinom(p = 0.025,
+               size = simulation_results$num_extinct,
+               prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+        qbinom(p = 0.025,
+               size = simulation_results$num_extinct,
+               prob = parameters$sampling_prob),
+        qbinom(p = 0.025,
+               size = simulation_results$num_extinct,
+               prob = parameters$occurrence_prob)),
+    theory_max =
+      c(qbinom(p = 0.975,
+               size = simulation_results$num_extinct,
+               prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+        qbinom(p = 0.975,
+               size = simulation_results$num_extinct,
+               prob = parameters$sampling_prob),
+        qbinom(p = 0.975,
+               size = simulation_results$num_extinct,
+               prob = parameters$occurrence_prob))
   )
 
   if (!is.null(parameters$rho)) {
@@ -404,7 +421,6 @@ main <- function(args) {
   if (args$verbose) {
     cat("reading parameters from", args$parameters, "\n")
   }
-
   set.seed(args$seed)
 
   ## Awkward because you cannot assign NULL via ifelse.
@@ -435,11 +451,10 @@ main <- function(args) {
   if (file.access(args$output_directory, mode = 2) != 0) {
     stop("Cannot write to output directory: ", args$output_directory)
   } else {
-    output_csv <- paste(
-      args$output_directory,
-      "ape-sim-event-times.csv",
-      sep = "/"
-    )
+    output_filepath <- function(n) {
+      paste(args$output_directory, n, sep = "/")
+    }
+    output_csv <- output_filepath("ape-sim-event-times.csv")
     if (args$verbose) {
       cat("writing output to csv...\n")
     }
@@ -447,6 +462,10 @@ main <- function(args) {
                 file = output_csv,
                 sep = ",",
                 row.names = FALSE)
+    jsonlite::write_json(
+                x = sim_result$final_prevalence,
+                path = output_filepath("ape-sim-final-prevalence.json")
+              )
   }
 
   if (args$make_plots) {
