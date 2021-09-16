@@ -7,6 +7,10 @@
 #' interactive mode this will substitute some parameters otherwise it expected
 #' to get everything from the command line.
 #'
+#' If the simulation results in only a single sequenced sample then the
+#' simulation is repeated. If no satisfactory simulation is generated in 100
+#' replicates then the program will crash.
+#'
 #' By default this avoids a population sample at the end of the simulation but
 #' there is a command line argument if you want to include this.
 #'
