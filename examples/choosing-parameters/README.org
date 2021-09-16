@@ -53,4 +53,10 @@ We will use the estimates of \(R_0\) above and the assumption of a becoming
 uninfectious rate of \(1/10\) as our parameters. Since we have the total number
 of confirmed cases, we can use this to get an updated sampling rate. Dividing
 the number of sequenced samples by the total number of cases gives us our
-estimate of the sampling proportion
+estimate of the sampling proportion. It is difficult to know what proportion of
+cases will be observed so we set the occurrence and death rates to be equal.
+Solving the resulting set of equations gives the following parameter values.
+
+| Outbreak  | Birth rate | Death rate | Sampling rate | Occurrence rate |
+|-----------+------------+------------+---------------+-----------------|
+| Australia |      0.185 |      0.046 |         0.008 |           0.046 |
