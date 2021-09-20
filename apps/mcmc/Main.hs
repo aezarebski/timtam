@@ -1,5 +1,8 @@
 {-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE RecordWildCards #-}
+-- | This module provides an application for running an MCMC sampler. The input
+-- to this program must match the 'MCMCInput' type.
+--
 
 module Main where
 
