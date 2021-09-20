@@ -20,9 +20,9 @@ mcmc_csv <- "out/mcmc-samples.csv"
 trace_png <- function(n) sprintf("out/mcmc-traceplot-%d.png", n)
 mcmc_diagnostics_json <- "out/mcmc-diagnostics.json"
 
-marginal_plot_filepath <- function(fmt, extra="") sprintf("out/posterior-marginals%s.%s", extra, fmt)
-r_naught_plot_filepath <- function(fmt, extra="") sprintf("out/posterior-r-naught%s.%s", extra, fmt)
-nb_plot_filepath <- function(fmt, extra="") sprintf("out/posterior-nb-prevalence%s.%s", extra, fmt)
+marginal_plot_filepath <- function(fmt, extra = "") sprintf("out/posterior-marginals%s.%s", extra, fmt)
+r_naught_plot_filepath <- function(fmt, extra = "") sprintf("out/posterior-r-naught%s.%s", extra, fmt)
+nb_plot_filepath <- function(fmt, extra = "") sprintf("out/posterior-nb-prevalence%s.%s", extra, fmt)
 
 post_samples_df <- read.csv(mcmc_csv, header = F)
 if (length(mcmc_input$mcmcInit) == 3) {
@@ -46,15 +46,15 @@ post_samples <- as.mcmc(post_samples_df)
 jx <- 1
 fig_n <- 1
 while (jx < ncol(post_samples)) {
-  png(filename=trace_png(fig_n), width=700, height=1500)
-  plot(post_samples[,c(jx, jx+1)])
+  png(filename = trace_png(fig_n), width = 700, height = 1500)
+  plot(post_samples[, c(jx, jx + 1)])
   dev.off()
   jx <- jx + 2
   fig_n <- fig_n + 1
 }
 if (jx == ncol(post_samples)) {
-  png(filename=trace_png(fig_n), width=700, height=1500)
-  plot(post_samples[,c(jx)])
+  png(filename = trace_png(fig_n), width = 700, height = 1500)
+  plot(post_samples[, c(jx)])
   dev.off()
 }
 
@@ -68,11 +68,11 @@ diagnostics <- list(
 )
 
 jsonlite::write_json(
-            x = diagnostics,
-            path = mcmc_diagnostics_json,
-            auto_unbox = T,
-            digits = 16
-          )
+  x = diagnostics,
+  path = mcmc_diagnostics_json,
+  auto_unbox = T,
+  digits = 16
+)
 
 
 ## ======================================================
@@ -154,11 +154,13 @@ omega_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
 
 marginals_fig <- plot_grid(birth_rate_fig, sampling_rate_fig, omega_rate_fig, ncol = 3)
 
-ggsave(filename = marginal_plot_filepath("png"),
-       plot = marginals_fig,
-       height = 10,
-       width = 2.8 * 10,
-       units = "cm")
+ggsave(
+  filename = marginal_plot_filepath("png"),
+  plot = marginals_fig,
+  height = 10,
+  width = 2.8 * 10,
+  units = "cm"
+)
 ## ggsave(filename = marginal_plot_filepath("pdf"),
 ##        plot = marginals_fig,
 ##        height = 10,
@@ -197,11 +199,13 @@ r_naught_fig <- ggplot(mapping = aes(x = x, y = y)) +
   theme()
 
 
-ggsave(filename = r_naught_plot_filepath("png"),
-       plot = r_naught_fig,
-       height = 10,
-       width = 1.3 * 10,
-       units = "cm")
+ggsave(
+  filename = r_naught_plot_filepath("png"),
+  plot = r_naught_fig,
+  height = 10,
+  width = 1.3 * 10,
+  units = "cm"
+)
 ## ggsave(filename = r_naught_plot_filepath("pdf"),
 ##        plot = r_naught_fig,
 ##        height = 10,
@@ -221,7 +225,8 @@ nb_samples <-
 nb_samples_vec <- rnbinom(
   n = nrow(nb_samples),
   size = nb_samples$nb_r,
-  prob = nb_samples$nb_q)
+  prob = nb_samples$nb_q
+)
 
 
 nb_df <- marginal_plot_summary(nb_samples_vec, "nb")
@@ -246,11 +251,13 @@ nb_fig <- ggplot(mapping = aes(x = x, y = y)) +
   theme()
 
 
-ggsave(filename = nb_plot_filepath("png"),
-       plot = nb_fig,
-       height = 10,
-       width = 1.3 * 10,
-       units = "cm")
+ggsave(
+  filename = nb_plot_filepath("png"),
+  plot = nb_fig,
+  height = 10,
+  width = 1.3 * 10,
+  units = "cm"
+)
 ## ggsave(filename = r_naught_plot_filepath("pdf"),
 ##        plot = r_naught_fig,
 ##        height = 10,
