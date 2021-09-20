@@ -1,12 +1,12 @@
-library(mcmc)
-library(coda)
-library(dplyr)
-library(ggplot2)
-library(cowplot)
-library(magrittr)
-library(reshape2)
-library(purrr)
-library(latex2exp)
+suppressPackageStartupMessages(library(mcmc))
+suppressPackageStartupMessages(library(coda))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(cowplot))
+suppressPackageStartupMessages(library(magrittr))
+suppressPackageStartupMessages(library(reshape2))
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(latex2exp))
 
 green_hex_colour <- "#7fc97f"
 purple_hex_colour <- "#beaed4"
