@@ -1,11 +1,8 @@
 #+title: Simulating data with ape
 
-There is a =run.sh= script to carry out this computation. It uses the [[https://cran.r-project.org/web/packages/ape/index.html][=ape=]]
-package in R to simulate a birth-death process and then randomly annotate the
-tips to produce a sample from the BDSCOD process. The results of this can be
-viewed by opening =index.html= in a browser.
-
-The file =ape-sim.R= provides a CLI for simulating the birth-death-sampling
-process using =ape=.
+There is a makefile to carry out this computation. It uses the [[https://cran.r-project.org/web/packages/ape/index.html][=ape=]] package in
+R to simulate a birth-death process and then randomly annotate the tips to
+produce a sample from the BDSCOD process. Run =make index.html= then open this
+file with your browser. To remove old files use =make clean=.
 
 
