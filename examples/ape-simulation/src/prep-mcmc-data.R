@@ -62,6 +62,7 @@ mcmc_input <- list(
   mcmcObservations = observations_list,
   mcmcNumSamples = 2e5,
   mcmcSampleCSV= "out/mcmc-samples.csv",
+  mcmcRecordFinalPrevalence = TRUE,
   mcmcStepSD  = 1e-3,
   mcmcInit   = mcmc_init,
   mcmcSeed  = c(1, 2),

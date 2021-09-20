@@ -7,15 +7,16 @@
 module Main where
 
 import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
-import           BDSCOD.Types             (Observation)
 import           BDSCOD.Types             (LogLikelihood (..),
                                            MCMCConfiguration (..), MWCSeed,
                                            NegativeBinomial (..), NumLineages,
-                                           Observation (..), ObservedEvent (..),
-                                           PDESolution (..), Parameters (..),
+                                           Observation, Observation (..),
+                                           ObservedEvent (..), PDESolution (..),
+                                           Parameters (..), nbMV2SP,
                                            packParameters, putLambda, putMu,
                                            putNus, putOmega, putPsi, putRhos,
                                            scheduledTimes, unpackParameters)
+import           BDSCOD.Utility           (toMaybe)
 import qualified Data.Aeson               as Json
 import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
@@ -30,16 +31,17 @@ import           System.Random.MWC        (initialize)
 import           Text.Printf              (printf)
 
 
-data MCMCInput = MI { mcmcObservations     :: [Observation]
-                    , mcmcNumSamples       :: Int
-                    , mcmcSampleCSV        :: FilePath
-                    , mcmcStepSD           :: Double
-                    , mcmcInit             :: [Double]
-                    , mcmcSeed             :: [Word32]
-                    , mcmcParameterisation :: String
-                    , mcmcKnownMu          :: Maybe Double
-                    , mcmcSimDuration      :: Maybe Double
-                    , mcmcPrior            :: String } deriving (Show, Generic)
+data MCMCInput = MI { mcmcObservations          :: [Observation]
+                    , mcmcInit                  :: [Double]
+                    , mcmcSeed                  :: [Word32]
+                    , mcmcNumSamples            :: Int
+                    , mcmcStepSD                :: Double
+                    , mcmcSampleCSV             :: FilePath
+                    , mcmcRecordFinalPrevalence :: Bool
+                    , mcmcParameterisation      :: String
+                    , mcmcKnownMu               :: Maybe Double
+                    , mcmcSimDuration           :: Maybe Double
+                    , mcmcPrior                 :: String } deriving (Show, Generic)
 
 instance Json.FromJSON MCMCInput
 
@@ -55,12 +57,13 @@ main = do
          -- configuration has been read correctly
          putStrLn $
            replicate 60 '-' ++
-           "\n\tconfiguration file:    " ++ configFile ++
-           "\n\tprior:                  WARNING NOT IMPLEMENTED" ++
-           "\n\tparameterisation name: " ++ mcmcParameterisation ++
-           "\n\toutput file:           " ++ mcmcSampleCSV ++
-           "\n\tnumber observations:   " ++ show (length mcmcObservations) ++
-           "\n\tnumber samples:        " ++ show mcmcNumSamples ++
+           "\n\tconfiguration file:       " ++ configFile ++
+           "\n\tprior:                    WARNING NOT IMPLEMENTED" ++
+           "\n\tparameterisation name:    " ++ mcmcParameterisation ++
+           "\n\toutput file:              " ++ mcmcSampleCSV ++
+           "\n\tnumber observations:      " ++ show (length mcmcObservations) ++
+           "\n\tnumber samples:           " ++ show mcmcNumSamples ++
+           "\n\trecord final prevalence:  " ++ show mcmcRecordFinalPrevalence ++
            "\n" ++ replicate 60 '-'
 
          -- construct the target density and a summary function if necessary.
@@ -71,11 +74,16 @@ main = do
              prior :: [Double] -> Double
              prior = undefined
              target x = llhd x
-             tunable = Nothing
+             tunable x =
+               fromRight undefined $ snd <$>
+               do params <- maybeToRight mempty $ asParam x
+                  llhdAndNB mcmcObservations params initLlhdState
+             maybeTunable :: Maybe ([Double] -> NegativeBinomial)
+             maybeTunable = toMaybe mcmcRecordFinalPrevalence tunable
 
          -- run the sampler and write the results to file.
          gen <- initialize $ Unboxed.fromList mcmcSeed
-         ch <- chain' mcmcNumSamples mcmcStepSD mcmcInit target tunable gen
+         ch <- chain' mcmcNumSamples mcmcStepSD mcmcInit target maybeTunable gen
          writeChainToCSV ch mcmcSampleCSV
     Left msg ->
       do putStrLn $ "failed to read valid MCMC configuration from " ++ configFile
@@ -133,7 +141,16 @@ paramConstructor p maybeMu maybeDuration
   | otherwise = error $ "do not recognise parameterisation: " ++ p
 
 -- | Write the samples to file.
-writeChainToCSV :: [Chain [Double] b] -> FilePath -> IO ()
-writeChainToCSV samples csv = writeFile csv $ samples2CSV samples ++ "\n"
-  where samples2CSV = mconcat . intersperse "\n" . map sample2Row
-        sample2Row s = mconcat . intersperse "," . map show $ (chainScore s) : (chainPosition s)
+writeChainToCSV :: [Chain [Double] NegativeBinomial] -> FilePath -> IO ()
+writeChainToCSV samples csv = Prelude.writeFile csv $ samples2CSV samples ++ "\n"
+  where
+    samples2CSV ss = mconcat . intersperse "\n" $ sample2Row <$> ss
+    sample2Row s = mconcat . intersperse "," $ show <$> sample2Doubles s
+    sample2Doubles s =
+      chainScore s : chainPosition s ++ nbAsFields (chainTunables s)
+    nbAsFields Nothing = []
+    nbAsFields (Just nb) =
+      case nbMV2SP nb of
+        Right Zero                   -> [1.0,0.0]
+        Right (NegBinomSizeProb r p) -> [r, p]
+        _                            -> [0.0 / 0.0, 0.0 / 0.0]

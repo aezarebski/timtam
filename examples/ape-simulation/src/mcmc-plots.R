@@ -13,19 +13,30 @@ purple_hex_colour <- "#beaed4"
 
 true_params <- jsonlite::read_json("../example-parameters.json")
 
+final_prevalence <- unlist(jsonlite::read_json("out/ape-sim-final-prevalence.json"))
+
 mcmc_input <- jsonlite::read_json("out/simulation-data.json")
 mcmc_csv <- "out/mcmc-samples.csv"
 trace_png <- function(n) sprintf("out/mcmc-traceplot-%d.png", n)
 mcmc_diagnostics_json <- "out/mcmc-diagnostics.json"
 
-marginal_plot_filepath <- function(fmt, extra="") sprintf("out/posterior-marginals%s.%s", extra, fmt)
-r_naught_plot_filepath <- function(fmt, extra="") sprintf("out/posterior-r-naught%s.%s", extra, fmt)
+marginal_plot_filepath <- function(fmt, extra = "") sprintf("out/posterior-marginals%s.%s", extra, fmt)
+r_naught_plot_filepath <- function(fmt, extra = "") sprintf("out/posterior-r-naught%s.%s", extra, fmt)
+nb_plot_filepath <- function(fmt, extra = "") sprintf("out/posterior-nb-prevalence%s.%s", extra, fmt)
 
 post_samples_df <- read.csv(mcmc_csv, header = F)
 if (length(mcmc_input$mcmcInit) == 3) {
-  names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate")
+  if (mcmc_input$mcmcRecordFinalPrevalence) {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate", "nb_r", "nb_p")
+  } else {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate")
+  }
 } else if (length(mcmc_input$mcmcInit) == 4) {
-  names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "rho_prob", "omega_rate")
+  if (mcmc_input$mcmcRecordFinalPrevalence) {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "rho_prob", "omega_rate", "nb_r", "nb_p")
+  } else {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "rho_prob", "omega_rate")
+  }
 } else {
   stop("")
 }
@@ -35,15 +46,15 @@ post_samples <- as.mcmc(post_samples_df)
 jx <- 1
 fig_n <- 1
 while (jx < ncol(post_samples)) {
-  png(filename=trace_png(fig_n), width=700, height=1500)
-  plot(post_samples[,c(jx, jx+1)])
+  png(filename = trace_png(fig_n), width = 700, height = 1500)
+  plot(post_samples[, c(jx, jx + 1)])
   dev.off()
   jx <- jx + 2
   fig_n <- fig_n + 1
 }
 if (jx == ncol(post_samples)) {
-  png(filename=trace_png(fig_n), width=700, height=1500)
-  plot(post_samples[,c(jx)])
+  png(filename = trace_png(fig_n), width = 700, height = 1500)
+  plot(post_samples[, c(jx)])
   dev.off()
 }
 
@@ -57,11 +68,11 @@ diagnostics <- list(
 )
 
 jsonlite::write_json(
-            x = diagnostics,
-            path = mcmc_diagnostics_json,
-            auto_unbox = T,
-            digits = 16
-          )
+  x = diagnostics,
+  path = mcmc_diagnostics_json,
+  auto_unbox = T,
+  digits = 16
+)
 
 
 ## ======================================================
@@ -143,11 +154,13 @@ omega_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
 
 marginals_fig <- plot_grid(birth_rate_fig, sampling_rate_fig, omega_rate_fig, ncol = 3)
 
-ggsave(filename = marginal_plot_filepath("png"),
-       plot = marginals_fig,
-       height = 10,
-       width = 2.8 * 10,
-       units = "cm")
+ggsave(
+  filename = marginal_plot_filepath("png"),
+  plot = marginals_fig,
+  height = 10,
+  width = 2.8 * 10,
+  units = "cm"
+)
 ## ggsave(filename = marginal_plot_filepath("pdf"),
 ##        plot = marginals_fig,
 ##        height = 10,
@@ -165,15 +178,15 @@ r_naught_samples <-
 
 true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
 
-foo <- marginal_plot_summary(r_naught_samples, "r_naught")
+r_naught_df <- marginal_plot_summary(r_naught_samples, "r_naught")
 
-foo_fig <- ggplot(mapping = aes(x = x, y = y)) +
+r_naught_fig <- ggplot(mapping = aes(x = x, y = y)) +
   geom_line(
-    data = foo$df,
+    data = r_naught_df$df,
     colour = green_hex_colour
   ) +
   geom_area(
-    data = filter(foo$df, foo$ci[1] < x, x < foo$ci[2]),
+    data = filter(r_naught_df$df, r_naught_df$ci[1] < x, x < r_naught_df$ci[2]),
     fill = green_hex_colour,
     alpha = 0.3
   ) +
@@ -186,13 +199,67 @@ foo_fig <- ggplot(mapping = aes(x = x, y = y)) +
   theme()
 
 
-ggsave(filename = r_naught_plot_filepath("png"),
-       plot = foo_fig,
-       height = 10,
-       width = 1.3 * 10,
-       units = "cm")
+ggsave(
+  filename = r_naught_plot_filepath("png"),
+  plot = r_naught_fig,
+  height = 10,
+  width = 1.3 * 10,
+  units = "cm"
+)
 ## ggsave(filename = r_naught_plot_filepath("pdf"),
-##        plot = foo_fig,
+##        plot = r_naught_fig,
+##        height = 10,
+##        width = 2.8 * 10,
+##        units = "cm")
+
+## ============================================================================
+## Make the plot of the posterior distribution of the prevalence at the end of
+## the observations
+## ============================================================================
+
+nb_samples <-
+  post_samples_df |>
+  mutate(nb_q = 1 - nb_p) |>
+  select(nb_r, nb_q)
+
+nb_samples_vec <- rnbinom(
+  n = nrow(nb_samples),
+  size = nb_samples$nb_r,
+  prob = nb_samples$nb_q
+)
+
+
+nb_df <- marginal_plot_summary(nb_samples_vec, "nb")
+
+nb_fig <- ggplot(mapping = aes(x = x, y = y)) +
+  geom_line(
+    data = nb_df$df,
+    colour = green_hex_colour
+  ) +
+  geom_area(
+    data = filter(nb_df$df, nb_df$ci[1] < x, x < nb_df$ci[2]),
+    fill = green_hex_colour,
+    alpha = 0.3
+  ) +
+  geom_vline(
+    xintercept = final_prevalence,
+    linetype = "dashed"
+  ) +
+  labs(y = "Posterior density", x = "Prevalence at present (square-root scale)") +
+  scale_x_sqrt() +
+  theme_classic() +
+  theme()
+
+
+ggsave(
+  filename = nb_plot_filepath("png"),
+  plot = nb_fig,
+  height = 10,
+  width = 1.3 * 10,
+  units = "cm"
+)
+## ggsave(filename = r_naught_plot_filepath("pdf"),
+##        plot = r_naught_fig,
 ##        height = 10,
 ##        width = 2.8 * 10,
 ##        units = "cm")

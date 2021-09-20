@@ -152,3 +152,7 @@ scanlM f z0 xs = sequence $ scanl' g (return z0) xs
   where
     g my x = my >>= \y -> f y x
 
+-- | Just the value if the precondition is satisfied.
+toMaybe :: Bool -> a -> Maybe a
+toMaybe True x = Just x
+toMaybe False _ = Nothing
