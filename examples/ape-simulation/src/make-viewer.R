@@ -1,5 +1,6 @@
 library(htmltools)
 library(base64enc)
+library(purrr)
 
 mcmc_diagnostics <- jsonlite::read_json("out/mcmc-diagnostics.json")
 out_html <- "index.html"
