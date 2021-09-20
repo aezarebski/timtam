@@ -7,6 +7,10 @@
 #' interactive mode this will substitute some parameters otherwise it expected
 #' to get everything from the command line.
 #'
+#' If the simulation results in only a single sequenced sample then the
+#' simulation is repeated. If no satisfactory simulation is generated in 100
+#' replicates then the program will crash.
+#'
 #' By default this avoids a population sample at the end of the simulation but
 #' there is a command line argument if you want to include this.
 #'
@@ -27,7 +31,6 @@ suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggtree))
 suppressPackageStartupMessages(library(cowplot))
-suppressPackageStartupMessages(library(treeio))
 suppressPackageStartupMessages(library(tidytree))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(ape))
@@ -119,6 +122,24 @@ read_parameters <- function(parameter_filepath, sim_duration, maybe_rho, is_verb
       }
     }
   }
+}
+
+run_conditioned_simulation <- function(params, is_verbose) {
+  max_iterations <- 100
+  has_solution <- FALSE
+  curr_iter <- 0
+  while ((!has_solution) & (curr_iter < max_iterations)) {
+    result <- tryCatch(
+      run_simulation(params, is_verbose),
+      error = function(c) "run_simulation returned a bad simulation..."
+    )
+    if (class(result) != "character") {
+      has_solution <- TRUE
+    } else {
+      cat("\trepeating simulation...\n")
+    }
+  }
+  return(result)
 }
 
 run_simulation <- function(params, is_verbose) {
@@ -238,7 +259,8 @@ run_simulation <- function(params, is_verbose) {
     min(tip_times[outcome == "sampling" | outcome == "rho"])
   depth_first_in_rt <- min(rt_tip_depths)
   rt_offset <- true_first_sample_time - depth_first_in_rt
-  ## Finally we can put all of this information into a single dataframe.
+  ## we can put all of this information into a single dataframe which is more
+  ## convenient for subsequent usage.
   event_times_df <- data.frame(
     time = c(-tmrca,
              tip_times[outcome == "occurrence"],
@@ -256,6 +278,14 @@ run_simulation <- function(params, is_verbose) {
               )
               )
   )
+  ## Compute the prevalence of infection at the end of the simulation. If there
+  ## is no rho sampling this is just the number of extant lineages otherwise we
+  ## need to subtract the number that were rho sampled from this.
+  if (is.null(params$rho)) {
+    final_prevalence <- num_extant
+  } else {
+    final_prevalence <- num_extant - num_rho_sampled
+  }
   if (is_verbose) {
     cat("checking output from run_simulation...\n")
   }
@@ -270,6 +300,7 @@ run_simulation <- function(params, is_verbose) {
   stopifnot(abs(dur_3 - params$duration) < time_eps)
   return(list(
     event_times_df = event_times_df,
+    final_prevalence = final_prevalence,
     phylo = phy,
     outcome = outcome,
     tip_ix = tip_ix,
@@ -281,41 +312,48 @@ run_simulation <- function(params, is_verbose) {
     num_occurrences = num_occurrences))
 }
 
-write_plot <- function(simulation_results, parameters, output_directory, is_verbose) {
+write_plot <- function(simulation_results,
+                       parameters,
+                       output_directory,
+                       is_verbose) {
   hist_plt_df <- data.frame(
     outcome = c("death",
                 "sampling",
                 "occurrence"),
-    empirical = c(simulation_results$num_extinct - simulation_results$num_observed,
-                  simulation_results$num_sampled,
-                  simulation_results$num_occurrences),
-    theory = c(qbinom(p = 0.5,
-                      size = simulation_results$num_extinct,
-                      prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
-               qbinom(p = 0.5,
-                      size = simulation_results$num_extinct,
-                      prob = parameters$sampling_prob),
-               qbinom(p = 0.5,
-                      size = simulation_results$num_extinct,
-                      prob = parameters$occurrence_prob)),
-    theory_min = c(qbinom(p = 0.025,
-                          size = simulation_results$num_extinct,
-                          prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
-                   qbinom(p = 0.025,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$sampling_prob),
-                   qbinom(p = 0.025,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$occurrence_prob)),
-    theory_max = c(qbinom(p = 0.975,
-                          size = simulation_results$num_extinct,
-                          prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
-                   qbinom(p = 0.975,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$sampling_prob),
-                   qbinom(p = 0.975,
-                          size = simulation_results$num_extinct,
-                          prob = parameters$occurrence_prob))
+    empirical =
+      c(simulation_results$num_extinct - simulation_results$num_observed,
+        simulation_results$num_sampled,
+        simulation_results$num_occurrences),
+    theory =
+      c(qbinom(p = 0.5,
+               size = simulation_results$num_extinct,
+               prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+        qbinom(p = 0.5,
+               size = simulation_results$num_extinct,
+               prob = parameters$sampling_prob),
+        qbinom(p = 0.5,
+               size = simulation_results$num_extinct,
+               prob = parameters$occurrence_prob)),
+    theory_min =
+      c(qbinom(p = 0.025,
+               size = simulation_results$num_extinct,
+               prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+        qbinom(p = 0.025,
+               size = simulation_results$num_extinct,
+               prob = parameters$sampling_prob),
+        qbinom(p = 0.025,
+               size = simulation_results$num_extinct,
+               prob = parameters$occurrence_prob)),
+    theory_max =
+      c(qbinom(p = 0.975,
+               size = simulation_results$num_extinct,
+               prob = 1 - parameters$sampling_prob - parameters$occurrence_prob),
+        qbinom(p = 0.975,
+               size = simulation_results$num_extinct,
+               prob = parameters$sampling_prob),
+        qbinom(p = 0.975,
+               size = simulation_results$num_extinct,
+               prob = parameters$occurrence_prob))
   )
 
   if (!is.null(parameters$rho)) {
@@ -351,7 +389,7 @@ write_plot <- function(simulation_results, parameters, output_directory, is_verb
   )
 
   ## TODO does this come from tidytree???
-  tr <- treedata(phylo = simulation_results$phylo, data = tip_annotations)
+  tr <- tidytree::treedata(phylo = simulation_results$phylo, data = tip_annotations)
 
   plt4 <- ggplot(tr, mapping = aes(x, y)) +
     geom_tippoint(mapping = aes(colour = outcome, shape = is_observed),
@@ -383,7 +421,6 @@ main <- function(args) {
   if (args$verbose) {
     cat("reading parameters from", args$parameters, "\n")
   }
-
   set.seed(args$seed)
 
   ## Awkward because you cannot assign NULL via ifelse.
@@ -406,16 +443,18 @@ main <- function(args) {
     maybe_rho,
     args$verbose)
 
-  sim_result <- run_simulation(params, args$verbose)
+  ## the deefault simulator can produce simulations where the tree is not valid
+  ## (because it only has a single tip) so we use the conditioned simulator to
+  ## repeat the simulation if this happens.
+  sim_result <- run_conditioned_simulation(params, args$verbose)
 
   if (file.access(args$output_directory, mode = 2) != 0) {
     stop("Cannot write to output directory: ", args$output_directory)
   } else {
-    output_csv <- paste(
-      args$output_directory,
-      "ape-sim-event-times.csv",
-      sep = "/"
-    )
+    output_filepath <- function(n) {
+      paste(args$output_directory, n, sep = "/")
+    }
+    output_csv <- output_filepath("ape-sim-event-times.csv")
     if (args$verbose) {
       cat("writing output to csv...\n")
     }
@@ -423,6 +462,10 @@ main <- function(args) {
                 file = output_csv,
                 sep = ",",
                 row.names = FALSE)
+    jsonlite::write_json(
+                x = sim_result$final_prevalence,
+                path = output_filepath("ape-sim-final-prevalence.json")
+              )
   }
 
   if (args$make_plots) {
