@@ -60,8 +60,9 @@ if (rho_enabled) {
 
 mcmc_input <- list(
   mcmcObservations = observations_list,
-  mcmcNumSamples = 2e5,
+  mcmcNumSamples = 2e4,
   mcmcSampleCSV= "out/mcmc-samples.csv",
+  mcmcRecordFinalPrevalence = TRUE,
   mcmcStepSD  = 1e-3,
   mcmcInit   = mcmc_init,
   mcmcSeed  = c(1, 2),

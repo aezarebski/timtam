@@ -23,9 +23,17 @@ r_naught_plot_filepath <- function(fmt, extra="") sprintf("out/posterior-r-naugh
 
 post_samples_df <- read.csv(mcmc_csv, header = F)
 if (length(mcmc_input$mcmcInit) == 3) {
-  names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate")
+  if (mcmc_input$mcmcRecordFinalPrevalence) {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate", "nb_r", "nb_p")
+  } else {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate")
+  }
 } else if (length(mcmc_input$mcmcInit) == 4) {
-  names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "rho_prob", "omega_rate")
+  if (mcmc_input$mcmcRecordFinalPrevalence) {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "rho_prob", "omega_rate", "nb_r", "nb_p")
+  } else {
+    names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "rho_prob", "omega_rate")
+  }
 } else {
   stop("")
 }
