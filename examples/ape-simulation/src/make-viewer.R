@@ -55,6 +55,9 @@ html_body <-
                                   style = "width: 1000px;"),
                        tags$h5("Posterior distribution of R-naught"),
                        png_as_img(filepath = "out/posterior-r-naught.png",
+                                  style = "width: 600px;"),
+                       tags$h5("Posterior distribution of prevalence"),
+                       png_as_img(filepath = "out/posterior-nb-prevalence.png",
                                   style = "width: 600px;")
                      )
               ),
