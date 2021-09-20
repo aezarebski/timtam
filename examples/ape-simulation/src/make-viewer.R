@@ -35,6 +35,19 @@ png_as_img <- function(filepath, ...) {
   }
 }
 
+traceplot_div <- function() {
+  fps <- list.files(
+    path = "out/",
+    pattern = "*traceplot*",
+    full.names = TRUE)
+  subtags <-
+    c(
+      list(tags$h3("MCMC traceplot")),
+      lapply(fps, \(fp) png_as_img(filepath=fp))
+    )
+  lift_dl(tags$div)(subtags)
+}
+
 html_body <-
   tags$body(
          tags$h1("ape simulation example"),
@@ -61,11 +74,7 @@ html_body <-
                                   style = "width: 600px;")
                      )
               ),
-         tags$div(
-                tags$h3("MCMC traceplot"),
-                png_as_img(filepath = "out/mcmc-traceplot-1.png"),
-                png_as_img(filepath = "out/mcmc-traceplot-2.png")
-              )
+         traceplot_div()
        )
 
 save_html(html_body, file = out_html)
