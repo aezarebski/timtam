@@ -240,7 +240,8 @@ nb_fig <- ggplot(mapping = aes(x = x, y = y)) +
     xintercept = final_prevalence,
     linetype = "dashed"
   ) +
-  labs(y = "Posterior density", x = "Prevalence at present") +
+  labs(y = "Posterior density", x = "Prevalence at present (square-root scale)") +
+  scale_x_sqrt() +
   theme_classic() +
   theme()
 
