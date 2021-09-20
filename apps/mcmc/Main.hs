@@ -8,16 +8,15 @@ module Main where
 
 import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
 import           BDSCOD.Types             (LogLikelihood (..),
-                                           nbMV2SP,
-                                           Observation,
                                            MCMCConfiguration (..), MWCSeed,
                                            NegativeBinomial (..), NumLineages,
-                                           Observation (..), ObservedEvent (..),
-                                           PDESolution (..), Parameters (..),
+                                           Observation, Observation (..),
+                                           ObservedEvent (..), PDESolution (..),
+                                           Parameters (..), nbMV2SP,
                                            packParameters, putLambda, putMu,
                                            putNus, putOmega, putPsi, putRhos,
                                            scheduledTimes, unpackParameters)
-import BDSCOD.Utility (toMaybe)
+import           BDSCOD.Utility           (toMaybe)
 import qualified Data.Aeson               as Json
 import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
@@ -152,6 +151,6 @@ writeChainToCSV samples csv = Prelude.writeFile csv $ samples2CSV samples ++ "\n
     nbAsFields Nothing = []
     nbAsFields (Just nb) =
       case nbMV2SP nb of
-        Right Zero -> [1.0,0.0]
+        Right Zero                   -> [1.0,0.0]
         Right (NegBinomSizeProb r p) -> [r, p]
-        _ -> [0.0 / 0.0, 0.0 / 0.0]
+        _                            -> [0.0 / 0.0, 0.0 / 0.0]
