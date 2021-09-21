@@ -484,7 +484,7 @@ if (!interactive()) {
     duration = 25.0,
     output_directory = "out",
     make_plots = TRUE,
-    rho = 0.6
+    rho = 0.6 # note that if you do not want rho sampling set this to -1.0
   )
   main(args)
 }
