@@ -16,27 +16,27 @@ suppressPackageStartupMessages(library(argparse))
 parser <- ArgumentParser()
 
 parser$add_argument(
-         "-v",
-         "--verbose",
-         action = "store_true",
-         default = FALSE,
-         help = "Verbose output"
-       )
+  "-v",
+  "--verbose",
+  action = "store_true",
+  default = FALSE,
+  help = "Verbose output"
+)
 parser$add_argument(
-         "-p",
-         "--prevalence",
-         type = "character",
-         help = "Filepath to final prevalence"
-       )
+  "-p",
+  "--prevalence",
+  type = "character",
+  help = "Filepath to final prevalence"
+)
 parser$add_argument(
-         "--posterior-samples",
-         type = "character",
-         help = "Filepath to posterior samples CSV"
-       )
+  "--posterior-samples",
+  type = "character",
+  help = "Filepath to posterior samples CSV"
+)
 parser$add_argument(
-       "--output-directory",
-       type = "character",
-       help = "Directory to write figures to"
+  "--output-directory",
+  type = "character",
+  help = "Directory to write figures to"
 )
 
 #' =============================================================================
@@ -77,7 +77,7 @@ main <- function(args) {
 
   ## Make the trace plots for use as diagnostics of the MCMC.
   trace_fp <- function(n) {
-    paste0(c(args$output_directory, sprintf("traceplot-%d.png", n)), collapse="/")
+    paste0(c(args$output_directory, sprintf("traceplot-%d.png", n)), collapse = "/")
   }
   jx <- 1
   fig_n <- 1
@@ -94,7 +94,7 @@ main <- function(args) {
     dev.off()
   }
 
-  birth_rate_marg <- marginal_plot_summary(post_samples[,"birth_rate"], "birth_rate")
+  birth_rate_marg <- marginal_plot_summary(post_samples[, "birth_rate"], "birth_rate")
 
   birth_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
     geom_line(
@@ -114,55 +114,55 @@ main <- function(args) {
     theme_classic() +
     theme()
 
-  sampling_rate_marg <- marginal_plot_summary(post_samples[,"sampling_rate"], "sampling_rate")
+  sampling_rate_marg <- marginal_plot_summary(post_samples[, "sampling_rate"], "sampling_rate")
 
-sampling_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
-  geom_line(
-    data = sampling_rate_marg$df,
-    colour = green_hex_colour
-  ) +
-  geom_area(
-    data = filter(sampling_rate_marg$df, sampling_rate_marg$ci[1] < x, x < sampling_rate_marg$ci[2]),
-    fill = green_hex_colour,
-    alpha = 0.3
-  ) +
-  geom_vline(
-    xintercept = true_params$samplingRate,
-    linetype = "dashed"
-  ) +
-  labs(y = NULL, x = TeX("Sampling rate ($\\psi$)")) +
-  theme_classic() +
-  theme()
+  sampling_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
+    geom_line(
+      data = sampling_rate_marg$df,
+      colour = green_hex_colour
+    ) +
+    geom_area(
+      data = filter(sampling_rate_marg$df, sampling_rate_marg$ci[1] < x, x < sampling_rate_marg$ci[2]),
+      fill = green_hex_colour,
+      alpha = 0.3
+    ) +
+    geom_vline(
+      xintercept = true_params$samplingRate,
+      linetype = "dashed"
+    ) +
+    labs(y = NULL, x = TeX("Sampling rate ($\\psi$)")) +
+    theme_classic() +
+    theme()
 
-omega_rate_marg <- marginal_plot_summary(post_samples[,"omega_rate"], "omega_rate")
+  omega_rate_marg <- marginal_plot_summary(post_samples[, "omega_rate"], "omega_rate")
 
-omega_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
-  geom_line(
-    data = omega_rate_marg$df,
-    colour = green_hex_colour
-  ) +
-  geom_area(
-    data = filter(omega_rate_marg$df, omega_rate_marg$ci[1] < x, x < omega_rate_marg$ci[2]),
-    fill = green_hex_colour,
-    alpha = 0.3
-  ) +
-  geom_vline(
-    xintercept = true_params$occurrenceRate,
-    linetype = "dashed"
-  ) +
-  labs(y = NULL, x = TeX("Occurrence rate ($\\omega$)")) +
-  theme_classic() +
-  theme()
+  omega_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
+    geom_line(
+      data = omega_rate_marg$df,
+      colour = green_hex_colour
+    ) +
+    geom_area(
+      data = filter(omega_rate_marg$df, omega_rate_marg$ci[1] < x, x < omega_rate_marg$ci[2]),
+      fill = green_hex_colour,
+      alpha = 0.3
+    ) +
+    geom_vline(
+      xintercept = true_params$occurrenceRate,
+      linetype = "dashed"
+    ) +
+    labs(y = NULL, x = TeX("Occurrence rate ($\\omega$)")) +
+    theme_classic() +
+    theme()
 
   marginals_fig <- cowplot::plot_grid(birth_rate_fig, sampling_rate_fig, omega_rate_fig, ncol = 3)
 
-ggsave(
-  filename = paste0(c(args$output_directory, "marginal-distributions.png"), collapse = "/"),
-  plot = marginals_fig,
-  height = 10,
-  width = 2.8 * 10,
-  units = "cm"
-)
+  ggsave(
+    filename = paste0(c(args$output_directory, "marginal-distributions.png"), collapse = "/"),
+    plot = marginals_fig,
+    height = 10,
+    width = 2.8 * 10,
+    units = "cm"
+  )
   ## summary_stats <- as.data.frame(summary(post_samples)$statistics)
 
   ## diagnostics <- list(
@@ -178,7 +178,6 @@ ggsave(
   ##             auto_unbox = T,
   ##             digits = 16
   ##           )
-
 }
 
 #' =============================================================================
