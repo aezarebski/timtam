@@ -35,3 +35,9 @@ clean:
 	rm -f out/ape-simulation-figure.png
 	rm -f out/ape-sim-event-times.csv
 	rm -f out/ape-sim-final-prevalence.json
+	rm -f out/unscheduled-data/mcmc-app-config.json
+	rm -f out/unscheduled-data/mcmc-samples.csv
+	rm -f out/unscheduled-data/posterior-samples.csv
+	rm -f out/unscheduled-data/traceplot-1.png
+	rm -f out/unscheduled-data/traceplot-2.png
+	rm -f out/unscheduled-data/traceplot-3.png
