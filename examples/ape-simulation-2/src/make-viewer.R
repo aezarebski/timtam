@@ -33,10 +33,12 @@ traceplot_div <- function(fps) {
   lift_dl(tags$div)(subtags)
 }
 
-marginal_div <- function(fp) {
+marginal_div <- function(fp1, fp2) {
   tags$div(
     tags$h5("Posterior marginals"),
-    png_as_img(filepath = fp, style = "width: 900px;")
+    png_as_img(filepath = fp1, style = "width: 900px;"),
+    tags$h5("Reproduction number"),
+    png_as_img(filepath = fp2, style = "width: 900px;")
   )
 }
 
@@ -63,7 +65,8 @@ html_body <-
     tags$div(
       tags$h3("Unscheduled data"),
       tags$div(
-             marginal_div("out/unscheduled-data/marginal-distributions.png"),
+             marginal_div("out/unscheduled-data/marginal-distributions.png",
+                          "out/unscheduled-data/r-naught.png"),
              splom_div("out/unscheduled-data/splom.png"),
         traceplot_div(unscheduled_data_traceplot_fps)
       )

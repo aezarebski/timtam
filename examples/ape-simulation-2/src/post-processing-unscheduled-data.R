@@ -204,6 +204,40 @@ main <- function(args) {
     width = 20,
     units = "cm"
   )
+
+  ## Make a plot of the r-naught estimates
+  r_naught_samples <-
+    post_samples_df |>
+    mutate(r_naught = birth_rate / (sampling_rate + true_params$deathRate + omega_rate)) |>
+    extract2("r_naught")
+
+  true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
+
+  r_naught_marg <- marginal_plot_summary(r_naught_samples, "r_naught")
+  r_naught_fig <- ggplot(mapping = aes(x = x, y = y)) +
+    geom_line(
+      data = r_naught_marg$df,
+      colour = green_hex_colour
+    ) +
+    geom_area(
+      data = filter(r_naught_marg$df, r_naught_marg$ci[1] < x, x < r_naught_marg$ci[2]),
+      fill = green_hex_colour,
+      alpha = 0.3
+    ) +
+    geom_vline(
+      xintercept = true_r_naught,
+      linetype = "dashed"
+    ) +
+    labs(y = NULL, x = TeX("Reproduction number ($R_{0}$)")) +
+    theme_classic() +
+    theme()
+  ggsave(
+    filename = paste0(c(args$output_directory, "r-naught.png"), collapse = "/"),
+    plot = r_naught_fig,
+    height = 10,
+    width = 2.8 * 10,
+    units = "cm"
+  )
   ## summary_stats <- as.data.frame(summary(post_samples)$statistics)
 
   ## diagnostics <- list(
