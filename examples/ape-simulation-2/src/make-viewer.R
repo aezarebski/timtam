@@ -24,12 +24,24 @@ png_as_img <- function(filepath, ...) {
 traceplot_div <- function(fps) {
   subtags <-
     c(
-      list(tags$h3("MCMC traceplot")),
-      lapply(fps, \(fp) png_as_img(filepath = fp))
+      list(tags$h5("MCMC traceplot")),
+      lapply(fps, \(fp) png_as_img(filepath = fp,
+                                   style = "width: 600px;"
+                                   ))
     )
   lift_dl(tags$div)(subtags)
 }
 
+marginal_div <- function(fp) {
+  tags$div(
+         tags$h5("Posterior marginals"),
+         png_as_img(filepath = fp, style = "width: 900px;")
+       )
+}
+
+#' =============================================================================
+#' Construct the actual HTML page
+#' =============================================================================
 
 unscheduled_data_traceplot_fps <- list.files(
   path = "out/unscheduled-data/",
@@ -44,7 +56,7 @@ html_body <-
          tags$div(
                 tags$h3("Unscheduled data"),
                 tags$div(
-                       tags$h5("Traceplots"),
+                       marginal_div("out/unscheduled-data/marginal-distributions.png"),
                        traceplot_div(unscheduled_data_traceplot_fps)
                      )
               )
