@@ -70,11 +70,12 @@ main <- function(args) {
 
   ## TODO This needs to be fixed up....
   post_samples_df <- read.csv(mcmc_csv, header = F)
+  ## Remove some samples from the start as burn-in.
+  post_samples_df <- tail(post_samples_df, -50000)
   stopifnot(ncol(post_samples_df) == 6)
   names(post_samples_df) <- c("llhd", "birth_rate", "sampling_rate", "omega_rate", "nb_r", "nb_p")
   warning("Assuming basic parameters in CSV......")
   post_samples <- as.mcmc(post_samples_df)
-
   ## Make the trace plots for use as diagnostics of the MCMC.
   trace_fp <- function(n) {
     paste0(c(args$output_directory, sprintf("traceplot-%d.png", n)), collapse = "/")
@@ -94,6 +95,7 @@ main <- function(args) {
     dev.off()
   }
 
+  ## Make the posterior marginal plots
   birth_rate_marg <- marginal_plot_summary(post_samples[, "birth_rate"], "birth_rate")
 
   birth_rate_fig <- ggplot(mapping = aes(x = x, y = y)) +
@@ -154,8 +156,12 @@ main <- function(args) {
     theme_classic() +
     theme()
 
-  marginals_fig <- cowplot::plot_grid(birth_rate_fig, sampling_rate_fig, omega_rate_fig, ncol = 3)
-
+  marginals_fig <- cowplot::plot_grid(
+                              birth_rate_fig,
+                              sampling_rate_fig,
+                              omega_rate_fig,
+                              ncol = 3
+                            )
   ggsave(
     filename = paste0(c(args$output_directory, "marginal-distributions.png"), collapse = "/"),
     plot = marginals_fig,
