@@ -40,6 +40,12 @@ marginal_div <- function(fp) {
   )
 }
 
+splom_div <- function(fp) {
+  tags$div(
+         tags$h5("Posterior SPLOM"),
+         png_as_img(filepath = fp, style = "width: 900px;"))
+}
+
 #' =============================================================================
 #' Construct the actual HTML page
 #' =============================================================================
@@ -57,7 +63,8 @@ html_body <-
     tags$div(
       tags$h3("Unscheduled data"),
       tags$div(
-        marginal_div("out/unscheduled-data/marginal-distributions.png"),
+             marginal_div("out/unscheduled-data/marginal-distributions.png"),
+             splom_div("out/unscheduled-data/splom.png"),
         traceplot_div(unscheduled_data_traceplot_fps)
       )
     )

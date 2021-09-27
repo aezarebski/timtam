@@ -163,6 +163,41 @@ main <- function(args) {
     width = 2.8 * 10,
     units = "cm"
   )
+
+  ## Make the matrix of scatter plots thing....
+  sub_plot_scatter <- function(x_var, y_var) {
+    ggplot(post_samples_df, aes_string(x = x_var, y = y_var)) +
+      geom_point(shape = 1, size = 0.1, colour = green_hex_colour) +
+      theme_minimal()
+  }
+  sub_plot_hist <- function(x_var) {
+    ggplot(post_samples_df, aes_string(x = x_var)) +
+      geom_histogram(fill = green_hex_colour, bins = 20) +
+      theme_minimal()
+  }
+  splom <- cowplot::plot_grid(
+                      sub_plot_hist("birth_rate"),
+                      sub_plot_scatter("sampling_rate", "birth_rate"),
+                      sub_plot_scatter("omega_rate", "birth_rate"),
+
+                      sub_plot_scatter("birth_rate", "sampling_rate"),
+                      sub_plot_hist("sampling_rate"),
+                      sub_plot_scatter("omega_rate", "sampling_rate"),
+
+                      sub_plot_scatter("birth_rate", "omega_rate"),
+                      sub_plot_scatter("sampling_rate", "omega_rate"),
+                      sub_plot_hist("omega_rate"),
+
+                      align = "hv",
+                      ncol = 3
+                    )
+  ggsave(
+    filename = paste0(c(args$output_directory, "splom.png"), collapse = "/"),
+    plot = splom,
+    height = 20,
+    width = 20,
+    units = "cm"
+  )
   ## summary_stats <- as.data.frame(summary(post_samples)$statistics)
 
   ## diagnostics <- list(
