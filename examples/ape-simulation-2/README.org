@@ -11,3 +11,5 @@ To clean up the results of previous computation use the =clean= recipe
 #+begin_src sh
 make clean
 #+end_src
+
+To view the results open =index.html= with your browser.
