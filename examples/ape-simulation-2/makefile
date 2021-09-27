@@ -24,8 +24,8 @@ out/unscheduled-data/posterior-samples.csv : out/unscheduled-data/mcmc-app-confi
 # 	Rscript src/run-diagnostics.R --input out/unscheduled-data/posterior-samples.csv
 
 # 5. Visualise the results so that we have figure files handy with the results.
-out/unscheduled-data/marginal-distributions.png : out/unscheduled-data/posterior-samples.csv src/plot-unscheduled-data.R out/ape-sim-final-prevalence.json
-	Rscript src/plot-unscheduled-data.R --verbose --output-directory out/unscheduled-data --prevalence out/ape-sim-final-prevalence.json --posterior-samples out/unscheduled-data/posterior-samples.csv
+out/unscheduled-data/marginal-distributions.png : out/unscheduled-data/posterior-samples.csv src/post-processing-unscheduled-data.R out/ape-sim-final-prevalence.json
+	Rscript src/post-processing-unscheduled-data.R --verbose --output-directory out/unscheduled-data --prevalence out/ape-sim-final-prevalence.json --posterior-samples out/unscheduled-data/posterior-samples.csv
 
 # 6. Combine the results into a page for easy inspection.
 index.html : out/ape-simulation-figure.png out/unscheduled-data/marginal-distributions.png src/make-viewer.R
