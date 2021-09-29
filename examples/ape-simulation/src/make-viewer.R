@@ -88,3 +88,8 @@ html_body <-
   )
 
 save_html(html_body, file = out_html)
+cat(
+  "Results can be viewed by pointing browser to\n\t",
+  paste("file:/", getwd(), out_html, sep = "/"),
+  "\n"
+)
