@@ -1,5 +1,5 @@
 SEED=1
-DURATION=40.0
+DURATION=50.0
 PARAM_JSON=../example-parameters.json
 OUTPUT_DIR=out
 APE_SIM=../ape-simulation/ape-sim.R
@@ -9,7 +9,6 @@ AGG_DUR_SEQ=1
 AGG_DUR_OCC=7
 AGGREGATION_ARGS=--seq-agg-times="0 ${DURATION} ${AGG_DUR_SEQ}" --occ-agg-times="0.5 ${DURATION} ${AGG_DUR_OCC}"
 PREV_JSON=out/ape-sim-final-prevalence.json
-NUM_MCMC_SAMPLES=100000
 
 index: index.html
 
@@ -22,10 +21,10 @@ out/ape-simulation-figure.png out/ape-simulation-figure-aggregated.png out/ape-s
 # 2. Post-process the simulation data so it can be used in an MCMC sampler. This
 # needs to be done once for each type of analysis that we want to run.
 out/unscheduled-data/mcmc-app-config.json : out/ape-sim-event-times.csv src/make-config.R
-	Rscript src/make-config.R --input out/ape-sim-event-times.csv --output out/unscheduled-data/mcmc-app-config.json --parameterisation=${UNSCHEDULED_PARAM} --unscheduled-data --num-mcmc-samples ${NUM_MCMC_SAMPLES}
+	Rscript src/make-config.R --input out/ape-sim-event-times.csv --output out/unscheduled-data/mcmc-app-config.json --parameterisation=${UNSCHEDULED_PARAM} --unscheduled-data --num-mcmc-samples 50000
 
 out/aggregated-data/mcmc-app-config.json : out/ape-sim-aggregated-event-times.csv src/make-config.R
-	Rscript src/make-config.R --input out/ape-sim-aggregated-event-times.csv --output out/aggregated-data/mcmc-app-config.json --parameterisation=${AGGREGATED_PARAM} --num-mcmc-samples ${NUM_MCMC_SAMPLES}
+	Rscript src/make-config.R --input out/ape-sim-aggregated-event-times.csv --output out/aggregated-data/mcmc-app-config.json --parameterisation=${AGGREGATED_PARAM} --num-mcmc-samples 50000
 
 # 3. Run the MCMC using each of the data sets derived from the ape simulation.
 out/unscheduled-data/posterior-samples.csv : out/unscheduled-data/mcmc-app-config.json
