@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-NUM_SEEDS=100                   # total number of replicates
+NUM_SEEDS=31                    # total number of replicates
 PAR_SIZE=15                     # number of processes to run in parallel.
+
+AGG_JSON=mcmc-app-config-aggregated.json
+SEQ_JSON=mcmc-app-config.json
 
 IX=1
 OUTER_LOOP_LIMIT="$(($NUM_SEEDS-$PAR_SIZE))"
@@ -13,7 +16,7 @@ do
     do
         PADDED_IX=$(printf "%03d" $IX)
         echo "Starting $IX"
-        mkdir out/replicate-$IX && touch out/replicate-$IX/foobar.txt && sleep 1 && echo "Finished $IX" & pids+=($!)
+        stack exec -- mcmc out/replicate-$IX/$SEQ_JSON && stack exec -- mcmc out/replicate-$IX/$AGG_JSON && echo "Finished $IX" & pids+=($!)
         ((IX++))
     done
     wait "${pids[@]}"
