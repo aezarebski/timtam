@@ -20,7 +20,7 @@ import           BDSCOD.Utility           (toMaybe)
 import qualified Data.Aeson               as Json
 import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
-import           Data.Maybe               (fromJust)
+import           Data.Maybe               (isNothing,fromJust)
 import qualified Data.Vector.Unboxed      as Unboxed
 import           Epidemic.Types.Parameter (AbsoluteTime (..), TimeDelta (..))
 import           GHC.Generics             (Generic)
@@ -41,6 +41,8 @@ data MCMCInput = MI { mcmcObservations          :: [Observation]
                     , mcmcParameterisation      :: String
                     , mcmcKnownMu               :: Maybe Double
                     , mcmcSimDuration           :: Maybe Double
+                    , mcmcRhoTimes :: [Double]
+                    , mcmcNuTimes :: [Double]
                     , mcmcPrior                 :: String } deriving (Show, Generic)
 
 instance Json.FromJSON MCMCInput
@@ -53,21 +55,8 @@ main = do
   eitherMI <- readConfigAndValidate configFile
   case eitherMI of
     Right MI {..} ->
-      do -- report some of the details of the mcmc so you can tell if the
-         -- configuration has been read correctly
-         putStrLn $
-           replicate 60 '-' ++
-           "\n\tconfiguration file:       " ++ configFile ++
-           "\n\tprior:                    WARNING NOT IMPLEMENTED" ++
-           "\n\tparameterisation name:    " ++ mcmcParameterisation ++
-           "\n\toutput file:              " ++ mcmcSampleCSV ++
-           "\n\tnumber observations:      " ++ show (length mcmcObservations) ++
-           "\n\tnumber samples:           " ++ show mcmcNumSamples ++
-           "\n\trecord final prevalence:  " ++ show mcmcRecordFinalPrevalence ++
-           "\n" ++ replicate 60 '-'
-
          -- construct the target density and a summary function if necessary.
-         let asParam = paramConstructor mcmcParameterisation mcmcKnownMu mcmcSimDuration
+         let asParam = paramConstructor mcmcParameterisation mcmcRhoTimes mcmcNuTimes mcmcKnownMu mcmcSimDuration
              llhd x = fromRight (-1e6) $ fst <$> do params <- maybeToRight mempty $ asParam x
                                                     llhdAndNB mcmcObservations params initLlhdState
              -- TODO Implement the prior functionality
@@ -80,11 +69,24 @@ main = do
                   llhdAndNB mcmcObservations params initLlhdState
              maybeTunable :: Maybe ([Double] -> NegativeBinomial)
              maybeTunable = toMaybe mcmcRecordFinalPrevalence tunable
-
-         -- run the sampler and write the results to file.
-         gen <- initialize $ Unboxed.fromList mcmcSeed
-         ch <- chain' mcmcNumSamples mcmcStepSD mcmcInit target maybeTunable gen
-         writeChainToCSV ch mcmcSampleCSV
+         in do -- report some of the details of the mcmc so you can tell if the
+               -- configuration has been read correctly
+           putStrLn $
+             replicate 60 '-' ++
+             "\n\tconfiguration file:        " ++ configFile ++
+             "\n\tprior:                     WARNING NOT IMPLEMENTED" ++
+             "\n\tnumber of rho samples:     WARNING NOT IMPLEMENTED" ++
+             "\n\tnumber of nu samples:      WARNING NOT IMPLEMENTED" ++
+             "\n\tparameterisation name:     " ++ mcmcParameterisation ++
+             "\n\toutput file:               " ++ mcmcSampleCSV ++
+             "\n\tnumber observations:       " ++ show (length mcmcObservations) ++
+             "\n\tnumber MCMC iterations:    " ++ show mcmcNumSamples ++
+             "\n\trecord final prevalence:   " ++ show mcmcRecordFinalPrevalence ++
+             "\n" ++ replicate 60 '-'
+             -- run the sampler and write the results to file.
+           gen <- initialize $ Unboxed.fromList mcmcSeed
+           ch <- chain' mcmcNumSamples mcmcStepSD mcmcInit target maybeTunable gen
+           writeChainToCSV ch mcmcSampleCSV
     Left msg ->
       do putStrLn $ "failed to read valid MCMC configuration from " ++ configFile
          putStrLn msg
@@ -125,20 +127,38 @@ readConfigAndValidate configFile =
                 (fst . head $ dropWhile snd namedTests)
 
 -- | A function for constructing parameters that can be used by the likelihood.
-paramConstructor :: String -> Maybe Double -> Maybe Double -> ([Double] -> Maybe Parameters)
-paramConstructor p maybeMu maybeDuration
-  | p == "identity-mu1-lambda-psi-noRho-omega-noNu" =
+paramConstructor :: String
+                 -> [Double]
+                 -> [Double]
+                 -> Maybe Double
+                 -> Maybe Double
+                 -> ([Double] -> Maybe Parameters)
+paramConstructor p rhoTimes nuTimes maybeMu maybeDuration
+  | p == "identity-mu1-lambda-psi-noRho-omega-noNu" && null rhoTimes && null nuTimes =
     \[λ, ψ, ω] -> Just $ packParameters (λ, 0.026, ψ, [], ω, [])
-  | p == "identity-muKnown-lambda-psi-noRho-omega-noNu" =
+  | p == "identity-muKnown-lambda-psi-noRho-omega-noNu" && null rhoTimes && null nuTimes =
     let μ = fromJust maybeMu
     in \[λ, ψ, ω] -> Just $ packParameters (λ, μ, ψ, [], ω, [])
-  | p == "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu" =
+  | p == "identity-muKnown-lambda-psi-rhoAtDuration-omega-noNu" && null nuTimes =
     let μ = fromJust maybeMu
         dur = fromJust maybeDuration
     in \[λ, ψ, ρ, ω] -> if minimum [λ, ψ, ρ, ω] > 0.0
                         then Just $ packParameters (λ, μ, ψ, [(AbsoluteTime dur, ρ)], ω, [])
                         else Nothing
-  | otherwise = error $ "do not recognise parameterisation: " ++ p
+  | p == "identity-muKnown-lambda-psiZero-rho-omegaZero-nu" && not (null nuTimes) && not (null rhoTimes) =
+    let μ = fromJust maybeMu
+    in \[λ, ρ, ν] -> if λ > 0.0 && 0.0 <= ρ && ρ <= 1.0 && 0.0 <= ν && ν <= 1.0
+                        then Just $ packParameters ( λ
+                                                   , μ
+                                                   , 0
+                                                   , [(AbsoluteTime rt, ρ) | rt <- rhoTimes]
+                                                   , 0
+                                                   , [(AbsoluteTime nt, ν) | nt <- nuTimes])
+                        else Nothing
+  | otherwise =
+    error $ "mcmc does not recognise parameterisation of the model: " ++ p ++
+    "\nonly some parameterisations have been implemented and this is not one of them" ++
+    "\ncheck the paramConstructor function for valid parameterisations."
 
 -- | Write the samples to file.
 writeChainToCSV :: [Chain [Double] NegativeBinomial] -> FilePath -> IO ()

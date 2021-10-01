@@ -30,10 +30,14 @@
 suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggtree))
+suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(cowplot))
 suppressPackageStartupMessages(library(tidytree))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(ape))
+
+green_hex_colour <- "#7fc97f"
+purple_hex_colour <- "#beaed4"
 
 # create parser object
 parser <- ArgumentParser()
@@ -81,9 +85,24 @@ parser$add_argument(
          "--rho",
          type = "double",
          default = -1.0,
-         help = "Scheduled sample probability")
+         help = "Scheduled sample probability at the end of the simulation.")
+parser$add_argument(
+         "--seq-agg-times",
+         type = "character",
+         default = "",
+         help = "Specification of aggregation times for sequenced samples: \"FROM TO BY\". These values get read as three numbers then form the arguments for the seq function.")
+parser$add_argument(
+         "--occ-agg-times",
+         type = "character",
+         default = "",
+         help = "Specification of aggregation times for unsequenced samples (occurrence data). See the details of --seq-agg-times.")
 
-read_parameters <- function(parameter_filepath, sim_duration, maybe_rho, is_verbose) {
+read_parameters <- function(parameter_filepath,
+                            sim_duration,
+                            maybe_rho,
+                            maybe_seq_from_to_by,
+                            maybe_occ_from_to_by,
+                            is_verbose) {
   if (!file.exists(parameter_filepath)) {
     stop("Cannot find parameter file: ", parameter_filepath)
   } else if (sim_duration <= 0.0) {
@@ -112,15 +131,23 @@ read_parameters <- function(parameter_filepath, sim_duration, maybe_rho, is_verb
     ## we need to handle the possibility that there is a valid rho.
     if (is.null(maybe_rho)) {
       params$rho <- maybe_rho
-      return(params)
+    } else if (0 < maybe_rho && maybe_rho < 1) {
+      params$rho <- maybe_rho
     } else {
-      if (0 < maybe_rho && maybe_rho < 1) {
-        params$rho <- maybe_rho
-        return(params)
-      } else {
-        stop("invalid rho argument: ", maybe_rho)
-      }
+      stop("invalid rho argument: ", maybe_rho)
     }
+    ## we need to parse the aggregation times if they have been given.
+    if (is.null(maybe_seq_from_to_by)) {
+      params$seq_agg_times <- NULL
+    } else {
+      params$seq_agg_times <- parse_from_to_by(maybe_seq_from_to_by)
+    }
+    if (is.null(maybe_occ_from_to_by)) {
+      params$occ_agg_times <- NULL
+    } else {
+      params$occ_agg_times <- parse_from_to_by(maybe_occ_from_to_by)
+    }
+    return(params)
   }
 }
 
@@ -298,8 +325,75 @@ run_simulation <- function(params, is_verbose) {
   stopifnot(abs(dur_1 - dur_2) < 1e-10 * params$duration)
   dur_3 <- max(tip_times[outcome == "extant" | outcome == "rho"]) + tmrca
   stopifnot(abs(dur_3 - params$duration) < time_eps)
+  ## If there is aggregation that needs to be carried out then this needs to be
+  ## done now just before the simulation results are returned. This operation is
+  ## only defined when there is no rho sampling at the end of the simulation.
+  if (is.null(params$rho) && (!is.null(params$occ_agg_times) | !is.null(params$seq_agg_times))) {
+    ## There is a little extra book keeping involved because the times are
+    ## relative to the TMRCA rather than the origin. To keep things consistent
+    ## with the TMRCA relative times we need to adjust the aggregation times.
+    ## This is why we need to subtract the TMRCA from the given aggregation
+    ## times to get the TMRCA relative aggregation times. We add a column for
+    ## size to count the number of individuals that were removed in the mock
+    ## scheduled event.
+    origin_event_row <- filter(event_times_df, event == "origin")
+    origin_event_row$size <- NA
+    birth_rows <- filter(event_times_df, event == "birth")
+    birth_rows$size <- NA
+    if (!is.null(params$seq_agg_times)) {
+      sampling_times <- event_times_df |> filter(event == "sampling") |> select(time)
+      tmrca_rel_seq_agg_times <- params$seq_agg_times - tmrca
+      num_agg_obs <- length(tmrca_rel_seq_agg_times) - 1
+      if (max(params$seq_agg_times) < max(sampling_times)) {
+        stop("There are sequenced samples after the last given aggregation time. It is unclear how to account for the births related to these sequences so you probably want to include another aggregation point to capture them.")
+      }
+      tmp_time <- numeric(num_agg_obs)
+      tmp_size <- numeric(num_agg_obs)
+      for (ix in seq.int(num_agg_obs)) {
+        tmp_time[ix] <- tmrca_rel_seq_agg_times[ix+1]
+        tmp_size[ix] <- sampling_times |>
+          filter(tmrca_rel_seq_agg_times[ix] < time,
+                 time <= tmrca_rel_seq_agg_times[ix+1]) |>
+          nrow()
+      }
+      seq_rows <- data.frame(time = tmp_time,
+                             event = "rho",
+                             size = tmp_size)
+    } else {
+      seq_rows <- event_times_df[event_times_df$event == "sampling", ]
+      seq_rows$size <- NA
+    }
+    if (!is.null(params$occ_agg_times)) {
+      occurrence_times <- event_times_df |> filter(event == "occurrence") |> select(time)
+      tmrca_rel_occ_agg_times <- params$occ_agg_times - tmrca
+      num_agg_obs <- length(tmrca_rel_occ_agg_times) - 1
+      tmp_time <- numeric(num_agg_obs)
+      tmp_size <- numeric(num_agg_obs)
+      for (ix in seq.int(num_agg_obs)) {
+        tmp_time[ix] <- tmrca_rel_occ_agg_times[ix+1]
+        tmp_size[ix] <- occurrence_times |>
+          filter(tmrca_rel_occ_agg_times[ix] < time,
+                 time <= tmrca_rel_occ_agg_times[ix+1]) |>
+          nrow()
+      }
+      unseq_rows <- data.frame(time = tmp_time,
+                               event = "nu",
+                               size = tmp_size)
+    } else {
+      unseq_rows <- event_times_df[event_times_df$event == "occurrence", ]
+      unseq_rows$size <- NA
+    }
+    agg_event_times_df <- rbind(origin_event_row,
+                                unseq_rows,
+                                seq_rows,
+                                birth_rows)
+  } else {
+    agg_event_times_df <- NULL
+  }
+
   return(list(
     event_times_df = event_times_df,
+    aggregated_event_times_df = agg_event_times_df,
     final_prevalence = final_prevalence,
     phylo = phy,
     outcome = outcome,
@@ -372,12 +466,29 @@ write_plot <- function(simulation_results,
     )
     hist_plt_df <- rbind(hist_plt_df, rho_row)
   }
-
+  tmp <- data.frame(outcome = "extant",
+                    empirical = simulation_results$num_extant,
+                    theory = NA,
+                    theory_min = NA,
+                    theory_max = NA)
+  hist_plt_df <- rbind(hist_plt_df, tmp)
+  hist_plt_df$outcome <- factor(hist_plt_df$outcome, levels = c("death", "occurrence", "sampling", "extant"))
   plt5 <- ggplot(hist_plt_df) +
     geom_col(mapping = aes(x = outcome, y = empirical)) +
     geom_point(mapping = aes(x = outcome, y = theory)) +
     geom_errorbar(mapping = aes(x = outcome, ymin = theory_min, ymax = theory_max)) +
     labs(y = "Count", x = NULL) +
+    theme_classic()
+
+  plt6 <- ggplot(data = hist_plt_df) +
+    geom_col(mapping = aes(x = outcome, y = empirical), colour = "#636363", fill = "#bdbdbd") +
+    scale_x_discrete(NULL,
+                     labels = c(
+                       "extant" = "Prevalence",
+                       "death" = "Unobserved",
+                       "sampling" = "Sequenced",
+                       "occurrence" = "Unsequenced")) +
+    labs(y = NULL, x = NULL) +
     theme_classic()
 
   is_observed <- is.element(simulation_results$outcome, c("sampling", "occurrence", "rho"))
@@ -388,7 +499,6 @@ write_plot <- function(simulation_results,
     is_observed = is_observed
   )
 
-  ## TODO does this come from tidytree???
   tr <- tidytree::treedata(phylo = simulation_results$phylo, data = tip_annotations)
 
   plt4 <- ggplot(tr, mapping = aes(x, y)) +
@@ -401,6 +511,15 @@ write_plot <- function(simulation_results,
          shape = "Observed") +
     theme_tree2(legend.position = "top")
 
+  plt7 <- ggplot(tr, mapping = aes(x, y)) +
+    geom_tree(alpha = 0.3) +
+    geom_tippoint(mapping = aes(colour = is_observed),
+                  size = 2.5) +
+    ## geom_nodepoint(shape = 1) +
+    scale_colour_manual(values = c("#bdbdbd", green_hex_colour), labels = c("TRUE" = "Observed", "FALSE" = "Not observed")) +
+    labs(colour = NULL) +
+    theme_tree(legend.position = "top")
+  print(plt7)
   if (is_verbose) {
     cat("writing visualistion to file...\n")
   }
@@ -415,9 +534,93 @@ write_plot <- function(simulation_results,
     height = 15,
     units = "cm"
   )
+  saveRDS(object = list(plt6, plt7),
+          file = paste(
+            output_directory,
+            "ape-sim-figures-1.rds",
+            sep = "/")
+          )
+}
+
+write_aggregated_plot <- function(simulation_results,
+                                  parameters,
+                                  output_directory,
+                                  is_verbose) {
+  plot_df <- filter(
+    simulation_results$aggregated_event_times_df,
+    is.element(event, c("rho", "nu"))
+  )
+  g <- ggplot(
+    data = plot_df,
+    mapping = aes(x = time, y = size, colour = event)
+  ) +
+    geom_line() +
+    geom_point() +
+    scale_colour_manual(
+      breaks = c("nu", "rho"),
+      values = c(purple_hex_colour, green_hex_colour)
+    ) +
+    labs(y = "Count", x = "Day", colour = "Observation type") +
+    theme_classic()
+  ggsave(
+    filename = paste(
+      output_directory,
+      "ape-simulation-figure-aggregated.png",
+      sep = "/"
+    ),
+    plot = g,
+    width = 14.8,
+    height = 10.5,
+    units = "cm"
+  )
+  g2 <- ggplot(
+    data = plot_df,
+    mapping = aes(x = time, y = size, shape = event)
+  ) +
+    geom_line(
+      colour = purple_hex_colour
+    ) +
+    geom_point(
+      colour = purple_hex_colour,
+      size = 3
+    ) +
+    scale_shape_manual(
+      values = c(1, 2),
+      labels = c("nu" = "Weekly unsequenced", "rho" = "Daily sequenced")
+    ) +
+    scale_y_sqrt() +
+    labs(y = "Count (square root scale)", x = "Day", shape = "Observation type") +
+    theme_classic() +
+    theme(legend.position = c(0.2, 0.8))
+  saveRDS(object = list(g2),
+          file = paste(
+            output_directory,
+            "ape-sim-figures-2.rds",
+            sep = "/")
+          )
+}
+
+#' Parse a string \"FROM TO BY\" into a linear vector of values.
+parse_from_to_by <- function(from_to_by_string) {
+  tmp <- as.numeric(unlist(strsplit(x = from_to_by_string, split = " ")))
+  stopifnot(length(tmp) == 3)
+  return(seq(from = tmp[1], to = tmp[2], by = tmp[3]))
+}
+
+#' Predicate for the command line arguments being valid.
+arguments_are_valid <- function(args) {
+  if (args$rho > -1.0 && args$seg_agg_times != "") {
+    return(FALSE)
+  }
+  return(TRUE)
 }
 
 main <- function(args) {
+  if (!arguments_are_valid(args)) {
+    print(args)
+    stop("The command line arguments are not valid.")
+  }
+
   if (args$verbose) {
     cat("reading parameters from", args$parameters, "\n")
   }
@@ -428,6 +631,20 @@ main <- function(args) {
     maybe_rho <-  NULL
   } else {
     maybe_rho <-  args$rho
+  }
+
+  ## If there is a request to aggregate the values then we need to parse the
+  ## specification of the times at which the aggregation occurs.
+  if (args$seq_agg_times == "") {
+    maybe_seq_from_to_by <- NULL
+  } else {
+    maybe_seq_from_to_by <- args$seq_agg_times
+  }
+
+  if (args$occ_agg_times == "") {
+    maybe_occ_from_to_by <- NULL
+  } else {
+    maybe_occ_from_to_by <- args$occ_agg_times
   }
 
   if (args$verbose) {
@@ -441,6 +658,8 @@ main <- function(args) {
     args$parameters,
     args$duration,
     maybe_rho,
+    maybe_seq_from_to_by,
+    maybe_occ_from_to_by,
     args$verbose)
 
   ## the deefault simulator can produce simulations where the tree is not valid
@@ -454,14 +673,30 @@ main <- function(args) {
     output_filepath <- function(n) {
       paste(args$output_directory, n, sep = "/")
     }
-    output_csv <- output_filepath("ape-sim-event-times.csv")
+    ## record the events that happened in the simulation
     if (args$verbose) {
       cat("writing output to csv...\n")
     }
     write.table(x = sim_result$event_times_df,
-                file = output_csv,
+                file = output_filepath("ape-sim-event-times.csv"),
                 sep = ",",
                 row.names = FALSE)
+    ## if there are aggregated simulation results then these should also be
+    ## recorded.
+    if (!is.null(sim_result$aggregated_event_times_df)) {
+      if (args$verbose) {
+        cat("writing aggregated output to csv...\n")
+      }
+      write.table(x = sim_result$aggregated_event_times_df,
+                  file = output_filepath("ape-sim-aggregated-event-times.csv"),
+                  sep = ",",
+                  row.names = FALSE)
+    }
+    ## record the final prevalence accounting for the number of lineages that
+    ## may have been removed in a rho sample at the very end of the simulation.
+    if (args$verbose) {
+      cat("writing final prevalence to json...\n")
+    }
     jsonlite::write_json(
                 x = sim_result$final_prevalence,
                 path = output_filepath("ape-sim-final-prevalence.json")
@@ -470,6 +705,9 @@ main <- function(args) {
 
   if (args$make_plots) {
     write_plot(sim_result, params, args$output_directory, args$verbose)
+    if (!is.null(sim_result$aggregated_event_times_df)) {
+      write_aggregated_plot(sim_result, params, args$output_directory, args$verbose)
+    }
   }
 }
 
@@ -479,12 +717,16 @@ if (!interactive()) {
 } else {
   args <- list(
     verbose = TRUE,
-    seed = 6,
+    seed = 1,
     parameters = "../example-parameters.json",
-    duration = 25.0,
+    duration = 50.0,
     output_directory = "out",
     make_plots = TRUE,
-    rho = 0.6
+    ## note that if you do not want rho sampling set this to -1.0
+    # rho = 0.6,
+    rho = -1.0,
+    seq_agg_times = "0 50.0 1",
+    occ_agg_times = "0.5 50.0 7"
   )
   main(args)
 }
