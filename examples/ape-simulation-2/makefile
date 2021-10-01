@@ -36,11 +36,11 @@ out/aggregated-data/posterior-samples.csv : out/aggregated-data/mcmc-app-config.
 # 4. Visualise the results so that we have figure files handy with the results.
 out/unscheduled-data/marginal-distributions.png out/unscheduled-data/r-naught.png out/unscheduled-data/prevalence.png &: out/unscheduled-data/posterior-samples.csv \
                                                                                                                          src/post-mcmc-visualisation.R
-	Rscript src/post-mcmc-visualisation.R --verbose --output-directory out/unscheduled-data --prevalence ${PREV_JSON} --posterior-samples out/unscheduled-data/posterior-samples.csv --params="llhd,birth_rate,sampling_rate,omega_rate,nb_r,nb_p"
+	Rscript src/post-mcmc-visualisation.R --verbose --output-directory out/unscheduled-data --prevalence ${PREV_JSON} --posterior-samples out/unscheduled-data/posterior-samples.csv --params="llhd,birth_rate,sampling_rate,omega_rate,nb_r,nb_p" --burn 10000
 
 out/aggregated-data/marginal-distributions.png out/aggregated-data/r-naught.png out/aggregated-data/prevalence.png &: out/aggregated-data/posterior-samples.csv \
                                                                                                                       src/post-mcmc-visualisation.R
-	Rscript src/post-mcmc-visualisation.R --verbose --output-directory out/aggregated-data --prevalence ${PREV_JSON} --posterior-samples out/aggregated-data/posterior-samples.csv --params="llhd,birth_rate,rho_prob,nu_prob,nb_r,nb_p"
+	Rscript src/post-mcmc-visualisation.R --verbose --output-directory out/aggregated-data --prevalence ${PREV_JSON} --posterior-samples out/aggregated-data/posterior-samples.csv --params="llhd,birth_rate,rho_prob,nu_prob,nb_r,nb_p" --burn 10000
 
 # 5. Combine the results into a page for easy inspection.
 index.html : out/ape-simulation-figure.png \
@@ -50,7 +50,9 @@ index.html : out/ape-simulation-figure.png \
              out/aggregated-data/marginal-distributions.png \
              out/aggregated-data/r-naught.png \
              out/aggregated-data/prevalence.png \
+             src/assemble-plots.R \
              src/make-viewer.R
+	Rscript src/assemble-plots.R
 	Rscript src/make-viewer.R
 
 clean:
@@ -69,6 +71,7 @@ clean:
 	rm -f out/unscheduled-data/prevalence.png
 	rm -f out/unscheduled-data/splom.png
 	rm -f out/unscheduled-data/r-naught.png
+	rm -f out/unscheduled-data/marginal-distributions-2.rds
 	rm -f out/aggregated-data/mcmc-app-config.json
 	rm -f out/aggregated-data/mcmc-samples.csv
 	rm -f out/aggregated-data/posterior-samples.csv
@@ -78,3 +81,9 @@ clean:
 	rm -f out/aggregated-data/marginal-distributions.png
 	rm -f out/aggregated-data/prevalence.png
 	rm -f out/aggregated-data/splom.png
+	rm -f out/aggregated-data/marginal-distributions-2.rds
+	rm -f out/ape-sim-figures-1.rds
+	rm -f out/ape-sim-figures-2.rds
+	rm -f out/ape-sim-figures-combined.png
+	rm -f out/marginal-distributions-combined.png
+	rm -f out/ape-sim-figures.rds
