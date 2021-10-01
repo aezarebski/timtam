@@ -466,12 +466,29 @@ write_plot <- function(simulation_results,
     )
     hist_plt_df <- rbind(hist_plt_df, rho_row)
   }
-
+  tmp <- data.frame(outcome = "extant",
+                    empirical = simulation_results$num_extant,
+                    theory = NA,
+                    theory_min = NA,
+                    theory_max = NA)
+  hist_plt_df <- rbind(hist_plt_df, tmp)
+  hist_plt_df$outcome <- factor(hist_plt_df$outcome, levels = c("death", "occurrence", "sampling", "extant"))
   plt5 <- ggplot(hist_plt_df) +
     geom_col(mapping = aes(x = outcome, y = empirical)) +
     geom_point(mapping = aes(x = outcome, y = theory)) +
     geom_errorbar(mapping = aes(x = outcome, ymin = theory_min, ymax = theory_max)) +
     labs(y = "Count", x = NULL) +
+    theme_classic()
+
+  plt6 <- ggplot(data = hist_plt_df) +
+    geom_col(mapping = aes(x = outcome, y = empirical), colour = "#636363", fill = "#bdbdbd") +
+    scale_x_discrete(NULL,
+                     labels = c(
+                       "extant" = "Prevalence",
+                       "death" = "Unobserved",
+                       "sampling" = "Sequenced",
+                       "occurrence" = "Unsequenced")) +
+    labs(y = NULL, x = NULL) +
     theme_classic()
 
   is_observed <- is.element(simulation_results$outcome, c("sampling", "occurrence", "rho"))
@@ -482,7 +499,6 @@ write_plot <- function(simulation_results,
     is_observed = is_observed
   )
 
-  ## TODO does this come from tidytree???
   tr <- tidytree::treedata(phylo = simulation_results$phylo, data = tip_annotations)
 
   plt4 <- ggplot(tr, mapping = aes(x, y)) +
@@ -495,6 +511,15 @@ write_plot <- function(simulation_results,
          shape = "Observed") +
     theme_tree2(legend.position = "top")
 
+  plt7 <- ggplot(tr, mapping = aes(x, y)) +
+    geom_tree(alpha = 0.3) +
+    geom_tippoint(mapping = aes(colour = is_observed),
+                  size = 2.5) +
+    ## geom_nodepoint(shape = 1) +
+    scale_colour_manual(values = c("#bdbdbd", green_hex_colour), labels = c("TRUE" = "Observed", "FALSE" = "Not observed")) +
+    labs(colour = NULL) +
+    theme_tree(legend.position = "top")
+  print(plt7)
   if (is_verbose) {
     cat("writing visualistion to file...\n")
   }
@@ -509,6 +534,12 @@ write_plot <- function(simulation_results,
     height = 15,
     units = "cm"
   )
+  saveRDS(object = list(plt6, plt7),
+          file = paste(
+            output_directory,
+            "ape-sim-figures-1.rds",
+            sep = "/")
+          )
 }
 
 write_aggregated_plot <- function(simulation_results,
@@ -542,6 +573,31 @@ write_aggregated_plot <- function(simulation_results,
     height = 10.5,
     units = "cm"
   )
+  g2 <- ggplot(
+    data = plot_df,
+    mapping = aes(x = time, y = size, shape = event)
+  ) +
+    geom_line(
+      colour = purple_hex_colour
+    ) +
+    geom_point(
+      colour = purple_hex_colour,
+      size = 3
+    ) +
+    scale_shape_manual(
+      values = c(1, 2),
+      labels = c("nu" = "Weekly unsequenced", "rho" = "Daily sequenced")
+    ) +
+    scale_y_sqrt() +
+    labs(y = "Count (square root scale)", x = "Day", shape = "Observation type") +
+    theme_classic() +
+    theme(legend.position = c(0.2, 0.8))
+  saveRDS(object = list(g2),
+          file = paste(
+            output_directory,
+            "ape-sim-figures-2.rds",
+            sep = "/")
+          )
 }
 
 #' Parse a string \"FROM TO BY\" into a linear vector of values.
@@ -661,16 +717,16 @@ if (!interactive()) {
 } else {
   args <- list(
     verbose = TRUE,
-    seed = 6,
+    seed = 1,
     parameters = "../example-parameters.json",
-    duration = 25.0,
+    duration = 50.0,
     output_directory = "out",
     make_plots = TRUE,
     ## note that if you do not want rho sampling set this to -1.0
     # rho = 0.6,
     rho = -1.0,
-    seq_agg_times = "1 25 1",
-    occ_agg_times = "1.5 25 1"
+    seq_agg_times = "0 50.0 1",
+    occ_agg_times = "0.5 50.0 7"
   )
   main(args)
 }
