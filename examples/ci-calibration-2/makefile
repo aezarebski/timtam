@@ -4,11 +4,12 @@ BURNIN=0
 NUM_MCMC_SAMPLES=2000
 index : index.html
 
-index.html : src/build-viewer.R out/prevalence-calibration.png
+index.html : src/build-viewer.R out/plotting-done.txt
 	Rscript src/build-viewer.R
 
-out/prevalence-calibration.png : src/build-calibration-figures.R out/mcmc-summary.json
+out/plotting-done.txt : src/build-calibration-figures.R out/mcmc-summary.json
 	Rscript src/build-calibration-figures.R --input out/mcmc-summary.json --output out/prevalence-calibration.png
+	touch out/plotting-done.txt
 
 out/mcmc-summary.json : out/mcmc-done.txt src/summarise-mcmc-samples.R
 	Rscript src/summarise-mcmc-samples.R --num-replicates ${NUM_REPS} --parameters ${PARAMS_JSON} --burnin ${BURNIN} --output out/mcmc-summary.json
