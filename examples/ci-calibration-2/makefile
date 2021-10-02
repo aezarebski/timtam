@@ -1,7 +1,7 @@
 NUM_REPS=40 										# annoyingly you have to modify this in run-mcmc.sh too!
 PARAMS_JSON=../example-parameters.json
-BURNIN=1000
-NUM_MCMC_SAMPLES=3000
+BURNIN=5000
+NUM_MCMC_SAMPLES=15000
 index : index.html
 
 index.html : src/build-viewer.R out/plotting-done.txt
