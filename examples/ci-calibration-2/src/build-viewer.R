@@ -28,8 +28,13 @@ tags$div(
 tags$h1("CI calibration example II"),
 tags$div(
 tags$h3("Unscheduled data"),
-png_as_img(filepath = "out/prevalence-calibration-extra-2.png", style = "height: 900px;")
+png_as_img(filepath = "out/prevalence-calibration-extra-2.png", style = "height: 900px;"),
+png_as_img(filepath = "out/estimate-calibration.png", style = "height: 900px;")
 ),
+tags$div(
+       tags$h3("Aggregated data"),
+       png_as_img(filepath = "out/aggregated-estimate-calibration.png", style = "height: 900px;")
+     ),
 tags$div(
 tags$h3("Comparing prevalence estimates"),
 tags$div(

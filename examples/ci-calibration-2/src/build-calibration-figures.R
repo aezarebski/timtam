@@ -137,9 +137,85 @@ make_prev_r_naught_fig <- function(args) {
   ggsave(filename = "out/prevalence-calibration-extra-2.png", plot = prev_fig_1, height = 14.8, width = 10.5, units = "cm")
 }
 
+
+calibration_plot_fig <- function(plot_df_1, plot_df_2, facet_labels, hex_colour) {
+  ggplot() +
+    geom_linerange(data = plot_df_1,
+                   mapping = aes(x = sorted_ordering, ymin = q1, ymax = q5),
+                   colour = hex_colour) +
+    geom_point(data = plot_df_1,
+               mapping = aes(x = sorted_ordering, y = q3),
+               colour = hex_colour) +
+    geom_hline(data = plot_df_2,
+               mapping = aes(yintercept = values),
+               linetype = "dashed") +
+    facet_grid(variable~.,
+               scales = "free_y",
+               labeller = labeller(variable = facet_labels))+
+    labs(x = "Replicate", y = NULL) +
+    theme_classic() +
+    theme(strip.background = element_blank(),
+          axis.text.x = element_blank())
+}
+
+make_estimate_calibration_plot <- function(args, from_aggregated) {
+true_params <- jsonlite::read_json("../example-parameters.json")
+input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
+
+if (from_aggregated) {
+  var_names <- c("birth_rate", "rho_prob", "nu_prob")
+  plot_df_1 <- input_list$estimates |>
+    filter(from_aggregated == TRUE) |>
+    select(-from_aggregated) |>
+    filter(is.element(variable, var_names)) |>
+    dcast(variable + replicate ~ quantile)
+  names(plot_df_1) <- c(c("variable", "replicate"), sprintf("q%d", 1:5))
+  plot_df_1 <- plot_df_1[order(plot_df_1$q3), ]
+  plot_df_1 <- plot_df_1[order(plot_df_1$variable), ]
+  plot_df_1$sorted_ordering <- rep(seq.int(nrow(plot_df_1)/3), 3)
+
+  plot_df_2 <- data.frame(variable = var_names[1],
+ values = true_params$birthRate)
+
+  facet_labels <- c(birth_rate = "Birth rate",
+ rho_prob = "Sequenced probability",
+ nu_prob = "Unsequenced probability")
+
+  hex_colour <- purple_hex_colour
+plot_png <- "out/aggregated-estimate-calibration.png"
+} else {
+  var_names <- c("birth_rate", "sampling_rate", "omega_rate")
+  plot_df_1 <- input_list$estimates |>
+    filter(from_aggregated == FALSE) |>
+    select(-from_aggregated) |>
+    filter(is.element(variable, var_names)) |>
+    dcast(variable + replicate ~ quantile)
+  names(plot_df_1) <- c(c("variable", "replicate"), sprintf("q%d", 1:5))
+  plot_df_1 <- plot_df_1[order(plot_df_1$q3), ]
+  plot_df_1 <- plot_df_1[order(plot_df_1$variable), ]
+  plot_df_1$sorted_ordering <- rep(seq.int(nrow(plot_df_1)/3), 3)
+
+  plot_df_2 <- data.frame(variable = var_names,
+ values = c(true_params$birthRate, true_params$samplingRate, true_params$occurrenceRate))
+
+  facet_labels <- c(birth_rate = "Birth rate",
+ sampling_rate = "Sampling rate",
+ omega_rate = "Occurrence rate")
+
+  hex_colour <- green_hex_colour
+  plot_png <- "out/estimate-calibration.png"
+}
+
+g <- calibration_plot_fig(plot_df_1, plot_df_2, facet_labels, hex_colour)
+
+ggsave(filename = plot_png, plot = g, height = 22.2, width = 10.5, units = "cm")
+}
+
 main <- function(args) {
   make_prevalence_comparison(args)
   make_prev_r_naught_fig(args)
+  make_estimate_calibration_plot(args, TRUE)
+  make_estimate_calibration_plot(args, FALSE)
 }
 
 if (!interactive()) {
@@ -151,3 +227,5 @@ if (!interactive()) {
   )
 }
 main(args)
+
+
