@@ -1,7 +1,7 @@
-NUM_REPS=30
+NUM_REPS=40 										# annoyingly you have to modify this in run-mcmc.sh too!
 PARAMS_JSON=../example-parameters.json
-BURNIN=0
-NUM_MCMC_SAMPLES=2000
+BURNIN=1000
+NUM_MCMC_SAMPLES=3000
 index : index.html
 
 index.html : src/build-viewer.R out/plotting-done.txt
@@ -33,3 +33,9 @@ clean :
 	rm -rf out/replicate-*
 	rm -f mcmc-summary.json
 	rm -f prevalence-calibration-extra-1.png
+	rm -f aggregated-estimate-calibration.png
+	rm -f estimate-calibration.png
+	rm -f mcmc-summary.json
+	rm -f plotting-done.txt
+	rm -f prevalence-calibration-extra-1.png
+	rm -f prevalence-calibration-extra-2.png

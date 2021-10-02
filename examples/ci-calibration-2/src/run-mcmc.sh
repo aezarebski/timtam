@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-NUM_SEEDS=31                    # total number of replicates
+NUM_SEEDS=50                    # total number of replicates
 PAR_SIZE=15                     # number of processes to run in parallel.
 
 AGG_JSON=mcmc-app-config-aggregated.json
