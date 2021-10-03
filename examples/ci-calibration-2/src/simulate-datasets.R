@@ -74,9 +74,11 @@ replicate_dir <- function(seed) {
 run_simulation <- function(num_replicates, duration) {
   sim_cmd <- function(seed) {
     sprintf(
-      "../ape-simulation/ape-sim.R --seed %d -p ../example-parameters.json -o %s --duration %f --make-plots -v --seq-agg-times=\"0 50.0 1\" --occ-agg-times=\"0.5 50.0 7\"",
+      "../ape-simulation/ape-sim.R --seed %d -p ../example-parameters.json -o %s --duration %f --make-plots -v --seq-agg-times=\"0 %f 1\" --occ-agg-times=\"0.5 %f 7\"",
       seed,
       replicate_dir(seed),
+      duration,
+      duration,
       duration
     )
   }
