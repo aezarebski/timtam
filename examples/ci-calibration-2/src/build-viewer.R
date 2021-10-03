@@ -21,6 +21,15 @@ png_as_img <- function(filepath, ...) {
   }
 }
 
+diagnostics_div <- function() {
+  tags$div(
+         tags$h3("Diagnostics"),
+         tags$div(
+                tags$h5("Effective sample size"),
+                png_as_img("out/effective-sample-sizes.png", style = "height: 900px;")
+              ))
+}
+
 build_index <- function() {
   out_html <- "index.html"
   html_body <- tags$body(
@@ -45,7 +54,8 @@ tags$div(
        tags$h5("Absolute error"),
        png_as_img(filepath = "out/prevalence-calibration-extra-1.png", style = "height: 900px;")
      )
-)
+),
+diagnostics_div()
 )
 )
   save_html(html_body, file = out_html)

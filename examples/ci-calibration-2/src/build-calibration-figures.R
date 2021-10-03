@@ -2,6 +2,7 @@ suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(coda))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(reshape2))
+suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(dplyr))
 
 green_hex_colour <- "#7fc97f"
@@ -211,11 +212,42 @@ g <- calibration_plot_fig(plot_df_1, plot_df_2, facet_labels, hex_colour)
 ggsave(filename = plot_png, plot = g, height = 22.2, width = 10.5, units = "cm")
 }
 
+make_effective_size_plot <- function(args) {
+  input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
+
+  tmp <- input_list$diagnostics$effectiveSize
+  tmp_agg <- tmp$aggregated |>
+    select(birth_rate, rho_prob, nu_prob, replicate, from_aggregated) |>
+    set_names(c(sprintf("v%d", 1:3), "replicate", "from_aggregated"))
+  tmp_not_agg <- tmp$not_aggregated |>
+    select(birth_rate, sampling_rate, omega_rate, replicate, from_aggregated) |>
+    set_names(c(sprintf("v%d", 1:3), "replicate", "from_aggregated"))
+  plot_df <- rbind(tmp_agg, tmp_not_agg) |>
+    melt(id.vars = c("replicate", "from_aggregated"))
+
+  g <- ggplot() +
+    geom_point(data = plot_df,
+               mapping = aes(x = replicate, y = value, colour = variable)) +
+    geom_hline(yintercept = 200, linetype = "dashed") +
+    scale_y_log10() +
+    labs(x = "Replicate", y = "Effective sample size") +
+    facet_wrap(~from_aggregated) +
+    theme_classic() +
+    theme(legend.position = "none")
+
+  ggsave(filename = "out/effective-sample-sizes.png",
+         plot = g,
+         height = 21.0,
+         width = 29.7,
+         units = "cm")
+}
+
 main <- function(args) {
   make_prevalence_comparison(args)
   make_prev_r_naught_fig(args)
   make_estimate_calibration_plot(args, TRUE)
   make_estimate_calibration_plot(args, FALSE)
+  make_effective_size_plot(args)
 }
 
 if (!interactive()) {
