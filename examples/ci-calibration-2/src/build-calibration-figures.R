@@ -242,12 +242,62 @@ make_effective_size_plot <- function(args) {
          units = "cm")
 }
 
+record_prev_coverage_est <- function(args) {
+  input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
+
+  ## The summarise function throws a warning but from looking on stack exchange
+  ## it looks like this is harmless.
+  prevalence_coverage_df <- input_list$estimates |>
+    filter(variable == "prevalence",
+           is.element(quantile, c("2.5%", "97.5%"))) |>
+    left_join(input_list$prevalence, by = "replicate") |>
+    select(-variable) |>
+    group_by(replicate, from_aggregated) |>
+    summarise(contains = min(value) <= prevalence & prevalence <= max(value)) |>
+    group_by(from_aggregated) |>
+    summarise(num_contains = sum(contains),
+              num_not_contains = sum(!contains)) |>
+    as.data.frame()
+
+  write.table(x = prevalence_coverage_df,
+              file = "out/prevalence-coverage-table.csv",
+              sep = ",",
+              row.names = FALSE)
+}
+
+record_r_0_coverage_est <- function(args) {
+  true_params <- jsonlite::read_json("../example-parameters.json")
+  true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
+  input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
+
+  ## The summarise function throws a warning but from looking on stack exchange
+  ## it looks like this is harmless.
+  r_naught_coverage_df <- input_list$estimates |>
+    filter(variable == "r_naught",
+           is.element(quantile, c("2.5%", "97.5%"))) |>
+    select(-variable) |>
+    mutate(truth = true_r_naught) |>
+    group_by(replicate, from_aggregated) |>
+    summarise(contains = min(value) <= truth & truth <= max(value)) |>
+    group_by(from_aggregated) |>
+    summarise(num_contains = sum(contains),
+              num_not_contains = sum(!contains)) |>
+    as.data.frame()
+
+  write.table(x = r_naught_coverage_df,
+              file = "out/r-naught-coverage-table.csv",
+              sep = ",",
+              row.names = FALSE)
+}
+
 main <- function(args) {
   make_prevalence_comparison(args)
   make_prev_r_naught_fig(args)
   make_estimate_calibration_plot(args, TRUE)
   make_estimate_calibration_plot(args, FALSE)
   make_effective_size_plot(args)
+  record_prev_coverage_est(args)
+  record_r_0_coverage_est(args)
 }
 
 if (!interactive()) {
@@ -259,5 +309,3 @@ if (!interactive()) {
   )
 }
 main(args)
-
-
