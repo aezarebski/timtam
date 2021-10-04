@@ -50,12 +50,18 @@ png_as_img(filepath = "out/prevalence-calibration-extra-2.png", style = "height:
 png_as_img(filepath = "out/estimate-calibration.png", style = "height: 900px;"),
 tags$div(
        tags$h5("R-naught coverage"),
-       csv_as_table(filepath = "out/r-naught-coverage-table.csv")
+       csv_as_table(filepath = "out/r-naught-coverage-table.csv"),
+       tags$h5("Parameter coverage"),
+       csv_as_table(filepath = "out/estimates-coverage.csv")
 )
 ),
 tags$div(
        tags$h3("Aggregated data"),
-       png_as_img(filepath = "out/aggregated-estimate-calibration.png", style = "height: 900px;")
+       png_as_img(filepath = "out/aggregated-estimate-calibration.png", style = "height: 900px;"),
+tags$div(
+tags$h5("Parameter coverage"),
+csv_as_table(filepath = "out/aggregated-estimates-coverage.csv")
+)
      ),
 tags$div(
 tags$h3("Comparing prevalence estimates"),

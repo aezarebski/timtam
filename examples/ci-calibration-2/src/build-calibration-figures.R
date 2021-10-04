@@ -189,6 +189,16 @@ make_estimate_calibration_plot <- function(args, from_aggregated) {
       values = true_params$birthRate
     )
 
+    est_coverage_df <- plot_df_1 |> 
+      filter(variable == "birth_rate") |> 
+      mutate(contains = q1 <= true_params$birthRate & true_params$birthRate <= q5) |> 
+      count(contains) |>
+      as.data.frame()
+    write.table(x = est_coverage_df,
+                file = "out/aggregated-estimates-coverage.csv",
+                sep = ",",
+                row.names = FALSE)
+
     facet_labels <- c(
       birth_rate = "Birth rate",
       rho_prob = "Sequenced probability",
@@ -213,6 +223,17 @@ make_estimate_calibration_plot <- function(args, from_aggregated) {
       variable = var_names,
       values = c(true_params$birthRate, true_params$samplingRate, true_params$occurrenceRate)
     )
+
+    est_coverage_df <- plot_df_1 |> 
+      select(variable, q1, q5) |> 
+      left_join(plot_df_2, by = "variable") |>
+      mutate(contains = q1 <= values & values <= q5) |>
+      group_by(variable) |>
+      count(contains)
+    write.table(x = est_coverage_df,
+                file = "out/estimates-coverage.csv",
+                sep = ",",
+                row.names = FALSE)
 
     facet_labels <- c(
       birth_rate = "Birth rate",
