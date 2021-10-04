@@ -1,0 +1,15 @@
+#+title: Testing calibration of uncertainty
+
+To make the =index.html= file to view the output use the =index= recipe
+
+#+begin_src sh
+make index
+#+end_src
+
+To clean up the results of previous computation use the =clean= recipe
+
+#+begin_src sh
+make clean
+#+end_src
+
+To view the results open =index.html= with your browser.
