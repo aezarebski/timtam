@@ -301,7 +301,8 @@ record_prev_coverage_est <- function(args) {
     left_join(input_list$prevalence, by = "replicate") |>
     select(-variable) |>
     group_by(replicate, from_aggregated) |>
-    summarise(contains = min(value) <= prevalence & prevalence <= max(value)) |>
+    ## 0.5 here because each quantile gets its own row.
+    summarise(contains = 0.5 * sum(min(value) <= prevalence & prevalence <= max(value))) |>
     group_by(from_aggregated) |>
     summarise(
       num_contains = sum(contains),
@@ -322,22 +323,20 @@ record_r_0_coverage_est <- function(args) {
   true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
   input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
 
-  ## The summarise function throws a warning but from looking on stack exchange
-  ## it looks like this is harmless.
+  #' The summarise function throws a warning but from looking on stack exchange
+  #' it looks like this is harmless.
   r_naught_coverage_df <- input_list$estimates |>
     filter(
       variable == "r_naught",
+      from_aggregated == FALSE,
       is.element(quantile, c("2.5%", "97.5%"))
     ) |>
     select(-variable) |>
     mutate(truth = true_r_naught) |>
-    group_by(replicate, from_aggregated) |>
-    summarise(contains = min(value) <= truth & truth <= max(value)) |>
-    group_by(from_aggregated) |>
-    summarise(
-      num_contains = sum(contains),
-      num_not_contains = sum(!contains)
-    ) |>
+    group_by(replicate) |>
+    ## 0.5 here because each quantile gets its own row.
+    summarise(contains = 0.5 * sum(min(value) <= truth & truth <= max(value))) |>
+    count(contains) |>
     as.data.frame()
 
   write.table(
