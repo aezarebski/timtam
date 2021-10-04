@@ -1,8 +1,8 @@
 NUM_REPS=100
 PARAMS_JSON=../example-parameters.json
 DUR=50.0
-BURNIN=500
-NUM_MCMC_SAMPLES=5500
+BURNIN=5000
+NUM_MCMC_SAMPLES=55000
 
 index : index.html
 
