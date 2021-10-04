@@ -109,7 +109,97 @@ make_prev_r_naught_fig <- function(args) {
 
   facet_labels <- c("prevalence" = "Prevalence", "r_naught" = "Reproduction number")
 
+
+  subplot_1 <- ggplot() +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    geom_linerange(
+      data = filter(plot_df, variable == "prevalence"),
+      mapping = aes(x = sorted_order, ymin = q1, ymax = q5),
+      colour = green_hex_colour
+    ) +
+    geom_point(
+      data = filter(plot_df, variable == "prevalence"),
+      mapping = aes(x = sorted_order, y = q3),
+      colour = green_hex_colour
+    ) +
+    geom_hline(
+      yintercept = mean(plot_df[plot_df$variable == "prevalence", "q3"]),
+      colour = green_hex_colour
+    ) +
+    coord_cartesian(ylim = c(-1, 10)) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      legend.position = "null"
+    ) +
+    labs(
+      x = "Replicate (ordered by prevalence)",
+      y = "Proportional error in prevalence",
+      colour = NULL
+    )
+
+  subplot_2 <- ggplot() +
+    geom_hline(yintercept = true_r_naught, linetype = "dashed") +
+    geom_linerange(
+      data = filter(plot_df, variable == "r_naught"),
+      mapping = aes(x = sorted_order, ymin = q1, ymax = q5),
+      colour = green_hex_colour
+    ) +
+    geom_point(
+      data = filter(plot_df, variable == "r_naught"),
+      mapping = aes(x = sorted_order, y = q3),
+      colour = green_hex_colour
+    ) +
+    geom_hline(
+      yintercept = mean(plot_df[plot_df$variable == "r_naught", "q3"]),
+      colour = green_hex_colour
+    ) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      legend.position = "null"
+    ) +
+    labs(
+      x = "Replicate (ordered by prevalence)",
+      y = "Reproduction number",
+      colour = NULL
+    )
+
+  subplot_3 <- ggplot() +
+    geom_point(
+      data = plot_df[plot_df$variable == "prevalence", ],
+      mapping = aes(x = sorted_order, y = prevalence)
+    ) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+    ) +
+    labs(
+      x = "Replicate (ordered by prevalence)",
+      y = "Reproduction number"
+    )
+
+
+  ggsave(
+    filename = "out/prevalence-calibration-extra-3.png",
+    plot = cowplot::plot_grid(
+      subplot_3 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm")),
+      subplot_1 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm")),
+      subplot_2 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm")),
+      ncol = 1, labels = c("A", "B", "C")
+    ),
+    height = 21.0,
+    width = 14.8,
+    units = "cm"
+  )
+
+  ## and generate another visualisation of the same data....
   prev_fig_1 <- ggplot(data = plot_df) +
+    geom_hline(
+      data = data.frame(yi = c(0, true_r_naught), variable = c("prevalence", "r_naught")),
+      mapping = aes(yintercept = yi),
+      linetype = "dashed"
+    ) +
     geom_linerange(
       mapping = aes(x = sorted_order, ymin = q1, ymax = q5),
       colour = green_hex_colour
@@ -117,11 +207,6 @@ make_prev_r_naught_fig <- function(args) {
     geom_point(
       mapping = aes(x = sorted_order, y = q3),
       colour = green_hex_colour
-    ) +
-    geom_hline(
-      data = data.frame(yi = c(0, true_r_naught), variable = c("prevalence", "r_naught")),
-      mapping = aes(yintercept = yi),
-      linetype = "dashed"
     ) +
     facet_grid(variable ~ .,
       scale = "free_y",
@@ -301,7 +386,8 @@ record_prev_coverage_est <- function(args) {
     left_join(input_list$prevalence, by = "replicate") |>
     select(-variable) |>
     group_by(replicate, from_aggregated) |>
-    summarise(contains = min(value) <= prevalence & prevalence <= max(value)) |>
+    ## 0.5 here because each quantile gets its own row.
+    summarise(contains = 0.5 * sum(min(value) <= prevalence & prevalence <= max(value))) |>
     group_by(from_aggregated) |>
     summarise(
       num_contains = sum(contains),
@@ -322,22 +408,20 @@ record_r_0_coverage_est <- function(args) {
   true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
   input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
 
-  ## The summarise function throws a warning but from looking on stack exchange
-  ## it looks like this is harmless.
+  #' The summarise function throws a warning but from looking on stack exchange
+  #' it looks like this is harmless.
   r_naught_coverage_df <- input_list$estimates |>
     filter(
       variable == "r_naught",
+      from_aggregated == FALSE,
       is.element(quantile, c("2.5%", "97.5%"))
     ) |>
     select(-variable) |>
     mutate(truth = true_r_naught) |>
-    group_by(replicate, from_aggregated) |>
-    summarise(contains = min(value) <= truth & truth <= max(value)) |>
-    group_by(from_aggregated) |>
-    summarise(
-      num_contains = sum(contains),
-      num_not_contains = sum(!contains)
-    ) |>
+    group_by(replicate) |>
+    ## 0.5 here because each quantile gets its own row.
+    summarise(contains = 0.5 * sum(min(value) <= truth & truth <= max(value))) |>
+    count(contains) |>
     as.data.frame()
 
   write.table(
