@@ -16,11 +16,11 @@ parser$add_argument(
   help = "Filepath containing summary."
 )
 parser$add_argument(
-  "--output",
-  type = "character",
-  help = "Filepath to write plot to."
+  "--make-pdfs",
+  action = "store_true",
+  default = FALSE,
+  help = "Flag to indicate that the PDF versions of the figures should also be made."
 )
-
 
 make_prevalence_comparison <- function(args) {
   input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
@@ -52,8 +52,23 @@ make_prevalence_comparison <- function(args) {
       strip.background = element_blank(),
       legend.position = "null"
     )
-  ## print(prev_fig_1)
-  ggsave(filename = "out/prevalence-calibration-extra-1.png", plot = prev_fig_1, height = 14.8, width = 10.5, units = "cm")
+
+  ggsave(
+    filename = "out/prevalence-calibration-extra-1.png",
+    plot = prev_fig_1,
+    height = 14.8,
+    width = 10.5,
+    units = "cm"
+  )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = "out/prevalence-calibration-extra-1.pdf",
+      plot = prev_fig_1,
+      height = 14.8,
+      width = 10.5,
+      units = "cm"
+    )
+  }
 
   prev_fig_2 <- ggplot(data = plot_df) +
     geom_linerange(
@@ -77,7 +92,22 @@ make_prevalence_comparison <- function(args) {
       legend.position = "null"
     )
   ## print(prev_fig_2)
-  ggsave(filename = args$output, plot = prev_fig_2, height = 14.8, width = 10.5, units = "cm")
+  ggsave(
+    filename = "out/prevalence-calibration.png",
+    plot = prev_fig_2,
+    height = 14.8,
+    width = 10.5,
+    units = "cm"
+  )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = "out/prevalence-calibration.pdf",
+      plot = prev_fig_2,
+      height = 14.8,
+      width = 10.5,
+      units = "cm"
+    )
+  }
 }
 
 make_prev_r_naught_fig <- function(args) {
@@ -192,7 +222,20 @@ make_prev_r_naught_fig <- function(args) {
     width = 14.8,
     units = "cm"
   )
-
+  if (args$make_pdfs) {
+    ggsave(
+      filename = "out/prevalence-calibration-extra-3.pdf",
+      plot = cowplot::plot_grid(
+        subplot_3 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm")),
+        subplot_1 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm")),
+        subplot_2 + theme(plot.margin = unit(c(0.5, 0, 0, 0.5), "cm")),
+        ncol = 1, labels = c("A", "B", "C")
+      ),
+      height = 21.0,
+      width = 14.8,
+      units = "cm"
+    )
+  }
   ## and generate another visualisation of the same data....
   prev_fig_1 <- ggplot(data = plot_df) +
     geom_hline(
@@ -220,7 +263,22 @@ make_prev_r_naught_fig <- function(args) {
       legend.position = "null"
     )
   ## print(prev_fig_1)
-  ggsave(filename = "out/prevalence-calibration-extra-2.png", plot = prev_fig_1, height = 14.8, width = 10.5, units = "cm")
+  ggsave(
+    filename = "out/prevalence-calibration-extra-2.png",
+    plot = prev_fig_1,
+    height = 14.8,
+    width = 10.5,
+    units = "cm"
+  )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = "out/prevalence-calibration-extra-2.pdf",
+      plot = prev_fig_1,
+      height = 14.8,
+      width = 10.5,
+      units = "cm"
+    )
+  }
 }
 
 
@@ -336,7 +394,22 @@ make_estimate_calibration_plot <- function(args, from_aggregated) {
 
   g <- calibration_plot_fig(plot_df_1, plot_df_2, facet_labels, hex_colour)
 
-  ggsave(filename = plot_png, plot = g, height = 22.2, width = 10.5, units = "cm")
+  ggsave(
+    filename = plot_png,
+    plot = g,
+    height = 22.2,
+    width = 10.5,
+    units = "cm"
+  )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = gsub(pattern = "png", replacement = "pdf", x = plot_png),
+      plot = g,
+      height = 22.2,
+      width = 10.5,
+      units = "cm"
+    )
+  }
 }
 
 make_effective_size_plot <- function(args) {
@@ -371,6 +444,15 @@ make_effective_size_plot <- function(args) {
     width = 29.7,
     units = "cm"
   )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = "out/effective-sample-sizes.pdf",
+      plot = g,
+      height = 21.0,
+      width = 29.7,
+      units = "cm"
+    )
+  }
 }
 
 record_prev_coverage_est <- function(args) {
@@ -447,7 +529,7 @@ if (!interactive()) {
 } else {
   args <- list(
     input = "out/foo-summary.json",
-    output = "out/foo-prevalence-figure.png"
+    make_pdfs = FALSE
   )
 }
 main(args)
