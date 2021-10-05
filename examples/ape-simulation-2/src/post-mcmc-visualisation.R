@@ -371,21 +371,23 @@ main <- function(args) {
   marginal_figs <- c(marginal_figs, list(nb_fig + labs(y = NULL)))
   marginals_fig_2 <- purrr::lift_dl(cowplot::plot_grid)(marginal_figs, ncol = 1)
   saveRDS(object = marginals_fig_2, file = paste0(c(args$output_directory, "marginal-distributions-2.rds"), collapse = "/"))
-  ## summary_stats <- as.data.frame(summary(post_samples)$statistics)
 
-  ## diagnostics <- list(
-  ##   varnames = varnames(post_samples),
-  ##   mean = summary_stats$Mean,
-  ##   sd = summary_stats$SD,
-  ##   effective_size = effectiveSize(post_samples)
-  ## )
+  summary_stats <- as.data.frame(summary(post_samples)$statistics)
 
-  ## jsonlite::write_json(
-  ##             x = diagnostics,
-  ##             path = mcmc_diagnostics_json,
-  ##             auto_unbox = T,
-  ##             digits = 16
-  ##           )
+  diagnostics <- list(
+    varnames = varnames(post_samples),
+    mean = summary_stats$Mean,
+    sd = summary_stats$SD,
+    effective_size = effectiveSize(post_samples)
+  )
+
+  jsonlite::write_json(
+              x = diagnostics,
+              path = paste0(c(args$output_directory, "summary-statistics-and-diagnostics.json"), collapse = "/"),
+              auto_unbox = TRUE,
+              digits = 16,
+              pretty = TRUE
+            )
 }
 
 #' =============================================================================
