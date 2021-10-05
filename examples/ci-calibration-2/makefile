@@ -2,7 +2,8 @@ NUM_REPS=100
 PARAMS_JSON=../example-parameters.json
 DUR=50.0
 BURNIN=5000
-NUM_MCMC_SAMPLES=55000
+NUM_MCMC_SAMPLES=2005000
+MAKE_PDFS=--make-pdfs
 
 index : index.html
 
@@ -10,7 +11,7 @@ index.html : src/build-viewer.R out/plotting-done.txt
 	Rscript src/build-viewer.R
 
 out/plotting-done.txt : src/build-calibration-figures.R out/mcmc-summary.json
-	Rscript src/build-calibration-figures.R --input out/mcmc-summary.json --output out/prevalence-calibration.png
+	Rscript src/build-calibration-figures.R --input out/mcmc-summary.json ${MAKE_PDFS}
 	touch out/plotting-done.txt
 
 out/mcmc-summary.json : out/mcmc-done.txt src/summarise-mcmc-samples.R
