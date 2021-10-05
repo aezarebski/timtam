@@ -23,6 +23,21 @@ png_as_img <- function(filepath, ...) {
   }
 }
 
+#' An HTML tag encoding a data frame as a basic table.
+#'
+#' This uses the \code{xtable} package to generate the HTML for the table.
+#'
+#' @param df data.frame to create an table from
+#' @param ... additional parameters for \code{xtable::xtable}.
+#'
+df_as_table <- function(df, ...) {
+  tmp_file <- tempfile()
+  print(xtable::xtable(df, ...),
+        type = "html",
+        file = tmp_file)
+  return(tags$div(includeHTML(tmp_file)))
+}
+
 traceplot_div <- function(fps) {
   subtags <-
     c(
@@ -55,6 +70,15 @@ marginal_div <- function(fp1, fp2, fp3) {
   }
 }
 
+diagnostics_div <- function(fp) {
+  tmp <- jsonlite::read_json(fp, simplifyVector = TRUE) |>
+    as.data.frame()
+  tags$div(
+         tags$h5("Summary statistics and effective sample size"),
+         df_as_table(tmp)
+       )
+}
+
 splom_div <- function(fp) {
   tags$div(
          tags$h5("Posterior SPLOM"),
@@ -79,6 +103,7 @@ html_body <-
              marginal_div("out/unscheduled-data/marginal-distributions.png",
                           "out/unscheduled-data/r-naught.png",
                           "out/unscheduled-data/prevalence.png"),
+             diagnostics_div("out/unscheduled-data/summary-statistics-and-diagnostics.json"),
              splom_div("out/unscheduled-data/splom.png"),
              traceplot_div(list.files(
                path = "out/unscheduled-data/",
@@ -93,6 +118,7 @@ html_body <-
                   marginal_div("out/aggregated-data/marginal-distributions.png",
                                NULL,
                                "out/aggregated-data/prevalence.png"),
+                  diagnostics_div("out/aggregated-data/summary-statistics-and-diagnostics.json"),
                   splom_div("out/aggregated-data/splom.png"),
                   traceplot_div(list.files(
                     path = "out/aggregated-data/",

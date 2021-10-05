@@ -21,10 +21,10 @@ out/ape-simulation-figure.png out/ape-simulation-figure-aggregated.png out/ape-s
 # 2. Post-process the simulation data so it can be used in an MCMC sampler. This
 # needs to be done once for each type of analysis that we want to run.
 out/unscheduled-data/mcmc-app-config.json : out/ape-sim-event-times.csv src/make-config.R
-	Rscript src/make-config.R --input out/ape-sim-event-times.csv --output out/unscheduled-data/mcmc-app-config.json --parameterisation=${UNSCHEDULED_PARAM} --unscheduled-data --num-mcmc-samples 50000
+	Rscript src/make-config.R --input out/ape-sim-event-times.csv --output out/unscheduled-data/mcmc-app-config.json --parameterisation=${UNSCHEDULED_PARAM} --unscheduled-data --num-mcmc-samples 500000
 
 out/aggregated-data/mcmc-app-config.json : out/ape-sim-aggregated-event-times.csv src/make-config.R
-	Rscript src/make-config.R --input out/ape-sim-aggregated-event-times.csv --output out/aggregated-data/mcmc-app-config.json --parameterisation=${AGGREGATED_PARAM} --num-mcmc-samples 50000
+	Rscript src/make-config.R --input out/ape-sim-aggregated-event-times.csv --output out/aggregated-data/mcmc-app-config.json --parameterisation=${AGGREGATED_PARAM} --num-mcmc-samples 2000000
 
 # 3. Run the MCMC using each of the data sets derived from the ape simulation.
 out/unscheduled-data/posterior-samples.csv : out/unscheduled-data/mcmc-app-config.json
@@ -34,23 +34,21 @@ out/aggregated-data/posterior-samples.csv : out/aggregated-data/mcmc-app-config.
 	stack exec -- mcmc out/aggregated-data/mcmc-app-config.json
 
 # 4. Visualise the results so that we have figure files handy with the results.
-out/unscheduled-data/marginal-distributions.png out/unscheduled-data/r-naught.png out/unscheduled-data/prevalence.png &: out/unscheduled-data/posterior-samples.csv \
-                                                                                                                         src/post-mcmc-visualisation.R
+out/unscheduled-data/unscheduled-figures-dummy.txt : out/unscheduled-data/posterior-samples.csv \
+                                                     src/post-mcmc-visualisation.R
 	Rscript src/post-mcmc-visualisation.R --verbose --output-directory out/unscheduled-data --prevalence ${PREV_JSON} --posterior-samples out/unscheduled-data/posterior-samples.csv --params="llhd,birth_rate,sampling_rate,omega_rate,nb_r,nb_p" --burn 10000
+	touch out/unscheduled-data/unscheduled-figures-dummy.txt
 
-out/aggregated-data/marginal-distributions.png out/aggregated-data/r-naught.png out/aggregated-data/prevalence.png &: out/aggregated-data/posterior-samples.csv \
+out/aggregated-data/aggregated-figures-dummy.txt : out/aggregated-data/posterior-samples.csv \
                                                                                                                       src/post-mcmc-visualisation.R
 	Rscript src/post-mcmc-visualisation.R --verbose --output-directory out/aggregated-data --prevalence ${PREV_JSON} --posterior-samples out/aggregated-data/posterior-samples.csv --params="llhd,birth_rate,rho_prob,nu_prob,nb_r,nb_p" --burn 10000
+	touch out/aggregated-data/aggregated-figures-dummy.txt
 
 # 5. Combine the results into a page for easy inspection.
 index.html : out/ape-simulation-figure.png \
-             out/unscheduled-data/marginal-distributions.png \
-             out/unscheduled-data/r-naught.png \
-             out/unscheduled-data/prevalence.png \
-             out/aggregated-data/marginal-distributions.png \
-             out/aggregated-data/r-naught.png \
-             out/aggregated-data/prevalence.png \
              src/assemble-plots.R \
+             out/unscheduled-data/unscheduled-figures-dummy.txt \
+             out/aggregated-data/aggregated-figures-dummy.txt \
              src/make-viewer.R
 	Rscript src/assemble-plots.R
 	Rscript src/make-viewer.R
