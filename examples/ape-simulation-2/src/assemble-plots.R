@@ -17,7 +17,7 @@ assemble_data_plot <- function() {
     labels = c("A", NULL)
   )
   print(comb_fig)
-  ggsave(file = "out/ape-sim-figures-combined.png",
+  ggsave(file = "out/ape-sim-figures-combined.pdf",
          plot = comb_fig,
          height = 14.8,
          width = 21.0,
