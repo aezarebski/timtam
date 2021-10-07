@@ -1,6 +1,7 @@
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(coda))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(latex2exp))
 suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(dplyr))
@@ -434,8 +435,7 @@ make_effective_size_plot <- function(args) {
     scale_y_log10() +
     labs(x = "Replicate", y = "Effective sample size") +
     facet_wrap(~from_aggregated) +
-    theme_classic() +
-    theme(legend.position = "none")
+    theme_classic()
 
   ggsave(
     filename = "out/effective-sample-sizes.png",
@@ -514,6 +514,77 @@ record_r_0_coverage_est <- function(args) {
   )
 }
 
+make_mse_plots <- function(args) {
+  input_list <- jsonlite::read_json(args$input, simplifyVector = TRUE)
+  plot_df_1 <- input_list$mses$not_aggregated
+  g_1 <- ggplot(data = plot_df_1,
+              mapping = aes(x = size, y = mse_r_naught)) +
+    geom_point() +
+    scale_y_log10() +
+    geom_smooth(method = "lm", colour = green_hex_colour, fill = green_hex_colour, alpha = 0.1) +
+    theme_classic() +
+    labs(y = TeX("$R_{0}$ MSE (logarithmic scale)"),
+         x = "Dataset size")
+
+  plot_png_1 <- "out/mse-r-naught.png"
+
+  ggsave(
+    filename = plot_png_1,
+    plot = g_1,
+    height = 7.4,
+    width = 10.5,
+    units = "cm"
+  )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = gsub(pattern = "png", replacement = "pdf", x = plot_png_1),
+      plot = g_1,
+      height = 7.4,
+      width = 10.5,
+      units = "cm"
+    )
+  }
+
+  plot_png_2 <- "out/mse-prevalence.png"
+  plot_df_2a <- input_list$mses$aggregated |> mutate(agg = TRUE)
+  plot_df_2b <- input_list$mses$not_aggregated |> select(size, mse_prevalence) |> mutate(agg = FALSE)
+  plot_df_2 <- rbind(plot_df_2a, plot_df_2b)
+
+  facet_labels <- c("TRUE" = "Aggregated data", "FALSE" = "Exact sampling dates")
+  g_2 <- ggplot(data = plot_df_2,
+                mapping = aes(x = size, y = mse_prevalence)) +
+    geom_point() +
+    scale_y_log10() +
+    geom_smooth(method = "lm", mapping = aes(colour = agg, fill = agg), alpha = 0.1) +
+    facet_wrap(~agg, ncol = 1, scales = "free", labeller = labeller(agg = facet_labels)) +
+    scale_colour_manual(values = c(green_hex_colour, purple_hex_colour)) +
+    scale_fill_manual(values = c(green_hex_colour, purple_hex_colour)) +
+    labs(y = "Relative prevalence MSE (logarithmic scale)",
+         x = "Dataset size") +
+    theme_classic() +
+    theme(legend.position = "null",
+          strip.background = element_blank())
+
+  ggsave(
+    filename = plot_png_2,
+    plot = g_2,
+    height = 14.8,
+    width = 10.5,
+    units = "cm"
+  )
+  if (args$make_pdfs) {
+    ggsave(
+      filename = gsub(pattern = "png", replacement = "pdf", x = plot_png_2),
+      plot = g_2,
+      height = 14.8,
+      width = 10.5,
+      units = "cm"
+    )
+  }
+
+
+}
+
 main <- function(args) {
   make_prevalence_comparison(args)
   make_prev_r_naught_fig(args)
@@ -522,6 +593,7 @@ main <- function(args) {
   make_effective_size_plot(args)
   record_prev_coverage_est(args)
   record_r_0_coverage_est(args)
+  make_mse_plots(args)
 }
 
 if (!interactive()) {
@@ -533,3 +605,4 @@ if (!interactive()) {
   )
 }
 main(args)
+

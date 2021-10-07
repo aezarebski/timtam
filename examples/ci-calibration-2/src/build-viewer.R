@@ -50,6 +50,7 @@ build_index <- function() {
         tags$h3("Unscheduled data"),
         png_as_img(filepath = "out/prevalence-calibration-extra-2.png", style = "height: 900px;"),
         png_as_img(filepath = "out/estimate-calibration.png", style = "height: 900px;"),
+        png_as_img(filepath = "out/mse-r-naught.png", style = "height: 900px;"),
         tags$div(
           tags$h5("R-naught coverage"),
           csv_as_table(filepath = "out/r-naught-coverage-table.csv"),
@@ -67,6 +68,7 @@ build_index <- function() {
       ),
       tags$div(
         tags$h3("Comparing prevalence estimates"),
+        png_as_img(filepath = "out/mse-prevalence.png", style = "height: 900px;"),
         tags$div(
           tags$h5("Coverage of prevalence estimates"),
           csv_as_table(filepath = "out/prevalence-coverage-table.csv")

@@ -120,7 +120,7 @@ main <- function(args) {
       collapse = "/"
     ),
     mcmcRecordFinalPrevalence = TRUE,
-    mcmcStepSD  = 1e-3,
+    mcmcStepSD  = ifelse(is_aggregated, 1e-2, 2e-3),
     mcmcInit   = mcmc_init,
     mcmcSeed  = c(1, 2),
     mcmcParameterisation = args$parameterisation,
