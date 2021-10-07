@@ -156,3 +156,20 @@ scanlM f z0 xs = sequence $ scanl' g (return z0) xs
 toMaybe :: Bool -> a -> Maybe a
 toMaybe True x = Just x
 toMaybe False _ = Nothing
+
+-- | Take every nth element of the list.
+--
+-- >>> takeEvery 1 [1..10]
+-- [1,2,3,4,5,6,7,8,9,10]
+-- >>> takeEvery 2 [1..10]
+-- [2,4,6,8,10]
+-- >>> takeEvery 3 [1..10]
+-- [3,6,9]
+-- >>> takeEvery 13 [1..10]
+-- []
+--
+takeEvery :: Int -> [a] -> [a]
+takeEvery n xs =
+  case drop (n-1) xs of
+    [] -> []
+    y : ys -> y : takeEvery n ys
