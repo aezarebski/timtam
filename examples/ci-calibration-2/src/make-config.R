@@ -38,6 +38,11 @@ parser$add_argument(
          type = "integer",
          help = "The number of posterior samples to generate via MCMC."
        )
+parser$add_argument(
+         "--thin",
+         type = "integer",
+         help = "The factor to thin the MCMC samples by."
+       )
 
 fix_from_to_by <- function(from_to_by_string) {
   if (from_to_by_string != "") {
@@ -99,6 +104,7 @@ main <- function(args) {
   mcmc_input <- list(
     mcmcObservations = observations_list,
     mcmcNumSamples = args$num_mcmc_samples,
+    mcmcThinFactor = args$thin,
     mcmcSampleCSV= paste0(
       c(dirname(args$output),
         ifelse(is_aggregated, 
@@ -137,7 +143,8 @@ if (!interactive()) {
     input = "out/ape-sim-aggregated-event-times.csv",
     output = "out/aggregated-data/mcmc-app-config.json",
     parameterisation = "identity-muKnown-lambda-psi-noRho-omega-noNu",
-    unscheduled_data = FALSE
+    num_mcmc_samples = 10000,
+    thin = 10
   )
   main(args)
 }
