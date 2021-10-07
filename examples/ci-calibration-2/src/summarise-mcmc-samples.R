@@ -19,11 +19,6 @@ parser$add_argument(
          help = "Filepath to parameters JSON"
        )
 parser$add_argument(
-         "--burnin",
-         type = "integer",
-         help = "Number of samples to discard as burnin."
-       )
-parser$add_argument(
          "--output",
          type = "character",
          help = "Filepath to write JSON results."
@@ -76,7 +71,7 @@ write_summary <- function(summaries, summaries_from_agg, parameters, output) {
 }
 
 ## read the MCMC samples and return some summary statistics
-read_and_summarise <- function(replicate_ix, num_burnin, from_aggregated, death_rate) {
+read_and_summarise <- function(replicate_ix, from_aggregated, death_rate) {
   final_prev <- jsonlite::read_json(sprintf(
                             "out/replicate-%d/ape-sim-final-prevalence.json",
                             replicate_ix
@@ -95,7 +90,18 @@ read_and_summarise <- function(replicate_ix, num_burnin, from_aggregated, death_
     header <- c("llhd", "birth_rate", "sampling_rate", "omega_rate", "nb_r", "nb_p")
   }
 
-  mcmc_df <- read.csv(file = samples_csv, header = FALSE, skip = num_burnin)
+  mcmc_df <- tryCatch(
+    read.csv(file = samples_csv, header = FALSE),
+    error = function(e) {
+      warning(e)
+      return(NULL)
+    }
+  )
+  if (is.null(mcmc_df)) {
+    cat("\tcould not read mcmc samples so terminating early.\n")
+    return(NULL)
+  }
+
   names(mcmc_df) <- header
   if (!from_aggregated) {
     mcmc_df$r_naught <- mcmc_df$birth_rate / (death_rate + mcmc_df$sampling_rate + mcmc_df$omega_rate)
@@ -128,10 +134,17 @@ main <- function(args) {
   summaries_agg <- list()
 
   for (replicate in seq.int(args$num_replicates)) {
-    summaries_not_agg <- c(summaries_not_agg,
-                           list(read_and_summarise(replicate, args$burnin, FALSE, death_rate)))
-    summaries_agg <- c(summaries_agg,
-                       list(read_and_summarise(replicate, args$burnin, TRUE, death_rate)))
+    cat("Processing replicate ", replicate, "\n")
+    summary_not_agg <- read_and_summarise(replicate, FALSE, death_rate)
+    summary_agg <- read_and_summarise(replicate, TRUE, death_rate)
+    if (!any(sapply(list(summary_not_agg, summary_agg), is.null))) {
+      summaries_not_agg <- c(summaries_not_agg,
+                             list(summary_not_agg))
+      summaries_agg <- c(summaries_agg,
+                         list(summary_agg))
+    } else {
+      cat("skipping replicate ", replicate, "\n")
+    }
   }
   write_summary(summaries_not_agg, summaries_agg, args$parameters, args$output)
 }
@@ -139,9 +152,8 @@ main <- function(args) {
 if (!interactive()) {
   args <- parser$parse_args()
 } else {
-  args <- list(num_replicates = 30,
+  args <- list(num_replicates = 5,
                parameters = "../example-parameters.json",
-               burnin = 0,
                output = "out/foo-summary.json")
 }
 main(args)
