@@ -1,8 +1,9 @@
-NUM_REPS=100
+NUM_REPS=20
 PARAMS_JSON=../example-parameters.json
 DUR=50.0
-BURNIN=5000
-NUM_MCMC_SAMPLES=2005000
+BURNIN=1000
+THIN=1000
+NUM_MCMC_SAMPLES=1001000
 MAKE_PDFS=--make-pdfs
 
 index : index.html
@@ -15,7 +16,7 @@ out/plotting-done.txt : src/build-calibration-figures.R out/mcmc-summary.json
 	touch out/plotting-done.txt
 
 out/mcmc-summary.json : out/mcmc-done.txt src/summarise-mcmc-samples.R
-	Rscript src/summarise-mcmc-samples.R --num-replicates ${NUM_REPS} --parameters ${PARAMS_JSON} --burnin ${BURNIN} --output out/mcmc-summary.json
+	Rscript src/summarise-mcmc-samples.R --num-replicates ${NUM_REPS} --parameters ${PARAMS_JSON} --output out/mcmc-summary.json
 
 # This file is touched at the end of the MCMC as a way to keep track of when
 # things have been run.
@@ -23,9 +24,12 @@ out/mcmc-done.txt : src/run-mcmc.sh out/simulation-done.txt
 	/usr/bin/env bash ./src/run-mcmc.sh ${NUM_REPS}
 	touch out/mcmc-done.txt
 
-# This file is touched to indicate that the data have been simulated.
+# This file is touched to indicate that the data have been simulated. This
+# script also takes care of formatting the data such that it can be used by the
+# MCMC application which is why we have to provide some additional information
+# about the MCMC configuration.
 out/simulation-done.txt : src/simulate-datasets.R
-	Rscript src/simulate-datasets.R --num-replicates ${NUM_REPS} --parameters ${PARAMS_JSON} --duration ${DUR} --seq-agg-times="0 ${DUR} 1" --occ-agg-times="0.5 ${DUR} 7" --num-mcmc-samples ${NUM_MCMC_SAMPLES}
+	Rscript src/simulate-datasets.R --num-replicates ${NUM_REPS} --parameters ${PARAMS_JSON} --duration ${DUR} --seq-agg-times="0 ${DUR} 1" --occ-agg-times="0.5 ${DUR} 7" --num-mcmc-samples ${NUM_MCMC_SAMPLES} --burn ${BURNIN} --thin ${THIN}
 	touch out/simulation-done.txt
 
 clean :

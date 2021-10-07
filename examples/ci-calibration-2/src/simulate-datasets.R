@@ -37,6 +37,16 @@ parser$add_argument(
          type = "integer",
          help = "The number of posterior samples to generate via MCMC."
        )
+parser$add_argument(
+         "--burn",
+         type = "integer",
+         help = "The number of MCMC samples to discard from the start of the chain."
+       )
+parser$add_argument(
+         "--thin",
+         type = "integer",
+         help = "The factor to thin the MCMC samples by."
+       )
 
 #' Helper function for running system commands.
 #'
@@ -88,7 +98,7 @@ run_simulation <- function(num_replicates, duration) {
   }
 }
 
-prepare_data <- function(num_replicates, num_mcmc_samples) {
+prepare_data <- function(num_replicates, num_mcmc_samples, num_burn, thinning_factor) {
   prep_cmd <- function(seed, is_aggregated) {
     input_csv <- sprintf("%s/%s",
                          replicate_dir(seed),
@@ -104,12 +114,16 @@ prepare_data <- function(num_replicates, num_mcmc_samples) {
     param_str <- ifelse(is_aggregated,
                         "\"identity-muKnown-lambda-psiZero-rho-omegaZero-nu\"",
                         "\"identity-muKnown-lambda-psi-noRho-omega-noNu\"")
+    mcmc_str <- sprintf("--num-mcmc-samples %d --burn %d --thin %d",
+                        num_mcmc_samples,
+                        num_burn,
+                        thinning_factor)
     sprintf(
-      "Rscript src/make-config.R --input %s --output %s --parameterisation=%s --num-mcmc-samples %d",
+      "Rscript src/make-config.R --input %s --output %s --parameterisation=%s %s",
       input_csv,
       output_json,
       param_str,
-      num_mcmc_samples
+      mcmc_str
     )
   }
   for (seed in seq.int(num_replicates)) {
@@ -121,7 +135,7 @@ prepare_data <- function(num_replicates, num_mcmc_samples) {
 main <- function(args) {
   cat("hello from simulate-datasets.R\n")
   run_simulation(args$num_replicates, args$duration)
-  prepare_data(args$num_replicates, args$num_mcmc_samples)
+  prepare_data(args$num_replicates, args$num_mcmc_samples, args$burn, args$thin)
 }
 
 if (!interactive()) {

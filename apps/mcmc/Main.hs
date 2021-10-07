@@ -10,17 +10,17 @@ import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
 import           BDSCOD.Types             (LogLikelihood (..),
                                            MCMCConfiguration (..), MWCSeed,
                                            NegativeBinomial (..), NumLineages,
-                                           Observation, Observation (..),
-                                           ObservedEvent (..), PDESolution (..),
-                                           Parameters (..), nbMV2SP,
-                                           packParameters, putLambda, putMu,
-                                           putNus, putOmega, putPsi, putRhos,
-                                           scheduledTimes, unpackParameters)
-import           BDSCOD.Utility           (toMaybe)
+                                           Observation (..), ObservedEvent (..),
+                                           PDESolution (..), Parameters (..),
+                                           nbMV2SP, packParameters, putLambda,
+                                           putMu, putNus, putOmega, putPsi,
+                                           putRhos, scheduledTimes,
+                                           unpackParameters)
+import           BDSCOD.Utility           (toMaybe, takeEvery)
 import qualified Data.Aeson               as Json
 import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
-import           Data.Maybe               (isNothing,fromJust)
+import           Data.Maybe               (fromJust, isNothing)
 import qualified Data.Vector.Unboxed      as Unboxed
 import           Epidemic.Types.Parameter (AbsoluteTime (..), TimeDelta (..))
 import           GHC.Generics             (Generic)
@@ -35,14 +35,16 @@ data MCMCInput = MI { mcmcObservations          :: [Observation]
                     , mcmcInit                  :: [Double]
                     , mcmcSeed                  :: [Word32]
                     , mcmcNumSamples            :: Int
+                    , mcmcThinFactor            :: Maybe Int
+                    , mcmcBurn                  :: Maybe Int
                     , mcmcStepSD                :: Double
                     , mcmcSampleCSV             :: FilePath
                     , mcmcRecordFinalPrevalence :: Bool
                     , mcmcParameterisation      :: String
                     , mcmcKnownMu               :: Maybe Double
                     , mcmcSimDuration           :: Maybe Double
-                    , mcmcRhoTimes :: [Double]
-                    , mcmcNuTimes :: [Double]
+                    , mcmcRhoTimes              :: [Double]
+                    , mcmcNuTimes               :: [Double]
                     , mcmcPrior                 :: String } deriving (Show, Generic)
 
 instance Json.FromJSON MCMCInput
@@ -62,6 +64,7 @@ main = do
              -- TODO Implement the prior functionality
              prior :: [Double] -> Double
              prior = undefined
+
              target x = llhd x
              tunable x =
                fromRight undefined $ snd <$>
@@ -69,6 +72,9 @@ main = do
                   llhdAndNB mcmcObservations params initLlhdState
              maybeTunable :: Maybe ([Double] -> NegativeBinomial)
              maybeTunable = toMaybe mcmcRecordFinalPrevalence tunable
+
+             burn = return . drop (maybe 0 id mcmcBurn)
+             thinChain = return . takeEvery (maybe 1 id mcmcThinFactor)
          in do -- report some of the details of the mcmc so you can tell if the
                -- configuration has been read correctly
            putStrLn $
@@ -81,11 +87,13 @@ main = do
              "\n\toutput file:               " ++ mcmcSampleCSV ++
              "\n\tnumber observations:       " ++ show (length mcmcObservations) ++
              "\n\tnumber MCMC iterations:    " ++ show mcmcNumSamples ++
+             (maybe "" (\n -> "\n\tnumber to burn:             " ++ show n) mcmcBurn) ++
+             (maybe "" (\n -> "\n\tthinning factor:            " ++ show n) mcmcThinFactor) ++
              "\n\trecord final prevalence:   " ++ show mcmcRecordFinalPrevalence ++
              "\n" ++ replicate 60 '-'
              -- run the sampler and write the results to file.
            gen <- initialize $ Unboxed.fromList mcmcSeed
-           ch <- chain' mcmcNumSamples mcmcStepSD mcmcInit target maybeTunable gen
+           ch <- thinChain =<< burn =<< chain' mcmcNumSamples mcmcStepSD mcmcInit target maybeTunable gen
            writeChainToCSV ch mcmcSampleCSV
     Left msg ->
       do putStrLn $ "failed to read valid MCMC configuration from " ++ configFile
