@@ -10,17 +10,17 @@ import           BDSCOD.Llhd              (initLlhdState, llhdAndNB)
 import           BDSCOD.Types             (LogLikelihood (..),
                                            MCMCConfiguration (..), MWCSeed,
                                            NegativeBinomial (..), NumLineages,
-                                           Observation, Observation (..),
-                                           ObservedEvent (..), PDESolution (..),
-                                           Parameters (..), nbMV2SP,
-                                           packParameters, putLambda, putMu,
-                                           putNus, putOmega, putPsi, putRhos,
-                                           scheduledTimes, unpackParameters)
+                                           Observation (..), ObservedEvent (..),
+                                           PDESolution (..), Parameters (..),
+                                           nbMV2SP, packParameters, putLambda,
+                                           putMu, putNus, putOmega, putPsi,
+                                           putRhos, scheduledTimes,
+                                           unpackParameters)
 import           BDSCOD.Utility           (toMaybe)
 import qualified Data.Aeson               as Json
 import           Data.Either.Combinators  (fromRight, maybeToRight)
 import           Data.List                (intersperse)
-import           Data.Maybe               (isNothing,fromJust)
+import           Data.Maybe               (fromJust, isNothing)
 import qualified Data.Vector.Unboxed      as Unboxed
 import           Epidemic.Types.Parameter (AbsoluteTime (..), TimeDelta (..))
 import           GHC.Generics             (Generic)
@@ -41,8 +41,8 @@ data MCMCInput = MI { mcmcObservations          :: [Observation]
                     , mcmcParameterisation      :: String
                     , mcmcKnownMu               :: Maybe Double
                     , mcmcSimDuration           :: Maybe Double
-                    , mcmcRhoTimes :: [Double]
-                    , mcmcNuTimes :: [Double]
+                    , mcmcRhoTimes              :: [Double]
+                    , mcmcNuTimes               :: [Double]
                     , mcmcPrior                 :: String } deriving (Show, Generic)
 
 instance Json.FromJSON MCMCInput
