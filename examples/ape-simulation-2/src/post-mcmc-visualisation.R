@@ -31,22 +31,18 @@ parser$add_argument(
   "--posterior-samples",
   type = "character",
   help = "Filepath to posterior samples CSV"
-  )
+)
 parser$add_argument(
-         "--params",
-         type = "character",
-         default = "",
-         help = "A comma-separated list of the variables in the posterior samples CSV."
-       )
+  "--params",
+  type = "character",
+  default = "",
+  help = "A comma-separated list of the variables in the posterior samples CSV."
+)
 parser$add_argument(
   "--output-directory",
   type = "character",
   help = "Directory to write figures to"
-  )
-parser$add_argument(
-         "--burn",
-         type = "integer",
-         help = "Number of samples to burn from the start of the chain.")
+)
 
 #' =============================================================================
 #' Actual functionality
@@ -90,8 +86,6 @@ main <- function(args) {
   stopifnot(length(post_samples_var_names) == ncol(post_samples_df))
   names(post_samples_df) <- post_samples_var_names
 
-  ## Remove some samples from the start as burn-in.
-  post_samples_df <- tail(post_samples_df, -args$burn)
   post_samples <- as.mcmc(post_samples_df)
   ## Make the trace plots for use as diagnostics of the MCMC.
   trace_fp <- function(n) {
@@ -220,7 +214,6 @@ main <- function(args) {
     marginal_figs <- c(marginal_figs, list(nu_prob_fig))
   }
 
-  
   marginals_fig <- purrr::lift_dl(cowplot::plot_grid)(marginal_figs, ncol = 3)
 
   ggsave(
@@ -235,47 +228,48 @@ main <- function(args) {
   sub_plot_scatter <- function(x_var, y_var, col) {
     ggplot(post_samples_df, aes_string(x = x_var, y = y_var)) +
       geom_point(shape = 1, size = 0.1, colour = col) +
-      theme_minimal()
+      labs(x = NULL, y = NULL) +
+      theme_classic()
   }
-  sub_plot_hist <- function(x_var, col) {
-    ggplot(post_samples_df, aes_string(x = x_var)) +
-      geom_histogram(fill = col, bins = 20) +
-      theme_minimal()
+  sub_plot_hist <- function(x_var, col, title) {
+    ggplot() +
+      geom_histogram(data = post_samples_df,
+                     mapping = aes_string(x = x_var, y = "..density.."),
+                     fill = col,
+                     bins = 20) +
+      ggtitle(title) +
+      labs(x = NULL, y = NULL) +
+      theme_classic() +
+      theme(plot.title = element_text(hjust = 0.5))
   }
   if (all(is.element(c("sampling_rate", "omega_rate"), varnames(post_samples)))) {
     splom <- cowplot::plot_grid(
-                        sub_plot_hist("birth_rate", green_hex_colour),
-                        sub_plot_scatter("sampling_rate", "birth_rate", green_hex_colour),
-                        sub_plot_scatter("omega_rate", "birth_rate", green_hex_colour),
-
-                        sub_plot_scatter("birth_rate", "sampling_rate", green_hex_colour),
-                        sub_plot_hist("sampling_rate", green_hex_colour),
-                        sub_plot_scatter("omega_rate", "sampling_rate", green_hex_colour),
-
-                        sub_plot_scatter("birth_rate", "omega_rate", green_hex_colour),
-                        sub_plot_scatter("sampling_rate", "omega_rate", green_hex_colour),
-                        sub_plot_hist("omega_rate", green_hex_colour),
-
-                        align = "hv",
-                        ncol = 3
-                      )
+      sub_plot_hist(x_var = "birth_rate", col = green_hex_colour, title = TeX("Birth rate, $\\lambda$")),
+      sub_plot_scatter("sampling_rate", "birth_rate", green_hex_colour),
+      sub_plot_scatter("omega_rate", "birth_rate", green_hex_colour),
+      sub_plot_scatter("birth_rate", "sampling_rate", green_hex_colour),
+      sub_plot_hist(x_var = "sampling_rate", col = green_hex_colour, title = TeX("Sampling rate, $\\psi$")),
+      sub_plot_scatter("omega_rate", "sampling_rate", green_hex_colour),
+      sub_plot_scatter("birth_rate", "omega_rate", green_hex_colour),
+      sub_plot_scatter("sampling_rate", "omega_rate", green_hex_colour),
+      sub_plot_hist(x_var = "omega_rate", col = green_hex_colour, title = TeX("Occurrence rate, $\\omega$")),
+      align = "hv",
+      ncol = 3
+    )
   } else if (all(is.element(c("rho_prob", "nu_prob"), varnames(post_samples)))) {
     splom <- cowplot::plot_grid(
-                        sub_plot_hist("birth_rate", purple_hex_colour),
-                        sub_plot_scatter("rho_prob", "birth_rate", purple_hex_colour),
-                        sub_plot_scatter("nu_prob", "birth_rate", purple_hex_colour),
-
-                        sub_plot_scatter("birth_rate", "rho_prob", purple_hex_colour),
-                        sub_plot_hist("rho_prob", purple_hex_colour),
-                        sub_plot_scatter("nu_prob", "rho_prob", purple_hex_colour),
-
-                        sub_plot_scatter("birth_rate", "nu_prob", purple_hex_colour),
-                        sub_plot_scatter("rho_prob", "nu_prob", purple_hex_colour),
-                        sub_plot_hist("nu_prob", purple_hex_colour),
-
-                        align = "hv",
-                        ncol = 3
-                      )
+      sub_plot_hist(x_var = "birth_rate", col = purple_hex_colour, title = TeX("Birth rate, $\\lambda$")),
+      sub_plot_scatter("rho_prob", "birth_rate", purple_hex_colour),
+      sub_plot_scatter("nu_prob", "birth_rate", purple_hex_colour),
+      sub_plot_scatter("birth_rate", "rho_prob", purple_hex_colour),
+      sub_plot_hist(x_var = "rho_prob", col = purple_hex_colour, title = TeX("Sequenced probability, $\\rho$")),
+      sub_plot_scatter("nu_prob", "rho_prob", purple_hex_colour),
+      sub_plot_scatter("birth_rate", "nu_prob", purple_hex_colour),
+      sub_plot_scatter("rho_prob", "nu_prob", purple_hex_colour),
+      sub_plot_hist(x_var = "nu_prob", col = purple_hex_colour, title = TeX("Unsequenced probability, $\\nu$")),
+      align = "hv",
+      ncol = 3
+    )
   } else {
     stop("not sure how to construct the SPLOM for this data, you may need to double check that this program understands the given combinations of parameter provided by the params argument.")
   }
@@ -288,39 +282,39 @@ main <- function(args) {
   )
 
   if (all(is.element(c("sampling_rate", "omega_rate"), varnames(post_samples)))) {
-  ## Make a plot of the r-naught estimates
-  r_naught_samples <-
-    post_samples_df |>
-    mutate(r_naught = birth_rate / (sampling_rate + true_params$deathRate + omega_rate)) |>
-    extract2("r_naught")
+    ## Make a plot of the r-naught estimates
+    r_naught_samples <-
+      post_samples_df |>
+      mutate(r_naught = birth_rate / (sampling_rate + true_params$deathRate + omega_rate)) |>
+      extract2("r_naught")
 
-  true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
+    true_r_naught <- true_params$birthRate / (true_params$deathRate + true_params$samplingRate + true_params$occurrenceRate)
 
-  r_naught_marg <- marginal_plot_summary(r_naught_samples, "r_naught")
-  r_naught_fig <- ggplot(mapping = aes(x = x, y = y)) +
-    geom_line(
-      data = r_naught_marg$df,
-      colour = green_hex_colour
-    ) +
-    geom_area(
-      data = filter(r_naught_marg$df, r_naught_marg$ci[1] < x, x < r_naught_marg$ci[2]),
-      fill = green_hex_colour,
-      alpha = 0.3
-    ) +
-    geom_vline(
-      xintercept = true_r_naught,
-      linetype = "dashed"
-    ) +
-    labs(y = NULL, x = TeX("Reproduction number ($R_{0}$)")) +
-    theme_classic() +
-    theme()
-  ggsave(
-    filename = paste0(c(args$output_directory, "r-naught.png"), collapse = "/"),
-    plot = r_naught_fig,
-    height = 10,
-    width = 2.8 * 10,
-    units = "cm"
-  )
+    r_naught_marg <- marginal_plot_summary(r_naught_samples, "r_naught")
+    r_naught_fig <- ggplot(mapping = aes(x = x, y = y)) +
+      geom_line(
+        data = r_naught_marg$df,
+        colour = green_hex_colour
+      ) +
+      geom_area(
+        data = filter(r_naught_marg$df, r_naught_marg$ci[1] < x, x < r_naught_marg$ci[2]),
+        fill = green_hex_colour,
+        alpha = 0.3
+      ) +
+      geom_vline(
+        xintercept = true_r_naught,
+        linetype = "dashed"
+      ) +
+      labs(y = NULL, x = TeX("Reproduction number ($R_{0}$)")) +
+      theme_classic() +
+      theme()
+    ggsave(
+      filename = paste0(c(args$output_directory, "r-naught.png"), collapse = "/"),
+      plot = r_naught_fig,
+      height = 10,
+      width = 2.8 * 10,
+      units = "cm"
+    )
   }
 
   ## Plot the negative binomial distribution of the prevalence
@@ -382,12 +376,12 @@ main <- function(args) {
   )
 
   jsonlite::write_json(
-              x = diagnostics,
-              path = paste0(c(args$output_directory, "summary-statistics-and-diagnostics.json"), collapse = "/"),
-              auto_unbox = TRUE,
-              digits = 16,
-              pretty = TRUE
-            )
+    x = diagnostics,
+    path = paste0(c(args$output_directory, "summary-statistics-and-diagnostics.json"), collapse = "/"),
+    auto_unbox = TRUE,
+    digits = 16,
+    pretty = TRUE
+  )
 }
 
 #' =============================================================================

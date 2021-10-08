@@ -45,6 +45,16 @@ parser$add_argument(
          type = "integer",
          help = "The number of posterior samples to generate via MCMC."
        )
+parser$add_argument(
+         "--burn",
+         type = "integer",
+         help = "The number of MCMC samples to discard from the start of the chain."
+       )
+parser$add_argument(
+         "--thin",
+         type = "integer",
+         help = "The factor to thin the MCMC samples by."
+       )
 
 fix_from_to_by <- function(from_to_by_string) {
   if (from_to_by_string != "") {
@@ -105,6 +115,8 @@ main <- function(args) {
   mcmc_input <- list(
     mcmcObservations = observations_list,
     mcmcNumSamples = args$num_mcmc_samples,
+    mcmcBurn = args$burn,
+    mcmcThinFactor = args$thin,
     mcmcSampleCSV= paste0(c(dirname(args$output), "posterior-samples.csv"), collapse = "/"),
     mcmcRecordFinalPrevalence = TRUE,
     mcmcStepSD  = 1e-3,
