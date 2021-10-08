@@ -1,4 +1,4 @@
-NUM_REPS=20
+NUM_REPS=100
 PARAMS_JSON=../example-parameters.json
 DUR=50.0
 BURNIN=1000
