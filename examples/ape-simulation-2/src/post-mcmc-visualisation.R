@@ -228,38 +228,45 @@ main <- function(args) {
   sub_plot_scatter <- function(x_var, y_var, col) {
     ggplot(post_samples_df, aes_string(x = x_var, y = y_var)) +
       geom_point(shape = 1, size = 0.1, colour = col) +
-      theme_minimal()
+      labs(x = NULL, y = NULL) +
+      theme_classic()
   }
-  sub_plot_hist <- function(x_var, col) {
-    ggplot(post_samples_df, aes_string(x = x_var)) +
-      geom_histogram(fill = col, bins = 20) +
-      theme_minimal()
+  sub_plot_hist <- function(x_var, col, title) {
+    ggplot() +
+      geom_histogram(data = post_samples_df,
+                     mapping = aes_string(x = x_var, y = "..density.."),
+                     fill = col,
+                     bins = 20) +
+      ggtitle(title) +
+      labs(x = NULL, y = NULL) +
+      theme_classic() +
+      theme(plot.title = element_text(hjust = 0.5))
   }
   if (all(is.element(c("sampling_rate", "omega_rate"), varnames(post_samples)))) {
     splom <- cowplot::plot_grid(
-      sub_plot_hist("birth_rate", green_hex_colour),
+      sub_plot_hist(x_var = "birth_rate", col = green_hex_colour, title = TeX("Birth rate, $\\lambda$")),
       sub_plot_scatter("sampling_rate", "birth_rate", green_hex_colour),
       sub_plot_scatter("omega_rate", "birth_rate", green_hex_colour),
       sub_plot_scatter("birth_rate", "sampling_rate", green_hex_colour),
-      sub_plot_hist("sampling_rate", green_hex_colour),
+      sub_plot_hist(x_var = "sampling_rate", col = green_hex_colour, title = TeX("Sampling rate, $\\psi$")),
       sub_plot_scatter("omega_rate", "sampling_rate", green_hex_colour),
       sub_plot_scatter("birth_rate", "omega_rate", green_hex_colour),
       sub_plot_scatter("sampling_rate", "omega_rate", green_hex_colour),
-      sub_plot_hist("omega_rate", green_hex_colour),
+      sub_plot_hist(x_var = "omega_rate", col = green_hex_colour, title = TeX("Occurrence rate, $\\omega$")),
       align = "hv",
       ncol = 3
     )
   } else if (all(is.element(c("rho_prob", "nu_prob"), varnames(post_samples)))) {
     splom <- cowplot::plot_grid(
-      sub_plot_hist("birth_rate", purple_hex_colour),
+      sub_plot_hist(x_var = "birth_rate", col = purple_hex_colour, title = TeX("Birth rate, $\\lambda$")),
       sub_plot_scatter("rho_prob", "birth_rate", purple_hex_colour),
       sub_plot_scatter("nu_prob", "birth_rate", purple_hex_colour),
       sub_plot_scatter("birth_rate", "rho_prob", purple_hex_colour),
-      sub_plot_hist("rho_prob", purple_hex_colour),
+      sub_plot_hist(x_var = "rho_prob", col = purple_hex_colour, title = TeX("Sequenced probability, $\\rho$")),
       sub_plot_scatter("nu_prob", "rho_prob", purple_hex_colour),
       sub_plot_scatter("birth_rate", "nu_prob", purple_hex_colour),
       sub_plot_scatter("rho_prob", "nu_prob", purple_hex_colour),
-      sub_plot_hist("nu_prob", purple_hex_colour),
+      sub_plot_hist(x_var = "nu_prob", col = purple_hex_colour, title = TeX("Unsequenced probability, $\\nu$")),
       align = "hv",
       ncol = 3
     )
