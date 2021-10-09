@@ -10,7 +10,7 @@ if (not(dir.exists("out"))) {
 output_file <- "app-config.json"
 
 ## the example parameters are expressed in units of days so this is 15 days.
-simulation_duration <- 25
+simulation_duration <- 35
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
@@ -44,15 +44,15 @@ sim_params <- list(
 
 result <- list(
   acDuration = simulation_duration,
-  acNumSims = 5000,
+  acNumSims = 10000,
   acBinWidth = 10,
   acSimParams = list(
     mpParameters = sim_params,
     mpDuration = simulation_duration
   ),
-  acNumBins = 40,
+  acNumBins = 50,
   acOutputCsv = "out/simulation-sizes-and-llhds.csv",
-  pyNumReplicates = 5
+  pyNumReplicates = 10
 )
 
 write_json(result,
