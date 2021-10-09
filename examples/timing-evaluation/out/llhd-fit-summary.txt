@@ -7,18 +7,18 @@ lm(formula = popSimLlhd ~ bdscodLlhd, data = plot_df)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--2.64526 -0.59164  0.01537  0.36382  3.01151 
+-2.23789 -0.33341  0.01501  0.38356  1.89754 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) 1.162253   0.555673   2.092   0.0472 *  
-bdscodLlhd  1.024148   0.001268 807.701   <2e-16 ***
+(Intercept) 1.325646   0.353360   3.752 0.000891 ***
+bdscodLlhd  1.017174   0.001091 932.042  < 2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 1.217 on 24 degrees of freedom
+Residual standard error: 0.7921 on 26 degrees of freedom
 Multiple R-squared:      1,	Adjusted R-squared:      1 
-F-statistic: 6.524e+05 on 1 and 24 DF,  p-value: < 2.2e-16
+F-statistic: 8.687e+05 on 1 and 26 DF,  p-value: < 2.2e-16
 
 [1] "================================================================================\n"
 Comparing LLHD values
@@ -29,18 +29,18 @@ lm(formula = difference ~ size, data = plot_df_2)
 
 Residuals:
     Min      1Q  Median      3Q     Max 
--3.5703 -0.6208 -0.0030  0.5523  3.6285 
+-2.6914 -0.4728  0.0176  0.3882  3.1898 
 
 Coefficients:
              Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -0.565538   0.658940  -0.858    0.399    
-size         0.059229   0.003898  15.194 8.21e-14 ***
+(Intercept) -0.396290   0.383181  -1.034    0.311    
+size         0.026974   0.002199  12.269 2.56e-12 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 1.499 on 24 degrees of freedom
-Multiple R-squared:  0.9058,	Adjusted R-squared:  0.9019 
-F-statistic: 230.9 on 1 and 24 DF,  p-value: 8.206e-14
+Residual standard error: 0.9862 on 26 degrees of freedom
+Multiple R-squared:  0.8527,	Adjusted R-squared:  0.8471 
+F-statistic: 150.5 on 1 and 26 DF,  p-value: 2.56e-12
 
 
 Call:
@@ -48,18 +48,18 @@ lm(formula = difference ~ mean_val, data = plot_df_2)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--2.97825 -0.35890 -0.01499  0.59000  2.61306 
+-1.88286 -0.37731 -0.01523  0.33154  2.21705 
 
 Coefficients:
              Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -1.155830   0.548390  -2.108   0.0457 *  
-mean_val    -0.023879   0.001238 -19.290 4.06e-16 ***
+(Intercept) -1.318814   0.349705  -3.771 0.000847 ***
+mean_val    -0.017043   0.001073 -15.886 6.68e-15 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 1.203 on 24 degrees of freedom
-Multiple R-squared:  0.9394,	Adjusted R-squared:  0.9369 
-F-statistic: 372.1 on 1 and 24 DF,  p-value: 4.061e-16
+Residual standard error: 0.7853 on 26 degrees of freedom
+Multiple R-squared:  0.9066,	Adjusted R-squared:  0.903 
+F-statistic: 252.4 on 1 and 26 DF,  p-value: 6.679e-15
 
 
 Call:
@@ -67,16 +67,16 @@ lm(formula = mean_val ~ size, data = plot_df_2)
 
 Residuals:
     Min      1Q  Median      3Q     Max 
--42.647  -8.167   2.365   9.183  27.310 
+-59.631 -21.759  -3.108  22.662  58.003 
 
 Coefficients:
-            Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  -19.098      7.100   -2.69   0.0128 *  
-size          -2.518      0.042  -59.94   <2e-16 ***
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -52.34443   11.89169  -4.402 0.000163 ***
+size         -1.59444    0.06823 -23.369  < 2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 16.16 on 24 degrees of freedom
-Multiple R-squared:  0.9934,	Adjusted R-squared:  0.9931 
-F-statistic:  3592 on 1 and 24 DF,  p-value: < 2.2e-16
+Residual standard error: 30.6 on 26 degrees of freedom
+Multiple R-squared:  0.9546,	Adjusted R-squared:  0.9528 
+F-statistic: 546.1 on 1 and 26 DF,  p-value: < 2.2e-16
 
