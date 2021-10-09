@@ -35,6 +35,7 @@ reformat_observations <- function(input_json,
 
     write_json(x = event_times_list,
                path = output_json,
+               digits = 16,
                pretty = TRUE)
 }
 
@@ -55,6 +56,8 @@ main <- function() {
        output_filepaths,
        reformat_observations,
        SIMULATION_DURATION)
+
+  return(NULL)
 }
 
 if (!interactive()) {

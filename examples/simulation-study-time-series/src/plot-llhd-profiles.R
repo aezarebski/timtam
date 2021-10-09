@@ -34,19 +34,13 @@ llhd_profile_figure <- function(infConfig,
         map(parse_doubles, sep = ",") %>%
         pluck(1)
 
-    make_plot_df <- function(llhds,param_kind) {
+    make_plot_df <- function(llhds, param_kind) {
         if (!is.element(el = param_kind, set = c("Simulation", "Estimated"))) {
             stop("Bad parameter kind: ", param_kind)
         }
-
-        data.frame(parameter_name = rep(c("lambda", "mu", "psi", "rho", "omega", "nu"),
+        data.frame(parameter_name = rep(true_parameters$parameter_name,
                                         each = length(param_mesh$lambda_mesh)),
-                   parameter_value = c(param_mesh$lambda_mesh,
-                                       param_mesh$mu_mesh,
-                                       param_mesh$psi_mesh,
-                                       param_mesh$rho_mesh,
-                                       param_mesh$omega_mesh,
-                                       param_mesh$nu_mesh),
+                   parameter_value = unlist(param_mesh),
                    parameter_kind = param_kind,
                    llhd = llhds)
     }
@@ -54,7 +48,10 @@ llhd_profile_figure <- function(infConfig,
     plot_df <- rbind(make_plot_df(all_llhd_vals[[1]], "Simulation"),
                      make_plot_df(all_llhd_vals[[2]], "Estimated"))
 
-    my_ylims <- max(plot_df$llhd) + c(-10, 2)
+    ## This functionality is not used in the figure, if you want to adjust the y
+    ## limits manually, you will need to look at the call to facet_wrap below.
+    ylim_buffer <- 0.1 * diff(range(plot_df$llhd))
+    my_ylims <- c(min(plot_df$llhd) - ylim_buffer, max(plot_df$llhd) + ylim_buffer)
 
     estimated_hex_colour <- "#7fc97f"
     true_hex_colour <- "#beaed4"
@@ -68,12 +65,13 @@ llhd_profile_figure <- function(infConfig,
       geom_vline(data = estimated_parameters,
                  mapping = aes(xintercept = parameter_value),
                  colour = estimated_hex_colour) +
-      facet_wrap(~parameter_name, scales = "free_x") +
+      facet_wrap(~parameter_name, scales = "free") +
+      ## facet_wrap(~parameter_name, scales = "free_x") +
+      ## ylim(my_ylims) +
       scale_color_manual(values = c(estimated_hex_colour, true_hex_colour)) +
       labs(x = "Parameter value",
            y = "Log-likelihood",
            colour = "Parameter Kind") +
-      ylim(my_ylims) +
       theme_classic() +
       theme(
         strip.background = element_blank(),
@@ -83,6 +81,7 @@ llhd_profile_figure <- function(infConfig,
         legend.position = "top",
         legend.title = element_text(face = "bold")
       )
+
 }
 
 
@@ -169,13 +168,13 @@ instantaneous_prevalence <- function(inf_config) {
 
 
 main <- function() {
-
   ## To avoid hardcoding the files to read data from we use the configuration JSON
   ## used by the application. The way the simulation parameters are encoded is
   ## suited to the haskell application but is messy for R so we also construct the
   ## \code{true_parameters} object to hold these values in a dataframe.
   config <- read_json("ts-config.json")
-  true_parameters <- config$simulationParametersClean %>%
+  true_parameters <- config$r_simulationParametersClean %>%
+    discard(is.null) %>%
     as.data.frame %>%
     (function(.x) melt(data = .x,
                        variable.name = "parameter_name",
@@ -192,17 +191,32 @@ main <- function() {
     psi_mesh = seq(from = config$acLlhdProfileMesh$lpmPsiBounds[[1]],
                    to = config$acLlhdProfileMesh$lpmPsiBounds[[2]],
                    length = config$acLlhdProfileMesh$lpmMeshSize),
-    rho_mesh = seq(from = config$acLlhdProfileMesh$lpmRhoBounds[[1]],
-                   to = config$acLlhdProfileMesh$lpmRhoBounds[[2]],
-                   length = config$acLlhdProfileMesh$lpmMeshSize),
     omega_mesh = seq(from = config$acLlhdProfileMesh$lpmOmegaBounds[[1]],
                      to = config$acLlhdProfileMesh$lpmOmegaBounds[[2]],
-                     length = config$acLlhdProfileMesh$lpmMeshSize),
-    nu_mesh = seq(from = config$acLlhdProfileMesh$lpmNuBounds[[1]],
-                  to = config$acLlhdProfileMesh$lpmNuBounds[[2]],
-                  length = config$acLlhdProfileMesh$lpmMeshSize)
+                     length = config$acLlhdProfileMesh$lpmMeshSize)
   )
 
+  if (is.element("rho", true_parameters$parameter_name)) {
+    param_mesh <- c(
+      param_mesh,
+      list(
+        rho_mesh = seq(from = config$acLlhdProfileMesh$lpmRhoBounds[[1]],
+                       to = config$acLlhdProfileMesh$lpmRhoBounds[[2]],
+                       length = config$acLlhdProfileMesh$lpmMeshSize)
+        )
+    )
+  }
+
+  if (is.element("nu", true_parameters$parameter_name)) {
+    param_mesh <- c(
+      param_mesh,
+      list(
+        nu_mesh = seq(from = config$acLlhdProfileMesh$lpmNuBounds[[1]],
+                       to = config$acLlhdProfileMesh$lpmNuBounds[[2]],
+                       length = config$acLlhdProfileMesh$lpmMeshSize)
+        )
+    )
+  }
 
   ## Loop over all the inference configurations and generate the LLHD profiles
   ## so that we can see how they change through time as more data becomes
@@ -224,7 +238,11 @@ main <- function() {
       filter(parameter_kind == "EstimatedParameters") %>%
       select(matches("(prob|rate)$"))
     unboxer_helper <- function(x) {
-      as.numeric(strsplit(x = x, split = " ")[[1]][2])
+      if (x == "Nothing") {
+        NaN
+      } else {
+        as.numeric(strsplit(x = x, split = " ")[[1]][2])
+      }
     }
     estimated_values <- c(
       boxed_estimated_values$lambda_rate,
@@ -233,7 +251,10 @@ main <- function() {
       unboxer_helper(boxed_estimated_values$maybe_rho_prob),
       boxed_estimated_values$omega_rate,
       unboxer_helper(boxed_estimated_values$maybe_nu_prob)
-    )
+    ) %>% discard(is.nan)
+    if (length(true_parameters$parameter_name) != length(estimated_values)) {
+      stop("you appear to have more estimates than parameters. you may need to remove old files.")
+    }
     estimated_parameters <- data.frame(parameter_name = true_parameters$parameter_name,
                                        parameter_value = estimated_values)
 
@@ -257,7 +278,7 @@ main <- function() {
                          header = FALSE,
                          stringsAsFactors = FALSE) %>%
     set_names(c("event", "time", "primary", "secondary")) %>%
-    mutate(delta = primary_count(primary),
+    mutate(delta = primary_count(ifelse(is.na(primary), "", as.character(primary))),
            delta_sign = ifelse(event == "infection", +1, -1),
            population_size = 1 + cumsum(delta * delta_sign)) %>%
     select(event,time,population_size)
@@ -276,13 +297,14 @@ main <- function() {
   dodge_obj <- position_dodge(width = 0.5)
 
   prev_fig <- ggplot(data = prev_estimates, mapping = aes(x = time, colour = parameter_kind)) +
-    geom_line(data = all_events, mapping = aes(y = population_size), colour = "black") +
+    geom_step(data = all_events, mapping = aes(y = population_size), colour = "black") +
     geom_errorbar(mapping = aes(ymin = lower, ymax = upper), width = 0.7, size = 0.7, position = dodge_obj) +
     geom_line(mapping = aes(y = mid), size = 0.7, position = dodge_obj) +
     geom_point(mapping = aes(y = mid), size = 1.5, position = dodge_obj) +
     labs(x = "Time", y = "Infection prevalence", colour = "Parameter Kind") +
     scale_color_manual(values = c("#7fc97f", "#beaed4")) +
     theme_classic() +
+    scale_y_log10() +
     theme(
       legend.position = c(0.2,0.9),
       legend.title = element_text(face = "bold"),

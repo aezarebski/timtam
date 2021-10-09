@@ -1,0 +1,62 @@
+#+title: Simulation Parameter Selection
+
+* Estimates from Vaughan /et al/ (2020)
+
+Following from Vaughan /et al/ (2020) we assume that the rate of becoming
+un-infectious is \(1/10\) (where time is measured in days). This subsumes the
+three ways in which individuals can cease to be infectious: recovery/death,
+sampling and occurrence. Plausible values of \(R_0\) range from 1.4 to 2.8. That
+analysis only considered genomic data so we cannot use their results to inform
+an occurrence rate, but it seems reasonable that this would be roughly similar
+to the sampling rate or higher.
+
+Some key figures from Vaughan /et al/ (2020) are included below
+
+#+ATTR_ORG: :width 400
+[[./data/vaughan2020estimatesFig1.png]]
+
+#+ATTR_ORG: :width 400
+[[./data/vaughan2020estimatesFig3.png]]
+
+#+ATTR_ORG: :width 400
+[[./data/vaughan2020estimatesFigS4.png]]
+
+An important caveat to the results in this manuscript is that it appears that
+there is "the presense of unsequenced pathgen diversity in these populations."
+The unsequenced diversity would explain why they tend to underestimate the total
+number of cases. Although the estimates of \(R_0\), which is the main focus of
+the paper, appear highly robust.
+
+Using WebPlotDigitizer we extracted the following values from these figures.
+
+| Outbreak            | Number of sequences |          \(R_0\) | Sampling proportion |        Total cases | Values from JHU |
+|---------------------+---------------------+------------------+---------------------+--------------------+-----------------|
+| Australia           |                   9 | 1.84655696752471 |   0.147260273972603 | 1071.1511200934258 |            1071 |
+| China               |                  13 |   2.830862387314 |  0.0308219178082191 |  16744.82438011533 |           16630 |
+| The Netherlands (1) |                  35 | 2.06717714782231 |   0.212328767123288 | 4092.0440344790195 |            4217 |
+| The Netherlands (2) |                  51 | 2.28779732811991 |   0.595890410958904 | 4092.0440344790195 |            4217 |
+| France (1)          |                  31 | 1.77867383512545 |   0.318493150684932 | 30033.914514445405 |           29252 |
+| France (2)          |                  19 | 1.81261540132508 |   0.236301369863014 | 30033.914514445405 |           29252 |
+| Iceland (1)         |                  47 | 5.18980123818834 |   0.445205479452055 |  966.2168943241246 |             963 |
+| Iceland (2)         |                  17 | 3.79819702400348 |   0.269073439878234 |  966.2168943241246 |             963 |
+| Italy               |                  55 | 1.65987835342674 |   0.480472053103332 |  35664.71894891472 |           35713 |
+| Spain               |                  14 | 1.33743347453025 |   0.361560333164214 | 29019.275606543688 |           28768 |
+| WA State (1)        |                 217 | 2.28779732811991 |   0.477168949771689 | 1793.6237390528277 |                 |
+| WA State (2)        |                   9 | 4.08670033670034 |   0.260815681549129 | 1793.6237390528277 |                 |
+| Iran                |                  14 | 2.25385576192028 |  0.0180375866734311 | 12719.721777050767 |           12729 |
+| Wales               |                  47 | 6.61534701857282 |   0.419364641467952 | 1187.4815363065986 |                 |
+| Diamond Princess    |                  96 | 4.40914521559683 |    0.10887292829359 |  709.1633267391829 |             706 |
+
+* Derived parameters
+
+We will use the estimates of \(R_0\) above and the assumption of a becoming
+uninfectious rate of \(1/10\) as our parameters. Since we have the total number
+of confirmed cases, we can use this to get an updated sampling rate. Dividing
+the number of sequenced samples by the total number of cases gives us our
+estimate of the sampling proportion. It is difficult to know what proportion of
+cases will be observed so we set the occurrence and death rates to be equal.
+Solving the resulting set of equations gives the following parameter values.
+
+| Outbreak  | Birth rate | Death rate | Sampling rate | Occurrence rate |
+|-----------+------------+------------+---------------+-----------------|
+| Australia |      0.185 |      0.046 |         0.008 |           0.046 |

@@ -21,10 +21,13 @@ library
                    BDSCOD.Utility
                    BDSCOD.Types
                    BDSCOD.InhomogeneousBDSLlhd
+                   Numeric.Minimisation.Powell
+                   Statistics.Distribution.Lognormal
   hs-source-dirs:
       src
   build-depends:
                     aeson
+                  , either >= 5.0
                   , generic-random
                   , QuickCheck >= 2.13.2
                   , base >= 4.7 && < 5
@@ -33,10 +36,31 @@ library
                   , deepseq >= 1.4.4.0
                   , epi-sim >= 0.3.0.0
                   , hspec-core >= 2.7.4
-                  , vector
+                  , math-functions
+                  , statistics
+                  , vector >= 0.12
   default-language:    Haskell2010
   ghc-options:         -fwarn-tabs -Wmissing-signatures -O2 -fwarn-incomplete-patterns
 
+executable mcmc
+  main-is: Main.hs
+  other-modules:
+      Paths_bdscod
+  hs-source-dirs:
+      apps/mcmc
+  ghc-options: -O2
+
+  build-depends:
+      base
+    , aeson
+    , bdscod
+    , either
+    , epi-sim
+    , mighty-metropolis >= 2.0
+    , mwc-random >= 0.14
+    , vector
+
+  default-language: Haskell2010
 
 executable simulation-study
   main-is: Main.hs
@@ -72,9 +96,9 @@ executable simulation-study-time-series
     , bytestring
     , cassava
     , directory
+    , either
     , epi-sim
     , hmatrix >= 0.20.0.0
-    , hmatrix-gsl >= 0.19.0.1
     , mtl >= 2.2
     , mwc-random >= 0.14
     , vector
@@ -94,12 +118,13 @@ executable simulation-study-aggregated-observations
     , bytestring
     , cassava
     , directory
+    , either
     , epi-sim
     , hmatrix
-    , hmatrix-gsl
     , mighty-metropolis >= 2.0.0
     , mtl
     , mwc-random
+    , statistics
     , vector
   default-language: Haskell2010
 
@@ -151,12 +176,12 @@ test-suite tests
   ghc-options:
   build-depends:
                         base
+                      , either
                       , generic-random
                       , QuickCheck >= 2.13.2
                       , bdscod
                       , epi-sim
                       , hmatrix
-                      , hmatrix-gsl
                       , hspec
                       , hspec-core >= 2.7.4
                       , mighty-metropolis

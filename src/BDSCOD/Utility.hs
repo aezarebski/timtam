@@ -7,6 +7,7 @@ import Epidemic.Types.Parameter
 import Epidemic.Types.Events
 import Epidemic.Types.Population
 import BDSCOD.Types
+import Data.List (scanl')
 -- import BDSCOD.Llhd --
 
 
@@ -16,7 +17,7 @@ instance Csv.ToField TimeDelta where
 -- | Check if two absolute times differ by such a small amount that they are
 -- likely identical.
 timesWithinEpsilon :: AbsoluteTime -> AbsoluteTime -> Bool
-timesWithinEpsilon (AbsoluteTime a) (AbsoluteTime b) = abs (a - b) < 1e-13
+timesWithinEpsilon (AbsoluteTime a) (AbsoluteTime b) = abs (a - b) < 1e-6
 
 -- | Convert simulation events to observation events, this assumes that the
 -- epidemic events have already been filtered by to only include the observable
@@ -38,15 +39,19 @@ processEvent' (_, currTime) epiSimEvent =
     (Disaster absTime (People persons)) -> ((timeDelta currTime absTime, ODisaster . fromIntegral $ V.length persons), absTime)
     (Removal _ _) -> error "A removal event has been passed to processEvent', this should never happen!"
 
-nbFromMAndV :: (Double, Double) -> NegativeBinomial
-nbFromMAndV (0, 0) = Zero
+-- | When possible return a negative binomial distribution with the specified
+-- mean and variance. If the result is likely to lead to under/overflow then
+-- this returns an error message as a string.
+nbFromMAndV :: (Double, Double) -> Either String NegativeBinomial
+nbFromMAndV (0, 0) = Right Zero
 nbFromMAndV (m, v) =
-  if m > 0 && v >= m
-    then NegBinomSizeProb r p
-    else error $ "nbFromMAndV received bad values: " ++ show (m,v)
-  where
+  let
     r = (m ** 2) / (v - m)
     p = (v - m) / v
+    postCond = m > 0 && v >= m && p > 1e-14 && p < 1 - 1e-14
+  in if postCond
+     then Right $ NegBinomSizeProb r p
+     else Left $ "nbFromMAndV received bad input: (m,v) = " ++ show (m,v)
 
 mAndVFromNb :: NegativeBinomial -> (Double, Double)
 mAndVFromNb (NegBinomSizeProb r p) = (m, v)
@@ -140,3 +145,31 @@ logit p = log (p / (1 - p))
 logSumExp :: (Floating a, Ord a) => [a] -> a
 logSumExp xs = x' + log (sum [exp (x - x') | x <- xs])
                where x' = maximum xs
+
+-- | Monadic (left) scan over the elements of a list.
+scanlM :: Monad m => (b -> a -> m b) -> b -> [a] -> m [b]
+scanlM f z0 xs = sequence $ scanl' g (return z0) xs
+  where
+    g my x = my >>= \y -> f y x
+
+-- | Just the value if the precondition is satisfied.
+toMaybe :: Bool -> a -> Maybe a
+toMaybe True x = Just x
+toMaybe False _ = Nothing
+
+-- | Take every nth element of the list.
+--
+-- >>> takeEvery 1 [1..10]
+-- [1,2,3,4,5,6,7,8,9,10]
+-- >>> takeEvery 2 [1..10]
+-- [2,4,6,8,10]
+-- >>> takeEvery 3 [1..10]
+-- [3,6,9]
+-- >>> takeEvery 13 [1..10]
+-- []
+--
+takeEvery :: Int -> [a] -> [a]
+takeEvery n xs =
+  case drop (n-1) xs of
+    [] -> []
+    y : ys -> y : takeEvery n ys

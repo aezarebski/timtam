@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 module BDSCOD.InhomogeneousBDSLlhd where
 
-import BDSCOD.Llhd hiding (initLlhdState, llhdAndNB')
+import BDSCOD.Llhd hiding (initLlhdState)
 import BDSCOD.Types
 import Data.List (intercalate)
 import Data.Maybe (fromJust, fromMaybe)
 import Epidemic.Types.Parameter
 import qualified Data.Aeson as Json
 import GHC.Generics
+import Data.Either.Combinators (rightToMaybe)
 
 
 
@@ -28,22 +29,22 @@ inhomLlhdAndNB' :: [Observation]
            -> InhomParams
            -> InhomLlhdCalcState
            -> Maybe (LogLikelihood,NegativeBinomial)
-inhomLlhdAndNB' [] _ (l,_,_,nb) = Just (l,nb)
+inhomLlhdAndNB' [] _ (l,_,_,nb) = pure (l,nb)
 inhomLlhdAndNB' ((delay,event):events) inhomParams@(InhomParams (tlams,mu,psi)) (l,t,k,nb) =
   do
     rateChangeTime <- nextTime tlams t
     if timeDelta t rateChangeTime > delay
       then let bdscodParams = Parameters (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
                t' = timeAfterDelta t delay
-               (l',nb') = intervalLlhd bdscodParams delay k nb
-               (l'',k'',nb'') = eventLlhd t' bdscodParams event k nb'
-             in inhomLlhdAndNB' events inhomParams (l+l'+l'',t',k'',nb'')
+             in do (l',nb') <- rightToMaybe $ intervalLlhd bdscodParams delay k nb
+                   let (l'',k'',nb'') = eventLlhd t' bdscodParams event k nb'
+                   inhomLlhdAndNB' events inhomParams (l+l'+l'',t',k'',nb'')
       else let bdscodParams = Parameters (fromJust $ cadlagValue tlams t, mu, psi, Timed [], 0.0, Timed [])
                t' = rateChangeTime
-               (l',nb') = intervalLlhd bdscodParams (timeDelta t rateChangeTime) k nb
                timeDeltaSubtraction (TimeDelta a) (TimeDelta b) = TimeDelta (a - b)
                remainingTime = timeDelta t rateChangeTime
-             in inhomLlhdAndNB' ((timeDeltaSubtraction delay remainingTime, event):events) inhomParams (l+l',t',k,nb')
+            in do (l',nb') <- rightToMaybe $ intervalLlhd bdscodParams (timeDelta t rateChangeTime) k nb
+                  inhomLlhdAndNB' ((timeDeltaSubtraction delay remainingTime, event):events) inhomParams (l+l',t',k,nb')
 
 -- | The log-likelihood and the distribution of prevalence of the inhomogenoues BDS.
 inhomLlhdAndNB :: [Observation]  -- ^ The observed events

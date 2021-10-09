@@ -1,0 +1,7 @@
+"variable","contains","n"
+"birth_rate",FALSE,5
+"birth_rate",TRUE,95
+"omega_rate",FALSE,3
+"omega_rate",TRUE,97
+"sampling_rate",FALSE,6
+"sampling_rate",TRUE,94

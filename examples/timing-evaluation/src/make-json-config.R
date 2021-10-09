@@ -9,7 +9,8 @@ if (not(dir.exists("out"))) {
 
 output_file <- "app-config.json"
 
-simulation_duration <- 6
+## the example parameters are expressed in units of days so this is 15 days.
+simulation_duration <- 35
 
 ## Read in the parameters to use in the example from a configuration file so
 ## they are shared between examples.
@@ -25,7 +26,10 @@ if (not(file.exists(example_params_json))) {
   rm(example_params_list, example_params_json)
 }
 
-catastrophe_params <- list(list(5.999999, 0.5))
+## scheduled the catastrophe for just prior to the end of the simulation to
+## ensure it is processed. Since popsize-distribution does not support disasters
+## we must leave this list empty.
+catastrophe_params <- list(list(simulation_duration - 1e-10, 0.5))
 disaster_params <- list()
 
 sim_params <- list(
@@ -40,20 +44,20 @@ sim_params <- list(
 
 result <- list(
   acDuration = simulation_duration,
-  acNumSims = 2000,
-  acBinWidth = 5,
+  acNumSims = 10000,
+  acBinWidth = 10,
   acSimParams = list(
     mpParameters = sim_params,
     mpDuration = simulation_duration
   ),
-  acNumBins = 40,
+  acNumBins = 50,
   acOutputCsv = "out/simulation-sizes-and-llhds.csv",
-  pyNumReplicates = 50
+  pyNumReplicates = 10
 )
 
 write_json(result,
   output_file,
   pretty = TRUE,
   auto_unbox = TRUE,
-  digits = 7
+  digits = 16
 )

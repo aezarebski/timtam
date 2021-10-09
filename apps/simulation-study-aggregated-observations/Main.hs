@@ -1,81 +1,66 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PatternSynonyms   #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Main where
 
-import BDSCOD.Aggregation
-  ( AggregatedObservations(..)
-  , AggregationTimes
-  , pattern AggTimes
-  , aggregateUnscheduledObservations
-  , maybeAggregationTimes
-  )
-import BDSCOD.Llhd
-  ( initLlhdState
-  , llhdAndNB
-  , logPdeStatistics
-  , pdeGF
-  , pdeStatistics
-  )
-import BDSCOD.Types
-  ( LogLikelihood(..)
-  , NegativeBinomial(..)
-  , NumLineages
-  , Observation(..)
-  , ObservedEvent(..)
-  , PDESolution(..)
-  , Parameters(..)
-  , MCMCConfiguration(..)
-  , MWCSeed
-  , packParameters
-  , putLambda
-  , putMu
-  , putNus
-  , putOmega
-  , putPsi
-  , putRhos
-  , scheduledTimes
-  , unpackParameters
-  )
-import BDSCOD.Utility (eventsAsObservations, invLogit)
-import Control.Monad (liftM2, when)
-import Control.Monad.Except (ExceptT, runExceptT, throwError)
-import Control.Monad.Reader (ReaderT, asks, liftIO, runReaderT)
-import qualified Data.Aeson as Json
-import qualified Data.ByteString.Builder as BBuilder
-import qualified Data.ByteString.Lazy as L
-import Data.ByteString.Lazy.Char8 (pack, singleton)
-import qualified Data.Csv as Csv
-import Data.List (intercalate)
-import qualified Data.Vector.Unboxed as Unboxed
-import qualified Epidemic.BDSCOD as SimBDSCOD
-import Epidemic.Types.Events
-  ( EpidemicEvent(..)
-  , asNewickString
-  , maybeEpidemicTree
-  , maybeReconstructedTree
-  )
-import Epidemic.Types.Parameter (Probability, Rate, AbsoluteTime(..), TimeDelta(..), Timed(..))
-import Epidemic.Types.Population (People(..), Person(..), numPeople, Identifier(..))
-import Epidemic.Utility
-import qualified Epidemic.Utility as SimUtil
-import GHC.Generics
-import Numeric.GSL.Minimization (MinimizeMethod(NMSimplex2), minimizeV)
-import Numeric.LinearAlgebra (dot)
-import Numeric.LinearAlgebra.Data (Vector(..), fromList, linspace, toList)
-import Numeric.MCMC.Metropolis
-import System.Environment (getArgs)
-import System.Random.MWC (initialize)
+import           BDSCOD.Aggregation         (AggregatedObservations (..),
+                                             AggregationTimes,
+                                             aggregateUnscheduledObservations,
+                                             maybeAggregationTimes,
+                                             pattern AggTimes)
+import           BDSCOD.Llhd                (initLlhdState, llhdAndNB,
+                                             logPdeStatistics, pdeGF,
+                                             pdeStatistics)
+import           BDSCOD.Types               (LogLikelihood (..),
+                                             MCMCConfiguration (..), MWCSeed,
+                                             NegativeBinomial (..), NumLineages,
+                                             Observation (..),
+                                             ObservedEvent (..),
+                                             PDESolution (..), Parameters (..),
+                                             packParameters, putLambda, putMu,
+                                             putNus, putOmega, putPsi, putRhos,
+                                             scheduledTimes, unpackParameters)
+import           BDSCOD.Utility             (eventsAsObservations, invLogit)
+import           Control.Monad              (liftM2, when)
+import           Control.Monad.Except       (ExceptT, runExceptT, throwError)
+import           Control.Monad.Reader       (ReaderT, asks, liftIO, runReaderT)
+import qualified Data.Aeson                 as Json
+import qualified Data.ByteString.Builder    as BBuilder
+import qualified Data.ByteString.Lazy       as L
+import           Data.ByteString.Lazy.Char8 (pack, singleton)
+import qualified Data.Csv                   as Csv
+import           Data.List                  (intercalate)
+import           Data.Maybe                 (fromJust)
+import qualified Data.Vector.Unboxed        as Unboxed
+import qualified Epidemic.BDSCOD            as SimBDSCOD
+import           Epidemic.Types.Events      (EpidemicEvent (..), asNewickString,
+                                             maybeEpidemicTree,
+                                             maybeReconstructedTree)
+import           Epidemic.Types.Parameter   (AbsoluteTime (..), Probability,
+                                             Rate, TimeDelta (..), Timed (..))
+import           Epidemic.Types.Population  (Identifier (..), People (..),
+                                             Person (..), numPeople)
+import           Epidemic.Utility           ()
+import qualified Epidemic.Utility           as SimUtil
+import           GHC.Generics               (Generic)
+import           Numeric.GSL.Minimization   (MinimizeMethod (NMSimplex2),
+                                             minimizeV)
+import           Numeric.LinearAlgebra      (dot)
+import           Numeric.LinearAlgebra.Data (Vector (..), fromList, linspace,
+                                             toList)
+import           Numeric.MCMC.Metropolis    (Chain (..), asGenIO, chain')
+import           System.Environment         (getArgs)
+import           System.Random.MWC          (initialize)
 
 
 -- | Record of the scheduled observation times.
 data ScheduledTimes =
   ScheduledTimes
     { stRhoTimes :: [AbsoluteTime]
-    , stNuTimes :: [AbsoluteTime]
+    , stNuTimes  :: [AbsoluteTime]
     }
   deriving (Show)
 
@@ -88,12 +73,12 @@ data ScheduledTimes =
 data InferenceConfiguration =
   InferenceConfiguration
     { reconstructedTreeOutputFiles :: (FilePath, FilePath)
-    , observationsOutputCsv :: FilePath
-    , llhdOutputCsv :: FilePath
-    , pointEstimatesCsv :: FilePath
-    , maybePointEstimate :: Maybe Parameters
-    , icMaybeTimesForAgg :: Maybe ([AbsoluteTime], [AbsoluteTime])
-    , icMaybeMCMCConfig :: Maybe MCMCConfiguration
+    , observationsOutputCsv        :: FilePath
+    , llhdOutputCsv                :: FilePath
+    , pointEstimatesCsv            :: FilePath
+    , maybePointEstimate           :: Maybe Parameters
+    , icMaybeTimesForAgg           :: Maybe ([AbsoluteTime], [AbsoluteTime])
+    , icMaybeMCMCConfig            :: Maybe MCMCConfiguration
     }
   deriving (Show, Generic)
 
@@ -160,24 +145,24 @@ bdscodConfiguration = do
       let bdscodConfig =
             SimBDSCOD.configuration (AbsoluteTime simDur) (unpackParameters simParams)
       case bdscodConfig of
-        Nothing -> throwError "Could not construct BDSCOD configuration"
+        Nothing       -> throwError "Could not construct BDSCOD configuration"
         (Just config) -> return config
     else throwError "Simulation parameters not acceptable for this program..."
 
 -- | Check if the LTT ever returns to 1 after being larger than 1.
 pMultipleOrigins :: [EpidemicEvent] -> Bool
-pMultipleOrigins epiEvents = go 1 epiEvents
+pMultipleOrigins = go 1
   where
     numLineage :: People -> NumLineages
     numLineage = fromIntegral . numPeople
     go :: NumLineages -> [EpidemicEvent] -> Bool
-    go _ [] = False
-    go n (Removal _ _:ees) = (n < 3) || go (n-1) ees
-    go n (Sampling _ _:ees) = (n < 3) || go (n-1) ees
-    go n (Occurrence _ _:ees) = (n < 3) || go (n-1) ees
+    go _ []                         = False
+    go n (Removal _ _:ees)          = (n < 3) || go (n-1) ees
+    go n (Sampling _ _:ees)         = (n < 3) || go (n-1) ees
+    go n (Occurrence _ _:ees)       = (n < 3) || go (n-1) ees
     go n (Catastrophe _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
-    go n (Disaster _ people:ees) = if m > 1 then go m ees else True where m = n - numLineage people
-    go n (Infection _ _ _:ees) = go (n+1) ees
+    go n (Disaster _ people:ees)    = if m > 1 then go m ees else True where m = n - numLineage people
+    go n (Infection {}:ees)      = go (n+1) ees
 
 
 -- | Simulate the actual epidemic making sure that the results are acceptable
@@ -188,7 +173,7 @@ simulateEpidemic seedInt bdscodConfig = do
   simEvents <-
     liftIO $ SimUtil.simulation' bdscodConfig SimBDSCOD.allEvents genIO
   (sizeLowerBound, sizeUpperBound) <- asks simulationSizeBounds
-  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound && (not (pMultipleOrigins simEvents))
+  if length simEvents > sizeLowerBound && length simEvents < sizeUpperBound && not (pMultipleOrigins simEvents)
     then do
       ifVerbosePutStrLn "simulated an acceptable epidemic..."
       simEventsCsv <- asks simulatedEventsOutputCsv
@@ -301,10 +286,10 @@ estimateLLHD :: InferenceConfiguration
 estimateLLHD infConfig obs = do
   ifVerbosePutStrLn "Running estimateLLHD..."
   Parameters (_, deathRate, _, _, _, _) <- asks simulationParameters
-  let mleParams = estimateRegularParameters deathRate obs
+  let mleParams@(Parameters (estBirthRate, _, _, _, _, _)) = estimateRegularParameters deathRate obs
       annotatedMLE = EstimatedParametersRegularData mleParams
   ifVerbosePutStrLn "\tUsing non-aggregated data the computed MLE is..."
-  ifVerbosePutStrLn $ "\t" ++ show annotatedMLE
+  ifVerbosePutStrLn $ "\tThe estimated birth rates is" ++ show estBirthRate
   recordPresentPrevalenceEstimate infConfig obs annotatedMLE
   runUnscheduledObservationMCMC infConfig deathRate obs annotatedMLE
 
@@ -343,17 +328,17 @@ estimateLLHDAggregated infConfig (AggregatedObservations _ obs) = do
 -- __NOTE__ The @energyFunc@ uses a regularisation cost to prevent the
 -- parameters from wandering off which can occur with smaller data sets.
 --
--- TODO Fix the stupid settings on this!!!
---
 estimateAggregatedParameters :: Rate -- ^ the known death rate
                              -> ScheduledTimes -- ^ the time of scheduled observations
                              -> [Observation] -- ^ the aggregated observations
                              -> Parameters
 estimateAggregatedParameters deathRate ScheduledTimes{..} obs =
-  let maxIters = 100
-      desiredPrec = 1e-4
-      initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho (because mu, psi, omega and nu are fixed)
-      randInit = fromList ([0.1, -0.1, 0.1] :: [Rate])
+  let maxIters = 20
+      desiredPrec = 1e-1
+      initBox = fromList ([0.1, 0.1, 0.1] :: [Rate]) -- lambda, rho and nu (because mu, psi, omega are fixed)
+      randInit = fromList $ exp <$> [-1,-2,-2]
+
+      vecAsParams :: Vector Rate -> Maybe Parameters
       vecAsParams x =
         let [lnR1, lnP1, lnP2] = toList x
             p1 = invLogit lnP1
@@ -361,13 +346,19 @@ estimateAggregatedParameters deathRate ScheduledTimes{..} obs =
             r = exp lnR1
             rts = [(t, p1) | t <- stRhoTimes]
             nts = [(t, p2) | t <- stNuTimes]
-          in packParameters (r, deathRate, 0, rts, 0, nts)
-      energyFunc x =
-        let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-            regCost = 10 * dot x x
-          in negLlhd + regCost
+            packedParams = packParameters (r, deathRate, 0, rts, 0, nts)
+          in if r < 5
+             then Just packedParams
+             else Nothing
+
+      negLlhd :: Parameters -> LogLikelihood
+      negLlhd ps = negate . fst $ llhdAndNB obs ps initLlhdState
+
+      energyFunc :: Vector Rate -> Double
+      energyFunc x = maybe 1e6 negLlhd $ vecAsParams x
+
       (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-   in vecAsParams est
+   in fromJust $ vecAsParams est
 
 
 -- | This is the main entry point to the actual simulation study, it is its own
@@ -384,24 +375,6 @@ simulationStudy = do
   uncurry estimateLLHD regObs'
   uncurry estimateLLHDAggregated aggObs
 
--- =============================================================================
--- The following can be used in the REPL to test things out.
---
--- TODO This comment section needs to be deleted once the application has been
--- finished and tested.
---
-replMain :: IO ()
-replMain = do
-  let configFilePath = "agg-app-config.json"
-  maybeConfig <- Json.decode <$> L.readFile configFilePath
-  case maybeConfig of
-    Nothing -> putStrLn $ "Could not get configuration from file: " ++ configFilePath
-    (Just config) -> do result <- runExceptT (runReaderT simulationStudy config)
-                        case result of
-                          Right () -> return ()
-                          Left errMsg -> do putStrLn errMsg; return ()
---
--- =============================================================================
 
 -- | We use an external file to configure the simulation so that it is easier to
 -- try different parameter values and random seeds. The @simulationStudy@
@@ -417,7 +390,7 @@ main = do
       result <- runExceptT (runReaderT simulationStudy config)
       case result of
         Left errMsg -> putStrLn errMsg
-        Right _ -> return ()
+        Right _     -> return ()
 
 
 
@@ -434,21 +407,39 @@ main = do
 estimateRegularParameters ::
      Rate -> [Observation] -> Parameters
 estimateRegularParameters deathRate obs =
-  let maxIters = 100
-      desiredPrec = 1e-4
-      initBox = fromList [0.2, 0.2, 0.2] -- lambda, psi (because mu, rho, omega and nu are fixed)
-      randInit = fromList [0.1, 0.0, 0.0]
+  let maxIters = 50
+      desiredPrec = 1e-2
+      -- the only parameters are lambda, psi and omega (because mu, rho and nu
+      -- are fixed)
+      initBox = fromList [0.1, 0.1, 0.1]
+
+      randInit :: Vector Double
+      randInit = fromList [-1.5,-2.5,-2.5]
+
+      vecAsParams :: Vector Double -> Maybe Parameters
       vecAsParams x =
         let [lnR1, lnR2, lnR3] = toList x
             r1 = exp lnR1
             r2 = exp lnR2
             r3 = exp lnR3
-           in packParameters (r1, deathRate, r2, [], r3, [])
-      energyFunc x =
-        let negLlhd = negate . fst $ llhdAndNB obs (vecAsParams x) initLlhdState
-         in negLlhd
-      (est, _) = minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
-   in vecAsParams est
+            packedParams = packParameters (r1, deathRate, r2, [], r3, [])
+            rNaught = r1 / (deathRate + r2 + r3)
+        in if r1 < 5 && 1 < rNaught && rNaught < 6
+              -- constrain the R0 to be less than 5 and a sensible birth rate.
+           then Just packedParams
+           else Nothing
+
+      negLlhd :: Parameters -> LogLikelihood
+      negLlhd ps = negate . fst $ llhdAndNB obs ps initLlhdState
+
+      energyFunc :: Vector Double -> Double
+      energyFunc x = maybe 1e6 negLlhd $ vecAsParams x
+
+      est :: Vector Double
+      (est, path) =
+        minimizeV NMSimplex2 desiredPrec maxIters initBox energyFunc randInit
+
+   in fromJust (vecAsParams est)
 
 -- | Action to run an MCMC analysis based on regular unscheduled observations.
 runUnscheduledObservationMCMC :: InferenceConfiguration
@@ -475,8 +466,7 @@ runUnscheduledObservationMCMC InferenceConfiguration {..} deathRate obs (Estimat
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
-                 (chainAsByteString' variableNames chainVals)
-             return ()
+                 (chainAsByteString variableNames chainVals)
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
 runScheduledObservationMCMC ::
@@ -518,31 +508,21 @@ runScheduledObservationMCMC InferenceConfiguration {..} deathRate ScheduledTimes
              liftIO $
                L.writeFile
                  (mcmcOutputCSV mcmcConfig)
-                 (chainAsByteString' variableNames chainVals)
+                 (chainAsByteString variableNames chainVals)
              return ()
     Nothing -> ifVerbosePutStrLn "No MCMC configuration found!"
 
 -- | A bytestring representation of the MCMC samples.
 chainAsByteString :: [String] -- ^ the names of the elements of the chain
-                  -> [Chain [Double] b] -- ^ the samples in the chain
-                  -> L.ByteString
-chainAsByteString varNames chainVals =
-  let header = pack $ intercalate "," ("llhd" : varNames)
-      records = Csv.encode [chainScore cv : chainPosition cv | cv <- chainVals]
-      linebreak = singleton '\n'
-   in mconcat [header, linebreak, records]
-
--- | A bytestring representation of the MCMC samples.
-chainAsByteString' :: [String] -- ^ the names of the elements of the chain
                   -> [Chain [Double] NegativeBinomial] -- ^ the samples in the chain
                   -> L.ByteString
-chainAsByteString' varNames chainVals =
+chainAsByteString varNames chainVals =
   let header = pack $ intercalate "," ("llhd" : varNames)
       nbParams cv =
         case chainTunables cv of
           Just (NegBinomSizeProb r p) -> [r, p]
-          Just Zero -> [0, 0]
-          Nothing -> [-1, -1]
+          Just Zero                   -> [0, 0]
+          Nothing                     -> [-1, -1]
       records =
         Csv.encode
           [chainScore cv : (chainPosition cv ++ nbParams cv) | cv <- chainVals]

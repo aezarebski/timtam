@@ -15,9 +15,14 @@ details on the examples see the [[file:./examples/README.org][README]]. The main
   method to your own data,
 - =apps= which contains the application code for each example, ie the code
   specific to the examples presented in the manuscript linked above,
+  + The =mcmc= application can be used to run an analysis from the command line
+    with data and configuration read from a single JSON file.
 - and =examples= which contains the documentation and scripts needed to run each
   example, ie the scripts you will need to run on your machine to replicate the
   results.
+  + The =ape-simulation= example is particularly important, it includes the
+    script =ape-sim.R= which provides a wrapper around some R packages to make
+    it easier to simulate suitable datasets.
 
 [[.repo-diagram.svg]]
 

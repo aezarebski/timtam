@@ -1,10 +1,36 @@
 {-# LANGUAGE MultiWayIf #-}
-module BDSCOD.Llhd where
+module BDSCOD.Llhd (llhdAndNB
+                   , unsafeLlhdAndNB
+                   ,intervalLlhd
+                   ,eventLlhd
+                   ,initLlhdState
+                   ,logPdeStatistics
+                   ,pdeStatistics
+                   , logPdeGF
+                   , logPdeGF'
+                   , logPdeGF''
+                   , odeHelpers
+                   , p0
+                   , logP0'
+                   , p0'
+                   , logP0''
+                   , p0''
+                   ,pdeGF
+                   ,pdeGF'
+                   ,pdeGF''
+                   ,rr
+                   ,rr'
+                   ,rr''
+                   ) where
 
-import Data.List (find)
-import BDSCOD.Types
-import BDSCOD.Utility
-import Epidemic.Types.Parameter
+import           BDSCOD.Types
+import           BDSCOD.Utility
+import           Data.List                (find, scanl')
+import           Epidemic.Types.Parameter
+import Control.Exception (assert)
+import Debug.Trace (traceShow)
+import Control.Monad (liftM)
+import Data.Either.Combinators (fromRight')
 
 
 -- | Predicate for whether the parameters could possibly have given rise to the
@@ -16,11 +42,12 @@ import Epidemic.Types.Parameter
 arePlausible :: [Observation]
              -> Parameters
              -> Bool
-arePlausible obs (Parameters (l, m, r, _, o, _))
-  | minimum [l, m, r, o] < 0 = False
-  | maximum [l, m, r, o] > 100 = False
-  | any isBirth obs && l == 0 = False
-  | any isUnscheduledSequenced obs && r == 0 = False
+arePlausible obs (Parameters (λ, μ, ψ, _, ω, _))
+  | minimum [λ, μ, ψ, ω] < 0 = False
+  | maximum [λ, μ, ψ, ω] > 100 = False
+  | any isBirth obs && λ == 0 = False
+  | any isUnscheduledSequenced obs && ψ == 0 = False
+  | λ < (μ + ψ + ω) = False
   | otherwise = True
 
 
@@ -171,8 +198,8 @@ logPdeGF params delay (PDESol nb k) z =
     logF = logNbPGF nb
     p0z = p0 params delay z
     rz = rr params delay z
-  in if | k > 0 -> logF p0z + k * log rz
-        | k == 0 -> logF p0z
+  in if | k > 0     -> logF p0z + k * log rz
+        | k == 0    -> logF p0z
         | otherwise -> error "negative k in logPdeGF"
 
 -- | The partial derivative of the generating function solution to the PDE.
@@ -201,7 +228,7 @@ logPdeGF' :: Parameters -> TimeDelta -> PDESolution -> Double -> Double
 logPdeGF' params delay (PDESol Zero 1) z = log rdashz
   where
     rdashz = rr' params delay z
-logPdeGF' params delay (PDESol nb k) z =
+logPdeGF' params@(Parameters (λ,μ,ψ,_,ω,_)) delay (PDESol nb k) z =
   if | k > 0 -> let p0z = p0 params delay z
                     logP0DashZ = logP0' params delay z
                     rz = rr params delay z
@@ -213,7 +240,24 @@ logPdeGF' params delay (PDESol nb k) z =
                       (k-1) * log rz +
                       log rdashz +
                       logNbPGF nb p0z
-                in logSumExp [firstTerm,secondTerm]
+                    result = logSumExp [firstTerm,secondTerm]
+                in if not $ isNaN result
+                   then result
+                   else error $
+                        "\n------------------------------------------------------------" ++
+                        "\n\tk: " ++ show k ++
+                        "\n\tnb: " ++ show nb ++
+                        "\n\tparameters: " ++
+                        "\n\t\tbirth rate (lambda): " ++ show λ ++
+                        "\n\t\tdeath rate (mu): " ++ show μ ++
+                        "\n\t\tsampling rate (psi): " ++ show ψ ++
+                        "\n\t\toccurrence rate (omega): " ++ show ω ++
+                        "\n\tfirst term: " ++ show firstTerm ++
+                        "\n\tsecond term: " ++ show secondTerm ++
+                        "\n\tp0z: " ++ show p0z ++
+                        "\n\trz: " ++ show rz ++
+                        "\n\tlogP0DashZ: " ++ show logP0DashZ ++
+                        "\n------------------------------------------------------------"
      | k == 0 -> let p0z = p0 params delay z
                      logP0DashZ = logP0' params delay z
                      in logNbPGF' nb p0z + logP0DashZ
@@ -314,24 +358,17 @@ logPdeStatistics params delay pdeSol@PDESol{} =
         logV = log $ exp (logmGF'' 1 - logC) + exp logm * (1 - exp logm)
 
 
-
-
-
-
+-- | The likelihood of the interval between the observations.
 intervalLlhd :: Parameters
              -> TimeDelta
              -> NumLineages
              -> NegativeBinomial
-             -> (LogLikelihood, NegativeBinomial)
-intervalLlhd params delay k nb =
+             -> Either String (LogLikelihood, NegativeBinomial)
+intervalLlhd params@(Parameters (λ, _, _, _, _, _)) delay k nb =
   let (logC, logm, logV) = logPdeStatistics params delay (PDESol nb k)
-      nb' = nbFromMAndV (exp logm, exp logV)
-    in if not (isNaN (exp logm) && isNaN (exp logV))
-       then (logC, nb')
-       else error $ "numerical error in intervalLlhd: " ++ show (params, delay, k, nb)
-
-
-
+  in do
+      newNB <- nbFromMAndV (exp logm, exp logV)
+      Right (logC, newNB)
 
 
 eventLlhd :: AbsoluteTime -- ^ Absolute time used to look up the parameter in the case of a scheduled event
@@ -380,54 +417,42 @@ initLlhdState = ((0, Zero), AbsoluteTime 0, 1)
 llhdAndNB :: [Observation]  -- ^ The observed events
           -> Parameters     -- ^ The parameters
           -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
+          -> Either String LlhdAndNB
+llhdAndNB obs params state0 = fst <$> verboseLlhdAndNB obs params state0
+
+unsafeLlhdAndNB :: [Observation]  -- ^ The observed events
+          -> Parameters     -- ^ The parameters
+          -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
           -> LlhdAndNB
-llhdAndNB obs params state0 = fst $ verboseLlhdAndNB obs params state0
+unsafeLlhdAndNB o p s0 =
+  case llhdAndNB o p s0 of
+    Left msg  -> error msg
+    Right lnb -> lnb
 
 -- | The log-likelihood and the distribution of the prevalence along with their
 -- partial values.
 verboseLlhdAndNB :: [Observation]  -- ^ The observed events
                  -> Parameters     -- ^ The parameters
                  -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
-                 -> (LlhdAndNB,[LlhdAndNB])
+                 -> Either String (LlhdAndNB,[LlhdAndNB])
 verboseLlhdAndNB obs params state0 =
   if arePlausible obs params
-  then verboseLlhdAndNB' obs params state0 mempty
-  else ((-1 / 0, Zero),mempty)
+  then let fstTrpl (a,_,_) = a
+           go = flip (updatedLlhdCalcState params)
+       in do results__ <- scanlM go state0 obs
+             let results_ = fstTrpl <$> results__
+             Right (last results_, results_)
+  else Left $ "implausible observations and parameters given to verboseLlhdAndNB" ++ show params
 
 updatedLlhdCalcState :: Parameters
                      -> Observation
                      -> LlhdCalcState
-                     -> LlhdCalcState
+                     -> Either String LlhdCalcState
 updatedLlhdCalcState params (delay,event) ((l,nb), t, k) =
   if k >= 0
-  then ((l+l'+l'',nb''),t',k'')
-  else error $ "bad k in updatedLlhdCalcState: k = " ++ show k
-  where
-    t' = timeAfterDelta t delay
-    (l',nb') = intervalLlhd params delay k nb
-    (l'',k'',nb'') = eventLlhd t' params event k nb'
-
--- | Compute the log-likelihood and distribution of the prevalence along with
--- their partial values assuming plausible parameters.
-verboseLlhdAndNB' :: [Observation]  -- ^ The observed events
-                  -> Parameters     -- ^ The parameters
-                  -> LlhdCalcState  -- ^ The initial state of the calculation: @initLlhdState@
-                  -> [LlhdAndNB]    -- ^ The accumulator of the partial results
-                  -> (LlhdAndNB,[LlhdAndNB])
-verboseLlhdAndNB' [] _ (lnb,_,_) partialResult = (lnb,lnb:partialResult)
-verboseLlhdAndNB' (o:obs) params calcState partialResult =
-  let calcState'@(lnb,_,_) = updatedLlhdCalcState params o calcState
-  in verboseLlhdAndNB' obs params calcState' (lnb:partialResult)
-
--- | Compute the log-likelihood and distribution of prevalence assuming
--- plausible parameters.
---
--- __WARNING__ This function is deprecated in favour of @llhdAndNB@.
---
-llhdAndNB' :: [Observation]
-           -> Parameters
-           -> LlhdCalcState
-           -> LlhdAndNB
-llhdAndNB' [] _ (lnb,_,_) = lnb
-llhdAndNB' ((delay,event):events) params ((l,nb),t,k) =
-  llhdAndNB' events params (updatedLlhdCalcState params (delay,event) ((l,nb),t,k))
+  then let t' = timeAfterDelta t delay
+       in do
+           (l',nb') <- intervalLlhd params delay k nb
+           let (l'',k'',nb'') = eventLlhd t' params event k nb'
+           Right ((l+l'+l'',nb''),t',k'')
+  else Left "negative number of lineages given to updatedLlhdCalcState."

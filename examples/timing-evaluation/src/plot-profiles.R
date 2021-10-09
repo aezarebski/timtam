@@ -7,8 +7,11 @@ library(jsonlite)
 library(scales)
 
 
-x1 <- read.csv("fobber.csv") %>% rename(bdscodMeanSeconds = Mean)
-x2 <- read.csv("out/simulation-sizes-and-llhds.csv", header = FALSE) %>% set_names(c("Size", "Llhd", "Name"))
+config <- read_json("app-config.json")
+
+x1 <- read.csv("criterion-times.csv") %>% rename(bdscodMeanSeconds = Mean)
+x2 <- read.csv(config$acOutputCsv, header = FALSE) %>%
+  set_names(c("Size", "Llhd", "Name"))
 bdscod_records <- left_join(x1, x2, by = "Name")
 
 try_read_json <- function(json_filepath) {
@@ -54,8 +57,14 @@ popsize_model <- plot_df %>%
     {lm(ln_time ~ ln_size, data = .)}
 
 ## We need to run the predictive model on a mesh so that we can display it later
-## as the model fit.
-x_vals <- 1:200
+## as the model fit. We use the range of the measured sizes as a way to choose a
+## suitable range of values to evaluate this over.
+x_vals <- seq(
+  from = 1,
+  to = max(plot_df$Size) + min(plot_df$Size),
+  ## to = config$acBinWidth * config$acNumBins,
+  length = 200
+)
 y_vals1 <- exp(predict(bdscod_model, data.frame(ln_size = log(x_vals))))
 y_vals2 <- exp(predict(popsize_model, data.frame(ln_size = log(x_vals))))
 y_vals <- c(y_vals1, y_vals2)

@@ -7,18 +7,18 @@ lm(formula = ln_time ~ ln_size, data = .)
 
 Residuals:
       Min        1Q    Median        3Q       Max 
--0.033152 -0.007076 -0.003204 -0.000415  0.036258 
+-0.014559 -0.007124 -0.004306  0.004554  0.040701 
 
 Coefficients:
               Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -13.387462   0.017442  -767.5   <2e-16 ***
-ln_size       1.012245   0.004222   239.8   <2e-16 ***
+(Intercept) -13.294663   0.014743  -901.8   <2e-16 ***
+ln_size       1.020056   0.003033   336.3   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.01554 on 24 degrees of freedom
-Multiple R-squared:  0.9996,	Adjusted R-squared:  0.9996 
-F-statistic: 5.748e+04 on 1 and 24 DF,  p-value: < 2.2e-16
+Residual standard error: 0.01208 on 26 degrees of freedom
+Multiple R-squared:  0.9998,	Adjusted R-squared:  0.9998 
+F-statistic: 1.131e+05 on 1 and 26 DF,  p-value: < 2.2e-16
 
 ================================================================================
 BDSCOD *ROBUST* model fit
@@ -27,14 +27,14 @@ BDSCOD *ROBUST* model fit
 Call: rlm(formula = ln_time ~ ln_size, data = .)
 Residuals:
        Min         1Q     Median         3Q        Max 
--0.0302823 -0.0035516  0.0000545  0.0028817  0.0393091 
+-0.0113437 -0.0031075 -0.0003315  0.0032055  0.0459558 
 
 Coefficients:
             Value      Std. Error t value   
-(Intercept)   -13.3897     0.0065 -2063.6723
-ln_size         1.0120     0.0016   644.3654
+(Intercept)   -13.2854     0.0080 -1653.2352
+ln_size         1.0175     0.0017   615.4626
 
-Residual standard error: 0.004755 on 24 degrees of freedom
+Residual standard error: 0.005006 on 26 degrees of freedom
 
 ================================================================================
 Manceau et al (2020) model fit
@@ -45,18 +45,18 @@ lm(formula = ln_time ~ ln_size, data = .)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--0.48897 -0.14623 -0.01726  0.16216  0.47126 
+-0.30480 -0.19430 -0.04051  0.22306  0.44948 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -6.24749    0.28348  -22.04   <2e-16 ***
-ln_size      1.92384    0.06862   28.04   <2e-16 ***
+(Intercept) -8.23753    0.26967  -30.55   <2e-16 ***
+ln_size      2.04914    0.05548   36.94   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.2526 on 24 degrees of freedom
-Multiple R-squared:  0.9704,	Adjusted R-squared:  0.9691 
-F-statistic: 786.1 on 1 and 24 DF,  p-value: < 2.2e-16
+Residual standard error: 0.221 on 26 degrees of freedom
+Multiple R-squared:  0.9813,	Adjusted R-squared:  0.9806 
+F-statistic:  1364 on 1 and 26 DF,  p-value: < 2.2e-16
 
 
 ================================================================================
@@ -66,11 +66,11 @@ Manceau et al (2020) *ROBUST* model fit
 Call: rlm(formula = ln_time ~ ln_size, data = .)
 Residuals:
      Min       1Q   Median       3Q      Max 
--0.48920 -0.14753 -0.01906  0.15935  0.46947 
+-0.29811 -0.19059 -0.04126  0.22079  0.46014 
 
 Coefficients:
             Value    Std. Error t value 
-(Intercept)  -6.2792   0.3164   -19.8431
-ln_size       1.9313   0.0766    25.2140
+(Intercept)  -8.2633   0.2762   -29.9209
+ln_size       2.0542   0.0568    36.1565
 
-Residual standard error: 0.241 on 24 degrees of freedom
+Residual standard error: 0.3093 on 26 degrees of freedom

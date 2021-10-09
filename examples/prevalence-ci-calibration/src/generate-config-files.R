@@ -170,7 +170,7 @@ make_config_file <- function(sim_seed) {
     config_file,
     pretty = TRUE,
     auto_unbox = TRUE,
-    digits = 7
+    digits = 16
   )
 }
 
