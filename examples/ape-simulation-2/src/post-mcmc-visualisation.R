@@ -63,8 +63,11 @@ marginal_plot_summary <- function(samples, varname) {
 }
 
 main <- function(args) {
-  green_hex_colour <- "#7fc97f"
-  purple_hex_colour <- "#beaed4"
+  hex_colours <- jsonlite::read_json("../colours.json")
+  green_hex_colour <- hex_colours$green
+  purple_hex_colour <- hex_colours$purple
+  ## green_hex_colour <- "#7fc97f"
+  ## purple_hex_colour <- "#beaed4"
 
   true_params <- jsonlite::read_json("../example-parameters.json")
 
