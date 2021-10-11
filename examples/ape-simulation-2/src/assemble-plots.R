@@ -16,7 +16,12 @@ assemble_data_plot <- function() {
     rel_widths = c(0.6, 0.4),
     labels = c("A", NULL)
   )
-  print(comb_fig)
+  ggsave(file = "out/ape-sim-figures-combined.png",
+         plot = comb_fig,
+         height = 14.8,
+         width = 21.0,
+         dpi = 300,
+         units = "cm")
   ggsave(file = "out/ape-sim-figures-combined.pdf",
          plot = comb_fig,
          height = 14.8,
@@ -34,6 +39,12 @@ assemble_marginals_plot <- function() {
                         labels = c("A", "B"),
                         hjust = -0.2)
   ggsave(file = "out/marginal-distributions-combined.pdf",
+         plot = comb_fig,
+         height = 21.0,
+         width = 14.8,
+         dpi = 300,
+         units = "cm")
+  ggsave(file = "out/marginal-distributions-combined.png",
          plot = comb_fig,
          height = 21.0,
          width = 14.8,

@@ -17,3 +17,11 @@ To view the results open =index.html= with your browser.
 This runs a single simulation and then analyses the data once using the exact
 sampling and occurrence times and then a second time using the aggregated
 values. Some diagnostics are also produced to help inspect the results.
+
+* Results
+
+#+attr_org: :width 500
+[[./out/ape-sim-figures-combined.png]]
+
+#+attr_org: :width 500
+[[./out/marginal-distributions-combined.png]]
