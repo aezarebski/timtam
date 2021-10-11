@@ -1,8 +1,9 @@
 #+title: BDSCOD
 
 This repository contains an implementation of the approximate likelihood of a
-birth-death process with various observation processes described [[https://doi.org/10.1101/2020.10.21.349068][here]]. An
-overview of the organisation of the code in this repository is given below.
+birth-death process with various observation processes described [[https://doi.org/10.1101/2020.10.21.349068][here]]. For a
+description of the code that generated the figures in that manuscript see [[file:./examples/README.org::*Paper figures][here]].
+An overview of the organisation of the code in this repository is given below.
 
 * Architecture
 
