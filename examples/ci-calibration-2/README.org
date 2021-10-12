@@ -13,3 +13,11 @@ make clean
 #+end_src
 
 To view the results open =index.html= with your browser.
+
+* Results
+
+#+attr_org: :width 500
+[[./out/prevalence-calibration-extra-3.png]]
+
+#+attr_org: :width 500
+[[./out/mse-r-naught.png]]

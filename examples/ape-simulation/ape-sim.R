@@ -36,8 +36,11 @@ suppressPackageStartupMessages(library(tidytree))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(ape))
 
-green_hex_colour <- "#7fc97f"
-purple_hex_colour <- "#beaed4"
+hex_colours <- jsonlite::read_json("../colours.json")
+green_hex_colour <- hex_colours$green
+purple_hex_colour <- hex_colours$purple
+## green_hex_colour <- "#7fc97f"
+## purple_hex_colour <- "#beaed4"
 
 # create parser object
 parser <- ArgumentParser()

@@ -6,8 +6,11 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(dplyr))
 
-green_hex_colour <- "#7fc97f"
-purple_hex_colour <- "#beaed4"
+hex_colours <- jsonlite::read_json("../colours.json")
+green_hex_colour <- hex_colours$green
+purple_hex_colour <- hex_colours$purple
+## green_hex_colour <- "#7fc97f"
+## purple_hex_colour <- "#beaed4"
 
 parser <- ArgumentParser()
 
