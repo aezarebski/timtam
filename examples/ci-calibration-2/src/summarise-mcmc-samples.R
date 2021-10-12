@@ -4,6 +4,10 @@ library(reshape2)
 library(dplyr)
 library(magrittr)
 
+## Set the seed because there is re-sampling involved in the estimation of the
+## coverage of the prevalence CI.
+set.seed(1)
+
 parser <- ArgumentParser()
 
 parser$add_argument(
