@@ -210,7 +210,7 @@ make_prev_r_naught_fig <- function(args) {
     ) +
     labs(
       x = "Replicate (ordered by prevalence)",
-      y = "Reproduction number"
+      y = "Prevalence"
     )
 
 

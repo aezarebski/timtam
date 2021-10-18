@@ -11,6 +11,8 @@ index : index.html
 index.html : src/build-viewer.R out/plotting-done.txt
 	Rscript src/build-viewer.R
 
+# If the MCMC results have already been summarised you can touch the appropriate
+# file and then only the plotting will be run when you make index.
 out/plotting-done.txt : src/build-calibration-figures.R out/mcmc-summary.json
 	Rscript src/build-calibration-figures.R --input out/mcmc-summary.json ${MAKE_PDFS}
 	touch out/plotting-done.txt
