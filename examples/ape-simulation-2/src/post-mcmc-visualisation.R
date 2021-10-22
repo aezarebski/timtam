@@ -227,13 +227,17 @@ main <- function(args) {
     units = "cm"
   )
 
+  sub_plot_margins <- unit(0.3 * c(1, 1, 1, 1), "cm")
+
   ## Make the matrix of scatter plots thing....
   sub_plot_scatter <- function(x_var, y_var, col) {
     ggplot(post_samples_df, aes_string(x = x_var, y = y_var)) +
       geom_point(shape = 1, size = 0.1, colour = col) +
       labs(x = NULL, y = NULL) +
-      theme_classic()
+      theme_classic() +
+      theme(plot.margin = sub_plot_margins)
   }
+
   sub_plot_hist <- function(x_var, col, title) {
     ggplot() +
       geom_histogram(data = post_samples_df,
@@ -243,8 +247,10 @@ main <- function(args) {
       ggtitle(title) +
       labs(x = NULL, y = NULL) +
       theme_classic() +
-      theme(plot.title = element_text(hjust = 0.5))
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.margin = sub_plot_margins)
   }
+
   if (all(is.element(c("sampling_rate", "omega_rate"), varnames(post_samples)))) {
     splom <- cowplot::plot_grid(
       sub_plot_hist(x_var = "birth_rate", col = green_hex_colour, title = TeX("Birth rate, $\\lambda$")),
