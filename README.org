@@ -1,3 +1,5 @@
+[[https://github.com/aezarebski/timtam2][*SEE TIMTAM2 FOR THE BEAST2 IMPLEMENTATION*]]
+
 #+title: BDSCOD
 
 This repository contains an implementation of the approximate likelihood of a
